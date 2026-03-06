@@ -1,206 +1,158 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hotspot Login</title>
+  <title>Tanzania Hotspot Login</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&display=swap" rel="stylesheet" />
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#135bec",
+            "background-light": "#f6f6f8",
+            "background-dark": "#101622",
+          },
+          fontFamily: {
+            display: ["Inter", "sans-serif"],
+          },
+          borderRadius: { DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px" },
+        },
+      },
+    };
+  </script>
   <style>
-    :root {
-      --bg-a: #0f172a;
-      --bg-b: #111827;
-      --card: #ffffff;
-      --text: #111827;
-      --muted: #6b7280;
-      --line: #e5e7eb;
-      --primary: #0ea5e9;
-      --primary-dark: #0284c7;
-      --danger: #dc2626;
-      --ok: #15803d;
-    }
-
-    * { box-sizing: border-box; }
-
     body {
-      margin: 0;
-      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(circle at 10% 10%, rgba(14, 165, 233, 0.2), transparent 35%),
-        radial-gradient(circle at 90% 80%, rgba(34, 197, 94, 0.15), transparent 30%),
-        linear-gradient(135deg, var(--bg-a), var(--bg-b));
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1.2rem;
+      font-family: "Inter", sans-serif;
     }
-
-    .shell {
-      width: min(1120px, 100%);
-      display: grid;
-      grid-template-columns: 1.2fr 1fr;
-      gap: 1rem;
-    }
-
-    .card {
-      background: var(--card);
-      border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      box-shadow: 0 18px 40px rgba(2, 6, 23, 0.24);
-      padding: 1rem;
-    }
-
-    h1, h2, h3, p { margin: 0; }
-
-    .card h2 {
-      font-size: 1.1rem;
-      margin-bottom: .35rem;
-    }
-
-    .hint {
-      color: var(--muted);
-      font-size: .92rem;
-      margin-bottom: 1rem;
-    }
-
-    .packages {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: .75rem;
-    }
-
-    .pack {
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: .75rem;
-      background: #f9fafb;
-    }
-
-    .pack h3 {
-      font-size: .98rem;
-      margin-bottom: .45rem;
-    }
-
-    .pack .price {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #0f172a;
-    }
-
-    .pack .meta {
-      margin-top: .3rem;
-      color: #4b5563;
-      font-size: .88rem;
-    }
-
-    .btn {
-      appearance: none;
-      border: 0;
-      border-radius: 10px;
-      padding: .62rem .86rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: .15s ease;
-    }
-
-    .btn:disabled { opacity: .65; cursor: not-allowed; }
-
-    .btn-primary {
-      background: var(--primary);
-      color: #fff;
-    }
-
-    .btn-primary:hover { background: var(--primary-dark); }
-
-    .btn-muted {
-      background: #e5e7eb;
-      color: #111827;
-    }
-
-    label {
-      display: block;
-      font-size: .9rem;
-      font-weight: 600;
-      margin-bottom: .35rem;
-    }
-
-    input[type="text"] {
-      width: 100%;
-      border: 1px solid #d1d5db;
-      border-radius: 10px;
-      padding: .72rem .8rem;
-      outline: none;
-      font-size: .95rem;
-      margin-bottom: .75rem;
-    }
-
-    input[type="text"]:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(14, 165, 233, .18);
-    }
-
-    .row {
-      display: flex;
-      gap: .55rem;
-      flex-wrap: wrap;
-      margin-bottom: .8rem;
-    }
-
-    .message {
-      min-height: 1.2rem;
-      font-size: .92rem;
-    }
-
-    .message.ok { color: var(--ok); }
-    .message.err { color: var(--danger); }
-
-    .footer-note {
-      margin-top: .75rem;
-      color: #6b7280;
-      font-size: .8rem;
-    }
-
-    @media (max-width: 960px) {
-      .shell { grid-template-columns: 1fr; }
+    .gradient-bg {
+      background: linear-gradient(135deg, #135bec 0%, #7c3aed 100%);
     }
   </style>
 </head>
-<body>
-  <main class="shell">
-    <section class="card">
-      <h2>Buy Package</h2>
-      <p class="hint">Choose a package. Online payment checkout is the next phase.</p>
-      <div id="package-list" class="packages"></div>
-    </section>
+<body class="bg-background-light min-h-screen font-display">
+  <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 bg-white/80 backdrop-blur-md px-6 md:px-10 py-4 sticky top-0 z-50">
+    <div class="flex items-center gap-3 text-slate-900">
+      <div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white">
+        <span class="material-symbols-outlined">wifi</span>
+      </div>
+      <h2 class="text-xl font-bold leading-tight tracking-tight">Tanzania Hotspot</h2>
+    </div>
+    <div class="flex items-center gap-4">
+      <button class="flex items-center gap-2 text-slate-600 hover:text-primary transition-colors font-medium text-sm" type="button">
+        <span class="material-symbols-outlined text-[20px]">help</span>
+        Support
+      </button>
+    </div>
+  </header>
 
-    <section class="card">
-      <h2>I Have a Voucher</h2>
-      <p class="hint">Enter your voucher code, validate, then connect.</p>
-
-      <label for="voucher-code">Voucher Code</label>
-      <input id="voucher-code" type="text" placeholder="BATCH01-AB12CD34" autocomplete="off" />
-
-      <div class="row">
-        <button id="btn-verify" class="btn btn-muted">Validate</button>
-        <button id="btn-connect" class="btn btn-primary">Connect Internet</button>
+  <main class="relative min-h-[calc(100vh-73px)] w-full flex flex-col lg:flex-row">
+    <div class="absolute inset-0 gradient-bg opacity-10 pointer-events-none"></div>
+    <div class="relative flex flex-col lg:flex-row w-full max-w-7xl mx-auto p-6 md:p-12 gap-8 lg:gap-16">
+      <div class="w-full lg:w-5/12 flex flex-col gap-6">
+        <div class="space-y-2">
+          <h1 class="text-slate-900 text-3xl font-black tracking-tight">Available Packages</h1>
+          <p class="text-slate-600 text-lg">Purchase a voucher at our local kiosks to enjoy premium high-speed access.</p>
+        </div>
+        <div id="package-list" class="grid gap-4"></div>
       </div>
 
-      <div id="voucher-response" class="message"></div>
-      <p class="footer-note">You can print voucher cards directly from the Hotspot Voucher doctype.</p>
-    </section>
+      <div class="w-full lg:w-7/12 flex items-start justify-center">
+        <div class="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 p-8 md:p-12">
+          <div class="mb-8 text-center">
+            <h2 class="text-slate-900 text-3xl font-black mb-3">Welcome Back</h2>
+            <p class="text-slate-500">Enter your voucher code to start your session.</p>
+          </div>
+
+          <form id="voucher-form" class="space-y-6">
+            <div class="space-y-2">
+              <label class="block text-sm font-bold text-slate-700 uppercase tracking-wider" for="voucher-code">Voucher Code</label>
+              <div class="relative">
+                <input id="voucher-code" class="w-full h-16 px-6 bg-slate-50 border-2 border-slate-200 rounded-xl text-2xl font-mono tracking-[0.2em] text-center focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-slate-300" maxlength="24" placeholder="XXXX-XXXX-XXXX" type="text" autocomplete="off" />
+                <div class="absolute inset-y-0 right-4 flex items-center pointer-events-none text-slate-400">
+                  <span class="material-symbols-outlined">confirmation_number</span>
+                </div>
+              </div>
+            </div>
+
+            <div id="voucher-feedback" class="hidden items-center gap-3 p-4 border rounded-lg text-sm font-medium">
+              <span id="feedback-icon" class="material-symbols-outlined">info</span>
+              <p id="feedback-text"></p>
+            </div>
+
+            <div class="flex flex-col gap-4 pt-4">
+              <button id="btn-connect" class="w-full h-14 bg-primary hover:bg-primary/90 text-white font-black text-lg rounded-xl shadow-lg shadow-primary/25 transition-all flex items-center justify-center gap-2" type="submit">
+                <span class="material-symbols-outlined">rocket_launch</span>
+                Connect Now
+              </button>
+              <button id="btn-validate" class="w-full h-14 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-all flex items-center justify-center gap-2" type="button">
+                <span class="material-symbols-outlined">check_circle</span>
+                Validate Only
+              </button>
+            </div>
+          </form>
+
+          <div class="mt-12 flex flex-col items-center gap-6">
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-[1px] bg-slate-200"></span>
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Network Status</span>
+              <span class="w-8 h-[1px] bg-slate-200"></span>
+            </div>
+            <div class="flex gap-8">
+              <div class="flex flex-col items-center gap-1">
+                <span class="material-symbols-outlined text-green-500">sensors</span>
+                <span class="text-[10px] font-bold text-slate-500">Active</span>
+              </div>
+              <div class="flex flex-col items-center gap-1">
+                <span class="material-symbols-outlined text-green-500">speed</span>
+                <span class="text-[10px] font-bold text-slate-500">100%</span>
+              </div>
+              <div class="flex flex-col items-center gap-1">
+                <span class="material-symbols-outlined text-slate-300">public</span>
+                <span class="text-[10px] font-bold text-slate-500">Global</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </main>
+
+  <footer class="w-full py-8 px-6 border-t border-slate-200 bg-white mt-auto">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+      <p class="text-slate-500 text-sm">© 2026 Tanzania Hotspot. All rights reserved.</p>
+      <div class="flex gap-6">
+        <a class="text-slate-400 hover:text-primary text-sm font-medium transition-colors" href="#">Privacy Policy</a>
+        <a class="text-slate-400 hover:text-primary text-sm font-medium transition-colors" href="#">Terms of Service</a>
+        <a class="text-slate-400 hover:text-primary text-sm font-medium transition-colors" href="#">Contact Support</a>
+      </div>
+    </div>
+  </footer>
 
   <script>
     (function () {
       const packageList = document.getElementById("package-list");
       const voucherInput = document.getElementById("voucher-code");
-      const response = document.getElementById("voucher-response");
-      const btnVerify = document.getElementById("btn-verify");
-      const btnConnect = document.getElementById("btn-connect");
+      const form = document.getElementById("voucher-form");
+      const btnValidate = document.getElementById("btn-validate");
+      const feedback = document.getElementById("voucher-feedback");
+      const feedbackText = document.getElementById("feedback-text");
+      const feedbackIcon = document.getElementById("feedback-icon");
 
-      function setResponse(ok, text) {
-        response.className = "message " + (ok ? "ok" : "err");
-        response.textContent = text || "";
+      function showFeedback(type, text) {
+        feedback.classList.remove("hidden", "bg-red-50", "border-red-200", "text-red-600", "bg-green-50", "border-green-200", "text-green-600");
+        if (type === "ok") {
+          feedback.classList.add("bg-green-50", "border-green-200", "text-green-600", "flex");
+          feedbackIcon.textContent = "check_circle";
+        } else {
+          feedback.classList.add("bg-red-50", "border-red-200", "text-red-600", "flex");
+          feedbackIcon.textContent = "error";
+        }
+        feedbackText.textContent = text || "";
       }
 
       async function callApi(method, params) {
@@ -211,62 +163,73 @@
         return data.message || {};
       }
 
+      function packageCard(p, idx) {
+        const featured = idx === 1;
+        const amount = Number(p.price || 0).toLocaleString();
+        const validity = `${p.validity_value} ${p.validity_unit}`;
+        const speed = p.download_kbps ? `Up to ${Math.max(1, Math.round(p.download_kbps / 1000))}Mbps Speed` : "High Speed Access";
+        const label = featured ? "POPULAR" : "PACKAGE";
+        return `
+          <div class="flex flex-col gap-4 rounded-xl ${featured ? "border-2 border-primary shadow-lg" : "border border-slate-200 shadow-sm"} bg-white p-6 relative overflow-hidden">
+            ${featured ? '<div class="absolute top-0 right-0"><div class="bg-primary text-white text-[10px] font-black px-8 py-1 rotate-45 translate-x-6 translate-y-2">POPULAR</div></div>' : ""}
+            <div class="flex flex-col gap-1">
+              <div class="flex items-center justify-between">
+                <h3 class="text-slate-900 text-lg font-bold">${p.plan_name}</h3>
+                <span class="text-xs font-semibold uppercase tracking-wider rounded-full bg-slate-100 text-slate-500 px-3 py-1">${label}</span>
+              </div>
+              <div class="flex items-baseline gap-2 mt-2">
+                <span class="text-slate-900 text-3xl font-black">${amount}</span>
+                <span class="text-slate-500 text-sm font-bold uppercase">TSh / ${validity}</span>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <div class="flex items-center gap-2 text-sm text-slate-600"><span class="material-symbols-outlined text-primary text-[18px]">check_circle</span>${speed}</div>
+              <div class="flex items-center gap-2 text-sm text-slate-600"><span class="material-symbols-outlined text-primary text-[18px]">check_circle</span>${p.data_limit_mb ? `${p.data_limit_mb} MB data` : "Unlimited data"}</div>
+            </div>
+            <button class="w-full flex items-center justify-center rounded-lg h-11 bg-slate-100 text-slate-400 text-sm font-bold cursor-not-allowed" disabled>Purchase at Kiosk</button>
+          </div>
+        `;
+      }
+
       async function loadPackages() {
         try {
           const result = await callApi("hotspot_ms.api.portal.get_packages");
           const items = result.packages || [];
           if (!items.length) {
-            packageList.innerHTML = "<p class='hint'>No packages available yet.</p>";
+            packageList.innerHTML = '<p class="text-sm text-slate-500">No packages available.</p>';
             return;
           }
-
-          packageList.innerHTML = items.map((p) => {
-            const currency = p.currency || "TZS";
-            const dataText = p.data_limit_mb ? `${p.data_limit_mb} MB` : "Unlimited data";
-            return `
-              <article class="pack">
-                <h3>${p.plan_name}</h3>
-                <p class="price">${currency} ${p.price}</p>
-                <p class="meta">${p.validity_value} ${p.validity_unit} | ${dataText}</p>
-                <div style="margin-top:.55rem;">
-                  <button class="btn btn-muted" disabled>Buy Soon</button>
-                </div>
-              </article>
-            `;
-          }).join("");
-        } catch (err) {
-          packageList.innerHTML = "<p class='message err'>Failed to load packages.</p>";
+          packageList.innerHTML = items.map((p, idx) => packageCard(p, idx)).join("");
+        } catch (e) {
+          packageList.innerHTML = '<p class="text-sm text-red-500">Failed to load packages.</p>';
         }
       }
 
       async function verifyVoucher() {
         const code = (voucherInput.value || "").trim();
         if (!code) {
-          setResponse(false, "Enter voucher code first.");
+          showFeedback("err", "Enter voucher code first.");
           return null;
         }
-
         const result = await callApi("hotspot_ms.api.portal.verify_voucher", { voucher_code: code });
         if (!result.ok) {
-          setResponse(false, result.message || "Voucher invalid.");
+          showFeedback("err", result.message || "Invalid or expired voucher code. Please try again.");
           return null;
         }
-
-        const voucher = result.voucher || {};
-        const expiry = voucher.expires_on ? ` | Expires: ${voucher.expires_on}` : "";
-        setResponse(true, `Valid voucher for ${voucher.plan}${expiry}`);
+        showFeedback("ok", `Voucher valid for plan ${result.voucher?.plan || ""}.`);
         return result;
       }
 
-      btnVerify.addEventListener("click", async function () {
+      btnValidate.addEventListener("click", async function () {
         try {
           await verifyVoucher();
         } catch (e) {
-          setResponse(false, "Validation failed. Try again.");
+          showFeedback("err", "Validation failed. Try again.");
         }
       });
 
-      btnConnect.addEventListener("click", async function () {
+      form.addEventListener("submit", async function (e) {
+        e.preventDefault();
         try {
           const verified = await verifyVoucher();
           if (!verified) return;
@@ -274,15 +237,15 @@
           const code = (voucherInput.value || "").trim();
           const activated = await callApi("hotspot_ms.api.portal.activate_voucher", { voucher_code: code });
           if (!activated.ok) {
-            setResponse(false, activated.message || "Could not activate voucher.");
+            showFeedback("err", activated.message || "Could not activate voucher.");
             return;
           }
 
           const sid = encodeURIComponent(activated.session_id || "");
           const vc = encodeURIComponent(code);
           window.location.href = `/hotspot/status?session_id=${sid}&voucher_code=${vc}`;
-        } catch (e) {
-          setResponse(false, "Connection request failed.");
+        } catch (err) {
+          showFeedback("err", "Connection request failed.");
         }
       });
 
