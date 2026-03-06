@@ -1,103 +1,159 @@
-{% extends "templates/web.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hotspot Status</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --card: #ffffff;
+      --line: #e5e7eb;
+      --text: #111827;
+      --muted: #6b7280;
+      --ok: #15803d;
+      --danger: #dc2626;
+      --btn: #0ea5e9;
+      --btn2: #111827;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: var(--text);
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f172a, #020617 65%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1rem;
+    }
+    .card {
+      width: min(800px, 100%);
+      background: var(--card);
+      border: 1px solid rgba(255, 255, 255, .25);
+      border-radius: 16px;
+      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
+      padding: 1rem;
+    }
+    h1 { margin: 0 0 .35rem; font-size: 1.25rem; }
+    .muted { margin: 0 0 .95rem; color: var(--muted); }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .65rem;
+    }
+    .cell {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: .65rem;
+      background: #f9fafb;
+    }
+    .cell b { display: block; font-size: .82rem; color: #4b5563; margin-bottom: .2rem; }
+    .msg { margin-top: .7rem; min-height: 1.2rem; font-size: .92rem; }
+    .msg.ok { color: var(--ok); }
+    .msg.err { color: var(--danger); }
+    .row { margin-top: .8rem; display: flex; gap: .55rem; flex-wrap: wrap; }
+    .btn {
+      border: 0;
+      border-radius: 10px;
+      padding: .62rem .86rem;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-refresh { background: var(--btn); }
+    .btn-logout { background: var(--btn2); }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Connection Status</h1>
+    <p class="muted">Your active hotspot session details.</p>
 
-{% block page_content %}
-<div class="status-wrap">
-  <section class="panel">
-    <h2>Connection Status</h2>
-    <p class="muted">Your voucher session details are shown below.</p>
-    <div id="status-output" class="status-grid"></div>
-    <div id="status-message" class="response"></div>
-    <div class="btn-row">
-      <button id="btn-refresh" class="btn btn-default">Refresh</button>
-      <button id="btn-logout" class="btn btn-danger">Disconnect</button>
+    <section id="status-output" class="grid"></section>
+    <div id="status-message" class="msg"></div>
+
+    <div class="row">
+      <button id="btn-refresh" class="btn btn-refresh">Refresh</button>
+      <button id="btn-logout" class="btn btn-logout">Disconnect</button>
     </div>
-  </section>
-</div>
+  </main>
 
-<style>
-.status-wrap { max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
-.panel { border: 1px solid #e2e2e2; border-radius: 8px; padding: 1rem; background: #fff; }
-.muted { color: #666; }
-.status-grid { margin-top: .75rem; display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
-.item { border: 1px solid #ececec; border-radius: 6px; padding: .6rem; background: #fafafa; }
-.item b { display: block; margin-bottom: .2rem; font-size: .85rem; color: #555; }
-.response { min-height: 1.4rem; margin-top: .75rem; }
-.response.ok { color: #1e8e3e; }
-.response.err { color: #c62828; }
-.btn-row { margin-top: .75rem; display: flex; gap: .5rem; }
-@media (max-width: 760px) { .status-grid { grid-template-columns: 1fr; } }
-</style>
+  <script>
+    (function () {
+      const statusOutput = document.getElementById("status-output");
+      const statusMessage = document.getElementById("status-message");
+      const btnRefresh = document.getElementById("btn-refresh");
+      const btnLogout = document.getElementById("btn-logout");
 
-<script>
-(function () {
-  const statusOutput = document.getElementById("status-output");
-  const statusMessage = document.getElementById("status-message");
-  const btnRefresh = document.getElementById("btn-refresh");
-  const btnLogout = document.getElementById("btn-logout");
+      const query = new URLSearchParams(window.location.search);
+      const sessionId = query.get("session_id") || "";
+      const voucherCode = query.get("voucher_code") || "";
 
-  const query = new URLSearchParams(window.location.search);
-  const sessionId = query.get("session_id") || "";
-  const voucherCode = query.get("voucher_code") || "";
-
-  function setMessage(ok, text) {
-    statusMessage.className = "response " + (ok ? "ok" : "err");
-    statusMessage.textContent = text || "";
-  }
-
-  async function callApi(method, params) {
-    const query = new URLSearchParams(params || {}).toString();
-    const url = `/api/method/${method}` + (query ? `?${query}` : "");
-    const res = await fetch(url, { credentials: "same-origin" });
-    const data = await res.json();
-    return data.message || {};
-  }
-
-  function draw(result) {
-    const s = result.session || {};
-    const v = result.voucher || {};
-    statusOutput.innerHTML = `
-      <div class="item"><b>Session ID</b>${s.session_id || "-"}</div>
-      <div class="item"><b>Status</b>${s.status || "-"}</div>
-      <div class="item"><b>Voucher</b>${v.code || "-"}</div>
-      <div class="item"><b>Plan Status</b>${v.status || "-"}</div>
-      <div class="item"><b>Start Time</b>${s.start_time || "-"}</div>
-      <div class="item"><b>Expires On</b>${v.expires_on || "-"}</div>
-      <div class="item"><b>Usage (MB)</b>${s.total_mb ?? 0}</div>
-      <div class="item"><b>Remaining (MB)</b>${v.remaining_mb ?? "Unlimited"}</div>
-    `;
-  }
-
-  async function refreshStatus() {
-    const params = sessionId ? { session_id: sessionId } : { voucher_code: voucherCode };
-    const result = await callApi("hotspot_ms.api.portal.session_status", params);
-    if (!result.ok) {
-      setMessage(false, result.message || "No active session.");
-      if ((result.code || "") === "NO_ACTIVE_SESSION") {
-        window.location.href = "/hotspot/expired";
+      function setMessage(ok, text) {
+        statusMessage.className = "msg " + (ok ? "ok" : "err");
+        statusMessage.textContent = text || "";
       }
-      return;
-    }
-    draw(result);
-    setMessage(true, "Session is active.");
-  }
 
-  btnRefresh.addEventListener("click", refreshStatus);
+      async function callApi(method, params) {
+        const query = new URLSearchParams(params || {}).toString();
+        const url = `/api/method/${method}` + (query ? `?${query}` : "");
+        const res = await fetch(url, { credentials: "same-origin" });
+        const data = await res.json();
+        return data.message || {};
+      }
 
-  btnLogout.addEventListener("click", async function () {
-    if (!sessionId) {
-      setMessage(false, "Missing session_id in URL.");
-      return;
-    }
-    const result = await callApi("hotspot_ms.api.portal.logout_session", { session_id: sessionId });
-    if (!result.ok) {
-      setMessage(false, result.message || "Failed to disconnect.");
-      return;
-    }
-    setMessage(true, "Disconnected.");
-    window.location.href = "/hotspot/expired";
-  });
+      function draw(result) {
+        const s = result.session || {};
+        const v = result.voucher || {};
+        statusOutput.innerHTML = `
+          <div class="cell"><b>Session ID</b>${s.session_id || "-"}</div>
+          <div class="cell"><b>Status</b>${s.status || "-"}</div>
+          <div class="cell"><b>Voucher</b>${v.code || "-"}</div>
+          <div class="cell"><b>Voucher State</b>${v.status || "-"}</div>
+          <div class="cell"><b>Start Time</b>${s.start_time || "-"}</div>
+          <div class="cell"><b>Expires</b>${v.expires_on || "-"}</div>
+          <div class="cell"><b>Usage (MB)</b>${s.total_mb ?? 0}</div>
+          <div class="cell"><b>Remaining (MB)</b>${v.remaining_mb ?? "Unlimited"}</div>
+        `;
+      }
 
-  refreshStatus();
-})();
-</script>
-{% endblock %}
+      async function refreshStatus() {
+        const params = sessionId ? { session_id: sessionId } : { voucher_code: voucherCode };
+        const result = await callApi("hotspot_ms.api.portal.session_status", params);
+        if (!result.ok) {
+          setMessage(false, result.message || "No active session.");
+          if ((result.code || "") === "NO_ACTIVE_SESSION") {
+            window.location.href = "/hotspot/expired";
+          }
+          return;
+        }
+
+        draw(result);
+        setMessage(true, "Session is active.");
+      }
+
+      btnRefresh.addEventListener("click", refreshStatus);
+
+      btnLogout.addEventListener("click", async function () {
+        if (!sessionId) {
+          setMessage(false, "Missing session_id in URL.");
+          return;
+        }
+
+        const result = await callApi("hotspot_ms.api.portal.logout_session", { session_id: sessionId });
+        if (!result.ok) {
+          setMessage(false, result.message || "Failed to disconnect.");
+          return;
+        }
+
+        window.location.href = "/hotspot/expired";
+      });
+
+      refreshStatus();
+    })();
+  </script>
+</body>
+</html>

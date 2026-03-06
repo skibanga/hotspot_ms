@@ -1,138 +1,293 @@
-{% extends "templates/web.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hotspot Login</title>
+  <style>
+    :root {
+      --bg-a: #0f172a;
+      --bg-b: #111827;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --primary: #0ea5e9;
+      --primary-dark: #0284c7;
+      --danger: #dc2626;
+      --ok: #15803d;
+    }
 
-{% block page_content %}
-<div class="hotspot-wrap">
-  <div class="hotspot-grid">
-    <section class="panel panel-plans">
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 10%, rgba(14, 165, 233, 0.2), transparent 35%),
+        radial-gradient(circle at 90% 80%, rgba(34, 197, 94, 0.15), transparent 30%),
+        linear-gradient(135deg, var(--bg-a), var(--bg-b));
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.2rem;
+    }
+
+    .shell {
+      width: min(1120px, 100%);
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 1rem;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 18px 40px rgba(2, 6, 23, 0.24);
+      padding: 1rem;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+
+    .card h2 {
+      font-size: 1.1rem;
+      margin-bottom: .35rem;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: .92rem;
+      margin-bottom: 1rem;
+    }
+
+    .packages {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: .75rem;
+    }
+
+    .pack {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: .75rem;
+      background: #f9fafb;
+    }
+
+    .pack h3 {
+      font-size: .98rem;
+      margin-bottom: .45rem;
+    }
+
+    .pack .price {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .pack .meta {
+      margin-top: .3rem;
+      color: #4b5563;
+      font-size: .88rem;
+    }
+
+    .btn {
+      appearance: none;
+      border: 0;
+      border-radius: 10px;
+      padding: .62rem .86rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: .15s ease;
+    }
+
+    .btn:disabled { opacity: .65; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: var(--primary-dark); }
+
+    .btn-muted {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    label {
+      display: block;
+      font-size: .9rem;
+      font-weight: 600;
+      margin-bottom: .35rem;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      padding: .72rem .8rem;
+      outline: none;
+      font-size: .95rem;
+      margin-bottom: .75rem;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(14, 165, 233, .18);
+    }
+
+    .row {
+      display: flex;
+      gap: .55rem;
+      flex-wrap: wrap;
+      margin-bottom: .8rem;
+    }
+
+    .message {
+      min-height: 1.2rem;
+      font-size: .92rem;
+    }
+
+    .message.ok { color: var(--ok); }
+    .message.err { color: var(--danger); }
+
+    .footer-note {
+      margin-top: .75rem;
+      color: #6b7280;
+      font-size: .8rem;
+    }
+
+    @media (max-width: 960px) {
+      .shell { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="card">
       <h2>Buy Package</h2>
-      <p class="muted">Select a package. Online payment integration will be enabled next.</p>
-      <div id="package-list" class="package-list"></div>
+      <p class="hint">Choose a package. Online payment checkout is the next phase.</p>
+      <div id="package-list" class="packages"></div>
     </section>
 
-    <section class="panel panel-voucher">
+    <section class="card">
       <h2>I Have a Voucher</h2>
-      <p class="muted">Enter your voucher code to validate and connect.</p>
+      <p class="hint">Enter your voucher code, validate, then connect.</p>
+
       <label for="voucher-code">Voucher Code</label>
-      <input id="voucher-code" type="text" placeholder="e.g. BATCH01-AB12CD34" autocomplete="off" />
-      <div class="button-row">
-        <button id="btn-verify" class="btn btn-default">Validate</button>
-        <button id="btn-connect" class="btn btn-primary">Connect</button>
+      <input id="voucher-code" type="text" placeholder="BATCH01-AB12CD34" autocomplete="off" />
+
+      <div class="row">
+        <button id="btn-verify" class="btn btn-muted">Validate</button>
+        <button id="btn-connect" class="btn btn-primary">Connect Internet</button>
       </div>
-      <div id="voucher-response" class="response"></div>
+
+      <div id="voucher-response" class="message"></div>
+      <p class="footer-note">You can print voucher cards directly from the Hotspot Voucher doctype.</p>
     </section>
-  </div>
-</div>
+  </main>
 
-<style>
-.hotspot-wrap { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
-.hotspot-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 1rem; }
-.panel { border: 1px solid #e2e2e2; border-radius: 8px; padding: 1rem; background: #fff; }
-.panel h2 { margin: 0 0 0.5rem; font-size: 1.2rem; }
-.muted { color: #666; margin-bottom: 1rem; }
-.package-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .75rem; }
-.package-card { border: 1px solid #e8e8e8; border-radius: 8px; padding: 0.75rem; background: #fafafa; }
-.package-card h4 { margin: 0 0 .4rem; font-size: 1rem; }
-.package-price { font-weight: 700; margin: 0 0 .2rem; }
-.package-meta { color: #555; font-size: .9rem; }
-label { display: block; font-weight: 600; margin-bottom: .35rem; }
-input[type="text"] { width: 100%; border: 1px solid #ccc; border-radius: 6px; padding: .55rem .65rem; margin-bottom: .75rem; }
-.button-row { display: flex; gap: .5rem; margin-bottom: .75rem; }
-.response { min-height: 1.4rem; font-size: .95rem; }
-.response.ok { color: #1e8e3e; }
-.response.err { color: #c62828; }
-@media (max-width: 900px) { .hotspot-grid { grid-template-columns: 1fr; } }
-</style>
+  <script>
+    (function () {
+      const packageList = document.getElementById("package-list");
+      const voucherInput = document.getElementById("voucher-code");
+      const response = document.getElementById("voucher-response");
+      const btnVerify = document.getElementById("btn-verify");
+      const btnConnect = document.getElementById("btn-connect");
 
-<script>
-(function () {
-  const packageList = document.getElementById("package-list");
-  const voucherInput = document.getElementById("voucher-code");
-  const response = document.getElementById("voucher-response");
-  const btnVerify = document.getElementById("btn-verify");
-  const btnConnect = document.getElementById("btn-connect");
-
-  function setResponse(ok, text) {
-    response.className = "response " + (ok ? "ok" : "err");
-    response.textContent = text || "";
-  }
-
-  async function callApi(method, params) {
-    const query = new URLSearchParams(params || {}).toString();
-    const url = `/api/method/${method}` + (query ? `?${query}` : "");
-    const res = await fetch(url, { credentials: "same-origin" });
-    const data = await res.json();
-    return data.message || {};
-  }
-
-  async function loadPackages() {
-    try {
-      const result = await callApi("hotspot_ms.api.portal.get_packages");
-      const items = result.packages || [];
-      if (!items.length) {
-        packageList.innerHTML = '<div class="muted">No packages available.</div>';
-        return;
+      function setResponse(ok, text) {
+        response.className = "message " + (ok ? "ok" : "err");
+        response.textContent = text || "";
       }
-      packageList.innerHTML = items.map((p) => {
-        const currency = p.currency || "TZS";
-        const dataText = p.data_limit_mb ? `${p.data_limit_mb} MB` : "Unlimited data";
-        return `
-          <article class="package-card">
-            <h4>${p.plan_name}</h4>
-            <p class="package-price">${currency} ${p.price}</p>
-            <p class="package-meta">${p.validity_value} ${p.validity_unit} | ${dataText}</p>
-            <button class="btn btn-sm" disabled title="Payment integration coming soon">Buy Soon</button>
-          </article>
-        `;
-      }).join("");
-    } catch (err) {
-      packageList.innerHTML = '<div class="response err">Failed to load packages.</div>';
-    }
-  }
 
-  async function verifyVoucher() {
-    const code = (voucherInput.value || "").trim();
-    if (!code) {
-      setResponse(false, "Enter voucher code first.");
-      return null;
-    }
-    const result = await callApi("hotspot_ms.api.portal.verify_voucher", { voucher_code: code });
-    if (!result.ok) {
-      setResponse(false, result.message || "Voucher invalid.");
-      return null;
-    }
-    const voucher = result.voucher || {};
-    const expiry = voucher.expires_on ? ` | Expires: ${voucher.expires_on}` : "";
-    setResponse(true, `Valid voucher for plan ${voucher.plan}${expiry}`);
-    return result;
-  }
-
-  btnVerify.addEventListener("click", async function () {
-    try {
-      await verifyVoucher();
-    } catch (e) {
-      setResponse(false, "Validation failed. Try again.");
-    }
-  });
-
-  btnConnect.addEventListener("click", async function () {
-    try {
-      const verified = await verifyVoucher();
-      if (!verified) return;
-      const code = (voucherInput.value || "").trim();
-      const activated = await callApi("hotspot_ms.api.portal.activate_voucher", { voucher_code: code });
-      if (!activated.ok) {
-        setResponse(false, activated.message || "Could not activate voucher.");
-        return;
+      async function callApi(method, params) {
+        const query = new URLSearchParams(params || {}).toString();
+        const url = `/api/method/${method}` + (query ? `?${query}` : "");
+        const res = await fetch(url, { credentials: "same-origin" });
+        const data = await res.json();
+        return data.message || {};
       }
-      const sid = encodeURIComponent(activated.session_id || "");
-      const vc = encodeURIComponent(code);
-      window.location.href = `/hotspot/status?session_id=${sid}&voucher_code=${vc}`;
-    } catch (e) {
-      setResponse(false, "Connection request failed.");
-    }
-  });
 
-  loadPackages();
-})();
-</script>
-{% endblock %}
+      async function loadPackages() {
+        try {
+          const result = await callApi("hotspot_ms.api.portal.get_packages");
+          const items = result.packages || [];
+          if (!items.length) {
+            packageList.innerHTML = "<p class='hint'>No packages available yet.</p>";
+            return;
+          }
+
+          packageList.innerHTML = items.map((p) => {
+            const currency = p.currency || "TZS";
+            const dataText = p.data_limit_mb ? `${p.data_limit_mb} MB` : "Unlimited data";
+            return `
+              <article class="pack">
+                <h3>${p.plan_name}</h3>
+                <p class="price">${currency} ${p.price}</p>
+                <p class="meta">${p.validity_value} ${p.validity_unit} | ${dataText}</p>
+                <div style="margin-top:.55rem;">
+                  <button class="btn btn-muted" disabled>Buy Soon</button>
+                </div>
+              </article>
+            `;
+          }).join("");
+        } catch (err) {
+          packageList.innerHTML = "<p class='message err'>Failed to load packages.</p>";
+        }
+      }
+
+      async function verifyVoucher() {
+        const code = (voucherInput.value || "").trim();
+        if (!code) {
+          setResponse(false, "Enter voucher code first.");
+          return null;
+        }
+
+        const result = await callApi("hotspot_ms.api.portal.verify_voucher", { voucher_code: code });
+        if (!result.ok) {
+          setResponse(false, result.message || "Voucher invalid.");
+          return null;
+        }
+
+        const voucher = result.voucher || {};
+        const expiry = voucher.expires_on ? ` | Expires: ${voucher.expires_on}` : "";
+        setResponse(true, `Valid voucher for ${voucher.plan}${expiry}`);
+        return result;
+      }
+
+      btnVerify.addEventListener("click", async function () {
+        try {
+          await verifyVoucher();
+        } catch (e) {
+          setResponse(false, "Validation failed. Try again.");
+        }
+      });
+
+      btnConnect.addEventListener("click", async function () {
+        try {
+          const verified = await verifyVoucher();
+          if (!verified) return;
+
+          const code = (voucherInput.value || "").trim();
+          const activated = await callApi("hotspot_ms.api.portal.activate_voucher", { voucher_code: code });
+          if (!activated.ok) {
+            setResponse(false, activated.message || "Could not activate voucher.");
+            return;
+          }
+
+          const sid = encodeURIComponent(activated.session_id || "");
+          const vc = encodeURIComponent(code);
+          window.location.href = `/hotspot/status?session_id=${sid}&voucher_code=${vc}`;
+        } catch (e) {
+          setResponse(false, "Connection request failed.");
+        }
+      });
+
+      loadPackages();
+    })();
+  </script>
+</body>
+</html>
