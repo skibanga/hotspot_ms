@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&display=swap" rel="stylesheet" />
   <script id="tailwind-config">
     tailwind.config = {
       darkMode: "class",
@@ -45,7 +44,7 @@
               <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 24px 24px;"></div>
               <div class="relative h-full flex items-center px-8 gap-6">
                 <div class="size-20 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 text-white">
-                  <span class="material-symbols-outlined text-4xl">signal_wifi_4_bar</span>
+                  <span class="text-xl font-black">LIVE</span>
                 </div>
                 <div class="flex flex-col">
                   <span id="status-pill" class="px-2 py-0.5 bg-green-500 text-white text-[10px] font-bold uppercase rounded-full w-fit mb-2 flex items-center gap-1">
@@ -76,14 +75,12 @@
                   <div class="flex flex-col">
                     <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Start Time</span>
                     <div class="flex items-center gap-2 text-slate-900 font-semibold">
-                      <span class="material-symbols-outlined text-slate-400 text-sm">schedule</span>
                       <span id="start-time">-</span>
                     </div>
                   </div>
                   <div class="flex flex-col">
                     <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Expiry Time</span>
                     <div class="flex items-center gap-2 text-amber-600 font-semibold">
-                      <span class="material-symbols-outlined text-sm">timer</span>
                       <span id="expiry-time">-</span>
                     </div>
                   </div>
@@ -94,7 +91,6 @@
                 <div class="flex flex-col gap-3">
                   <div class="flex justify-between items-end">
                     <div class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-primary">data_usage</span>
                       <p class="text-slate-900 text-base font-semibold leading-normal">Usage (MB)</p>
                     </div>
                     <p class="text-slate-900 text-sm font-bold leading-normal"><span id="usage-text">0MB</span></p>
@@ -111,7 +107,6 @@
                 <div class="flex flex-col gap-3">
                   <div class="flex justify-between items-end">
                     <div class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-primary">cloud_download</span>
                       <p class="text-slate-900 text-base font-semibold leading-normal">Remaining (MB)</p>
                     </div>
                     <p class="text-slate-900 text-sm font-bold leading-normal"><span id="remaining-text">Unlimited</span></p>
@@ -129,11 +124,9 @@
 
               <div class="flex flex-col md:flex-row gap-4 mt-12 pt-8 border-t border-slate-100">
                 <button id="btn-refresh" class="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg border-2 border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-colors focus:ring-4 focus:ring-slate-100" type="button">
-                  <span class="material-symbols-outlined">refresh</span>
                   Refresh Status
                 </button>
                 <button id="btn-disconnect" class="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-red-600 text-white font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-500/30 focus:ring-4 focus:ring-red-100" type="button">
-                  <span class="material-symbols-outlined">logout</span>
                   Disconnect
                 </button>
               </div>
