@@ -1,0 +1,160 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:payment_ref",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "payment_ref",
+  "status",
+  "column_break_1",
+  "amount",
+  "currency",
+  "section_break_1",
+  "customer",
+  "voucher",
+  "provider",
+  "section_break_2",
+  "requested_on",
+  "completed_on",
+  "external_id",
+  "section_break_3",
+  "provider_response_code",
+  "provider_response_message",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "payment_ref",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Payment Ref",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "Pending",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Pending\nSuccessful\nFailed\nCancelled",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount",
+   "reqd": 1
+  },
+  {
+   "default": "TZS",
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "section_break_1",
+   "fieldtype": "Section Break",
+   "label": "References"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Customer",
+   "options": "Hotspot Customer"
+  },
+  {
+   "fieldname": "voucher",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Voucher",
+   "options": "Hotspot Voucher"
+  },
+  {
+   "default": "M-Pesa",
+   "fieldname": "provider",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Provider",
+   "options": "M-Pesa\nAirtel Money\nTigo Pesa\nHaloPesa\nBank\nCash"
+  },
+  {
+   "fieldname": "section_break_2",
+   "fieldtype": "Section Break",
+   "label": "Timeline"
+  },
+  {
+   "default": "Now",
+   "fieldname": "requested_on",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Requested On"
+  },
+  {
+   "fieldname": "completed_on",
+   "fieldtype": "Datetime",
+   "label": "Completed On"
+  },
+  {
+   "fieldname": "external_id",
+   "fieldtype": "Data",
+   "label": "External ID"
+  },
+  {
+   "fieldname": "section_break_3",
+   "fieldtype": "Section Break",
+   "label": "Provider Response"
+  },
+  {
+   "fieldname": "provider_response_code",
+   "fieldtype": "Data",
+   "label": "Response Code"
+  },
+  {
+   "fieldname": "provider_response_message",
+   "fieldtype": "Small Text",
+   "label": "Response Message"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "module": "Hotspot MS",
+ "name": "Payment Transaction",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "quick_entry": 1,
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "payment_ref",
+ "track_changes": 1
+}

@@ -1,0 +1,134 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:profile_name",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "profile_name",
+  "enabled",
+  "column_break_1",
+  "plan",
+  "auth_type",
+  "section_break_1",
+  "simultaneous_use",
+  "idle_timeout",
+  "session_timeout",
+  "section_break_2",
+  "rate_limit_down_kbps",
+  "rate_limit_up_kbps",
+  "section_break_3",
+  "attributes"
+ ],
+ "fields": [
+  {
+   "fieldname": "profile_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Profile Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "plan",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Plan",
+   "options": "Hotspot Plan"
+  },
+  {
+   "default": "PAP",
+   "fieldname": "auth_type",
+   "fieldtype": "Select",
+   "label": "Auth Type",
+   "options": "PAP\nCHAP\nMS-CHAP",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_1",
+   "fieldtype": "Section Break",
+   "label": "Session Policy"
+  },
+  {
+   "default": "1",
+   "fieldname": "simultaneous_use",
+   "fieldtype": "Int",
+   "label": "Simultaneous Use"
+  },
+  {
+   "fieldname": "idle_timeout",
+   "fieldtype": "Int",
+   "label": "Idle Timeout (Seconds)"
+  },
+  {
+   "fieldname": "session_timeout",
+   "fieldtype": "Int",
+   "label": "Session Timeout (Seconds)"
+  },
+  {
+   "fieldname": "section_break_2",
+   "fieldtype": "Section Break",
+   "label": "Rate Limit"
+  },
+  {
+   "fieldname": "rate_limit_down_kbps",
+   "fieldtype": "Int",
+   "label": "Download (Kbps)"
+  },
+  {
+   "fieldname": "rate_limit_up_kbps",
+   "fieldtype": "Int",
+   "label": "Upload (Kbps)"
+  },
+  {
+   "fieldname": "section_break_3",
+   "fieldtype": "Section Break",
+   "label": "Custom Attributes"
+  },
+  {
+   "fieldname": "attributes",
+   "fieldtype": "Table",
+   "label": "Attributes",
+   "options": "Radius Attribute"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "module": "Hotspot MS",
+ "name": "Radius Profile",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "quick_entry": 1,
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "profile_name",
+ "track_changes": 1
+}
