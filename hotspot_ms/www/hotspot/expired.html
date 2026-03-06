@@ -39,23 +39,7 @@
   </style>
 </head>
 <body class="bg-background-light font-display min-h-screen flex flex-col">
-  <header class="w-full bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between items-center h-16">
-        <div class="flex items-center gap-2">
-          <div class="bg-primary rounded-lg p-1.5 flex items-center justify-center">
-            <span class="material-symbols-outlined text-white text-xl">wifi_tethering</span>
-          </div>
-          <span class="text-xl font-bold text-slate-900 tracking-tight">TZ Hotspot</span>
-        </div>
-        <nav class="hidden md:flex items-center gap-8">
-          <a class="text-sm font-medium text-slate-600 hover:text-primary transition-colors" href="#">Support</a>
-          <a class="text-sm font-medium text-slate-600 hover:text-primary transition-colors" href="/hotspot/login">Pricing Plans</a>
-          <a class="bg-primary text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-primary/90 transition-all shadow-md shadow-primary/20" href="/hotspot/login">Help Center</a>
-        </nav>
-      </div>
-    </div>
-  </header>
+  {% include "hotspot_ms/www/hotspot/components/nav.html" %}
 
   <main class="flex-grow flex items-center justify-center p-4 bg-mesh relative overflow-hidden">
     <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
@@ -119,18 +103,6 @@
     </div>
   </main>
 
-  <footer class="bg-white py-8 px-4 border-t border-slate-200">
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-      <div class="flex items-center gap-2 opacity-60">
-        <span class="material-symbols-outlined text-sm">copyright</span>
-        <span class="text-sm text-slate-600">2026 TZ Hotspot ISP. All rights reserved.</span>
-      </div>
-      <div class="flex gap-6">
-        <a class="text-sm text-slate-500 hover:text-primary transition-colors" href="#">Privacy Policy</a>
-        <a class="text-sm text-slate-500 hover:text-primary transition-colors" href="#">Terms of Use</a>
-        <a class="text-sm text-slate-500 hover:text-primary transition-colors" href="#">Refund Policy</a>
-      </div>
-    </div>
-  </footer>
+  {% include "hotspot_ms/www/hotspot/components/footer.html" %}
 </body>
 </html>
