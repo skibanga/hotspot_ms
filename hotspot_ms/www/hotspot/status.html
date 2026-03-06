@@ -1,0 +1,103 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div class="status-wrap">
+  <section class="panel">
+    <h2>Connection Status</h2>
+    <p class="muted">Your voucher session details are shown below.</p>
+    <div id="status-output" class="status-grid"></div>
+    <div id="status-message" class="response"></div>
+    <div class="btn-row">
+      <button id="btn-refresh" class="btn btn-default">Refresh</button>
+      <button id="btn-logout" class="btn btn-danger">Disconnect</button>
+    </div>
+  </section>
+</div>
+
+<style>
+.status-wrap { max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+.panel { border: 1px solid #e2e2e2; border-radius: 8px; padding: 1rem; background: #fff; }
+.muted { color: #666; }
+.status-grid { margin-top: .75rem; display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.item { border: 1px solid #ececec; border-radius: 6px; padding: .6rem; background: #fafafa; }
+.item b { display: block; margin-bottom: .2rem; font-size: .85rem; color: #555; }
+.response { min-height: 1.4rem; margin-top: .75rem; }
+.response.ok { color: #1e8e3e; }
+.response.err { color: #c62828; }
+.btn-row { margin-top: .75rem; display: flex; gap: .5rem; }
+@media (max-width: 760px) { .status-grid { grid-template-columns: 1fr; } }
+</style>
+
+<script>
+(function () {
+  const statusOutput = document.getElementById("status-output");
+  const statusMessage = document.getElementById("status-message");
+  const btnRefresh = document.getElementById("btn-refresh");
+  const btnLogout = document.getElementById("btn-logout");
+
+  const query = new URLSearchParams(window.location.search);
+  const sessionId = query.get("session_id") || "";
+  const voucherCode = query.get("voucher_code") || "";
+
+  function setMessage(ok, text) {
+    statusMessage.className = "response " + (ok ? "ok" : "err");
+    statusMessage.textContent = text || "";
+  }
+
+  async function callApi(method, params) {
+    const query = new URLSearchParams(params || {}).toString();
+    const url = `/api/method/${method}` + (query ? `?${query}` : "");
+    const res = await fetch(url, { credentials: "same-origin" });
+    const data = await res.json();
+    return data.message || {};
+  }
+
+  function draw(result) {
+    const s = result.session || {};
+    const v = result.voucher || {};
+    statusOutput.innerHTML = `
+      <div class="item"><b>Session ID</b>${s.session_id || "-"}</div>
+      <div class="item"><b>Status</b>${s.status || "-"}</div>
+      <div class="item"><b>Voucher</b>${v.code || "-"}</div>
+      <div class="item"><b>Plan Status</b>${v.status || "-"}</div>
+      <div class="item"><b>Start Time</b>${s.start_time || "-"}</div>
+      <div class="item"><b>Expires On</b>${v.expires_on || "-"}</div>
+      <div class="item"><b>Usage (MB)</b>${s.total_mb ?? 0}</div>
+      <div class="item"><b>Remaining (MB)</b>${v.remaining_mb ?? "Unlimited"}</div>
+    `;
+  }
+
+  async function refreshStatus() {
+    const params = sessionId ? { session_id: sessionId } : { voucher_code: voucherCode };
+    const result = await callApi("hotspot_ms.api.portal.session_status", params);
+    if (!result.ok) {
+      setMessage(false, result.message || "No active session.");
+      if ((result.code || "") === "NO_ACTIVE_SESSION") {
+        window.location.href = "/hotspot/expired";
+      }
+      return;
+    }
+    draw(result);
+    setMessage(true, "Session is active.");
+  }
+
+  btnRefresh.addEventListener("click", refreshStatus);
+
+  btnLogout.addEventListener("click", async function () {
+    if (!sessionId) {
+      setMessage(false, "Missing session_id in URL.");
+      return;
+    }
+    const result = await callApi("hotspot_ms.api.portal.logout_session", { session_id: sessionId });
+    if (!result.ok) {
+      setMessage(false, result.message || "Failed to disconnect.");
+      return;
+    }
+    setMessage(true, "Disconnected.");
+    window.location.href = "/hotspot/expired";
+  });
+
+  refreshStatus();
+})();
+</script>
+{% endblock %}
