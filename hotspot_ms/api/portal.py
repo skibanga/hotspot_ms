@@ -56,6 +56,7 @@ def get_packages() -> dict[str, Any]:
 	plans = frappe.get_all(
 		"Hotspot Plan",
 		filters={"enabled": 1},
+		ignore_permissions=True,
 		fields=[
 			"name",
 			"plan_name",
@@ -145,6 +146,7 @@ def activate_voucher(
 	existing_open_session = frappe.get_all(
 		"Hotspot Session",
 		filters={"voucher": voucher.name, "session_status": "Open"},
+		ignore_permissions=True,
 		fields=["name", "session_id"],
 		order_by="start_time desc",
 		limit=1,
@@ -219,6 +221,7 @@ def session_status(voucher_code: str | None = None, session_id: str | None = Non
 	session = frappe.get_all(
 		"Hotspot Session",
 		filters=filters,
+		ignore_permissions=True,
 		fields=[
 			"name",
 			"session_id",
@@ -292,3 +295,57 @@ def logout_session(session_id: str) -> dict[str, Any]:
 
 	frappe.db.commit()
 	return _success("Session closed", session_id=session.session_id)
+
+
+@frappe.whitelist()
+def seed_dummy_packages() -> dict[str, Any]:
+	"""Create or update starter packages for quick portal testing."""
+	seed = [
+		{
+			"plan_name": "TSh 500 - 6 Hours",
+			"price": 500,
+			"currency": "TZS",
+			"validity_value": 6,
+			"validity_unit": "Hours",
+			"description": "Demo package for 6-hour access.",
+		},
+		{
+			"plan_name": "TSh 1000 - 24 Hours",
+			"price": 1000,
+			"currency": "TZS",
+			"validity_value": 24,
+			"validity_unit": "Hours",
+			"description": "Demo package for 24-hour access.",
+		},
+		{
+			"plan_name": "TSh 5000 - 7 Days",
+			"price": 5000,
+			"currency": "TZS",
+			"validity_value": 7,
+			"validity_unit": "Days",
+			"description": "Demo package for 7-day access.",
+		},
+	]
+
+	created = 0
+	updated = 0
+	for row in seed:
+		existing = frappe.db.get_value("Hotspot Plan", {"plan_name": row["plan_name"]}, "name")
+		if existing:
+			doc = frappe.get_doc("Hotspot Plan", existing)
+			updated += 1
+		else:
+			doc = frappe.new_doc("Hotspot Plan")
+			created += 1
+
+		doc.plan_name = row["plan_name"]
+		doc.enabled = 1
+		doc.price = row["price"]
+		doc.currency = row["currency"]
+		doc.validity_value = row["validity_value"]
+		doc.validity_unit = row["validity_unit"]
+		doc.description = row["description"]
+		doc.save(ignore_permissions=True)
+
+	frappe.db.commit()
+	return _success("Dummy packages seeded", created=created, updated=updated, total=len(seed))
