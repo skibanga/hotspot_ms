@@ -1,0 +1,13 @@
+{
+  "name": "hotspot_ms_frontend",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Tailwind build pipeline for hotspot portal web pages",
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.js -i ./hotspot_ms/public/tailwind/hotspot_portal.css -o ./hotspot_ms/public/css/hotspot_portal.css --minify",
+    "watch:css": "tailwindcss -c tailwind.config.js -i ./hotspot_ms/public/tailwind/hotspot_portal.css -o ./hotspot_ms/public/css/hotspot_portal.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}

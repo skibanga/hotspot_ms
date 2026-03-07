@@ -4,38 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Session Expired | TZ Hotspot</title>
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <script id="tailwind-config">
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          colors: {
-            primary: "#135bec",
-            "background-light": "#f6f6f8",
-            "background-dark": "#101622",
-          },
-          fontFamily: {
-            display: ["Inter"],
-          },
-          borderRadius: { DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px" },
-        },
-      },
-    };
-  </script>
-  <style>
-    body {
-      font-family: "Inter", sans-serif;
-    }
-    .bg-mesh {
-      background-color: #135bec;
-      background-image:
-        radial-gradient(at 0% 0%, hsla(220, 100%, 45%, 1) 0, transparent 50%),
-        radial-gradient(at 50% 0%, hsla(220, 100%, 55%, 1) 0, transparent 50%),
-        radial-gradient(at 100% 0%, hsla(220, 100%, 45%, 1) 0, transparent 50%);
-    }
-  </style>
+  <link rel="stylesheet" href="/assets/hotspot_ms/css/hotspot_portal.css" />
 </head>
 <body class="bg-background-light font-display min-h-screen flex flex-col">
   {% include "hotspot_ms/www/hotspot/components/nav.html" %}

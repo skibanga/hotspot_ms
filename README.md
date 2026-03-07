@@ -28,6 +28,29 @@ Pre-commit is configured to use the following tools for checking and formatting 
 - prettier
 - pyupgrade
 
+### Hotspot Portal CSS (Tailwind)
+
+Hotspot portal pages under `hotspot_ms/www/hotspot/` now use a locally compiled Tailwind build:
+
+- Source: `hotspot_ms/public/tailwind/hotspot_portal.css`
+- Output: `hotspot_ms/public/css/hotspot_portal.css`
+- Tailwind config: `tailwind.config.js`
+
+Build once:
+
+```bash
+cd apps/hotspot_ms
+npm install
+npm run build:css
+```
+
+Watch during UI edits:
+
+```bash
+cd apps/hotspot_ms
+npm run watch:css
+```
+
 ### License
 
 mit
