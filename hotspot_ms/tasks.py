@@ -3,6 +3,8 @@ from __future__ import annotations
 import frappe
 from frappe.utils import flt, get_datetime, now_datetime
 
+DEAUTH_PENDING_PREFIX = "DEAUTH_PENDING|"
+
 
 def _to_mb(octets: float) -> float:
 	return round((flt(octets) / 1024 / 1024), 2)
@@ -43,7 +45,11 @@ def close_expired_or_used_sessions() -> dict[str, int]:
 		session.session_status = "Expired" if is_expired else "Closed"
 		session.stop_time = now
 		session.total_mb = session_total_mb
-		session.terminate_cause = "Session Expired" if is_expired else "Data Limit Reached"
+		base_cause = "Session Expired" if is_expired else "Data Limit Reached"
+		if session.ip_address or session.mac_address:
+			session.terminate_cause = f"{DEAUTH_PENDING_PREFIX}{base_cause}"
+		else:
+			session.terminate_cause = base_cause
 		session.save(ignore_permissions=True)
 		closed += 1
 

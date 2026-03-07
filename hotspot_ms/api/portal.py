@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import secrets
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from typing import Any
@@ -8,6 +9,8 @@ import frappe
 from frappe.utils import add_to_date, cint, flt, get_datetime, now_datetime
 
 from hotspot_ms.defaults import ensure_default_hotspot_plans
+
+DEAUTH_PENDING_PREFIX = "DEAUTH_PENDING|"
 
 
 def _error(message: str, code: str = "ERROR") -> dict[str, Any]:
@@ -127,6 +130,27 @@ def _resolve_nas_device(nas_identifier: str | None) -> str | None:
 			return name
 
 	return None
+
+
+def _validate_nas_access(nas_identifier: str | None, secret: str | None):
+	nas_name = _resolve_nas_device(nas_identifier)
+	if not nas_name:
+		return None, _error("Unknown NAS device", "INVALID_NAS")
+
+	nas_doc = frappe.get_doc("Nas Device", nas_name)
+	expected_secret = (nas_doc.get_password("shared_secret") or "").strip()
+	provided_secret = (secret or "").strip()
+
+	if not expected_secret or not provided_secret:
+		return None, _error("Missing NAS shared secret", "MISSING_NAS_SECRET")
+
+	if not hmac.compare_digest(expected_secret, provided_secret):
+		return None, _error("Invalid NAS shared secret", "INVALID_NAS_SECRET")
+
+	if not cint(nas_doc.enabled):
+		return None, _error("NAS device is disabled", "NAS_DISABLED")
+
+	return nas_doc, None
 
 
 def _build_status_url(session_id: str, voucher_code: str, upstream_redir: str | None = None) -> str:
@@ -442,6 +466,99 @@ def logout_session(session_id: str) -> dict[str, Any]:
 
 	frappe.db.commit()
 	return _success("Session closed", session_id=session.session_id)
+
+
+@frappe.whitelist(allow_guest=True)
+def pull_disconnect_actions(nas_identifier: str, secret: str, limit: int = 20) -> dict[str, Any]:
+	"""
+	Pull pending disconnect actions (deauth queue) for router-side agent.
+	Use with a NAS shared secret to avoid exposing control commands publicly.
+	"""
+	nas_doc, error = _validate_nas_access(nas_identifier, secret)
+	if error:
+		return error
+
+	limit = max(1, min(cint(limit) or 20, 100))
+	rows = frappe.get_all(
+		"Hotspot Session",
+		filters={"terminate_cause": ("like", f"{DEAUTH_PENDING_PREFIX}%")},
+		fields=[
+			"name",
+			"session_id",
+			"session_status",
+			"terminate_cause",
+			"ip_address",
+			"mac_address",
+			"nas_device",
+			"stop_time",
+		],
+		order_by="modified asc",
+		limit=limit,
+		ignore_permissions=True,
+	)
+
+	actions = []
+	for row in rows:
+		# If session is bound to a specific NAS, return only matching actions.
+		if row.get("nas_device") and row.get("nas_device") != nas_doc.name:
+			continue
+
+		reason = (row.get("terminate_cause") or "").replace(DEAUTH_PENDING_PREFIX, "", 1)
+		actions.append(
+			{
+				"action_id": row.get("session_id"),
+				"session_id": row.get("session_id"),
+				"ip_address": row.get("ip_address"),
+				"mac_address": row.get("mac_address"),
+				"reason": reason or "Session ended",
+				"stop_time": row.get("stop_time"),
+			}
+		)
+
+	return _success("Disconnect actions fetched", actions=actions, count=len(actions))
+
+
+@frappe.whitelist(allow_guest=True)
+def acknowledge_disconnect_action(
+	session_id: str,
+	nas_identifier: str,
+	secret: str,
+	result: str | None = "ok",
+	note: str | None = None,
+) -> dict[str, Any]:
+	"""
+	Acknowledge that router processed a disconnect action.
+	Removes DEAUTH_PENDING marker so the action is not sent again.
+	"""
+	nas_doc, error = _validate_nas_access(nas_identifier, secret)
+	if error:
+		return error
+
+	session_id = (session_id or "").strip()
+	if not session_id:
+		return _error("session_id is required", "MISSING_SESSION")
+
+	session_name = frappe.db.get_value("Hotspot Session", {"session_id": session_id}, "name")
+	if not session_name:
+		return _success("Session already removed", session_id=session_id)
+
+	session = frappe.get_doc("Hotspot Session", session_name)
+	if session.nas_device and session.nas_device != nas_doc.name:
+		return _error("Session belongs to another NAS device", "NAS_MISMATCH")
+
+	terminate_cause = (session.terminate_cause or "").strip()
+	if terminate_cause.startswith(DEAUTH_PENDING_PREFIX):
+		base = terminate_cause[len(DEAUTH_PENDING_PREFIX) :].strip() or "Session ended"
+		status = (result or "ok").strip().lower()
+		suffix = "router deauth ok" if status == "ok" else f"router deauth {status}"
+		if note:
+			suffix = f"{suffix}: {note.strip()}"
+		session.terminate_cause = f"{base} ({suffix})"
+		session.save(ignore_permissions=True)
+		frappe.db.commit()
+		return _success("Disconnect action acknowledged", session_id=session_id)
+
+	return _success("No pending disconnect action", session_id=session_id)
 
 
 @frappe.whitelist()
