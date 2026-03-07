@@ -117,6 +117,17 @@
       const feedback = document.getElementById("voucher-feedback");
       const feedbackText = document.getElementById("feedback-text");
       const feedbackIcon = document.getElementById("feedback-icon");
+      const qs = new URLSearchParams(window.location.search || "");
+      const captive = {
+        tok: (qs.get("tok") || "").trim(),
+        redir: (qs.get("redir") || "").trim(),
+        clientip: (qs.get("clientip") || "").trim(),
+        clientmac: (qs.get("clientmac") || "").trim(),
+        authaction: (qs.get("authaction") || "").trim(),
+        fas: (qs.get("fas") || "").trim(),
+        gatewayname: (qs.get("gatewayname") || "").trim(),
+        hid: (qs.get("hid") || "").trim(),
+      };
 
       function showFeedback(type, text) {
         feedback.classList.remove("hidden", "bg-red-50", "border-red-200", "text-red-600", "bg-green-50", "border-green-200", "text-green-600");
@@ -130,8 +141,19 @@
         feedbackText.textContent = text || "";
       }
 
+      function cleanParams(input) {
+        const out = {};
+        for (const [key, value] of Object.entries(input || {})) {
+          if (value === null || value === undefined) continue;
+          const text = String(value).trim();
+          if (!text) continue;
+          out[key] = text;
+        }
+        return out;
+      }
+
       async function callApi(method, params) {
-        const query = new URLSearchParams(params || {}).toString();
+        const query = new URLSearchParams(cleanParams(params)).toString();
         const url = `/api/method/${method}` + (query ? `?${query}` : "");
         const res = await fetch(url, { credentials: "same-origin" });
         const data = await res.json();
@@ -210,15 +232,32 @@
           if (!verified) return;
 
           const code = (voucherInput.value || "").trim();
-          const activated = await callApi("hotspot_ms.api.portal.activate_voucher", { voucher_code: code });
+          const activated = await callApi("hotspot_ms.api.portal.activate_voucher", {
+            voucher_code: code,
+            mac_address: captive.clientmac,
+            ip_address: captive.clientip,
+            nas_device: captive.gatewayname || captive.hid,
+          });
           if (!activated.ok) {
             showFeedback("err", activated.message || "Could not activate voucher.");
             return;
           }
 
-          const sid = encodeURIComponent(activated.session_id || "");
-          const vc = encodeURIComponent(code);
-          window.location.href = `/hotspot/status?session_id=${sid}&voucher_code=${vc}`;
+          const redirectResult = await callApi("hotspot_ms.api.portal.build_opennds_redirect", {
+            session_id: activated.session_id,
+            voucher_code: code,
+            tok: captive.tok,
+            redir: captive.redir,
+            authaction: captive.authaction,
+            fas: captive.fas,
+          });
+
+          if (!redirectResult.ok || !redirectResult.redirect_url) {
+            showFeedback("err", redirectResult.message || "Could not complete captive login redirect.");
+            return;
+          }
+
+          window.location.href = redirectResult.redirect_url;
         } catch (err) {
           showFeedback("err", "Connection request failed.");
         }

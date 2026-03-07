@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import secrets
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from typing import Any
 
 import frappe
@@ -49,6 +50,39 @@ def _expiry_check(voucher, plan_doc):
 
 def _to_mb(octets: float) -> float:
 	return round((flt(octets) / 1024 / 1024), 2)
+
+
+def _resolve_nas_device(nas_identifier: str | None) -> str | None:
+	if not nas_identifier:
+		return None
+
+	value = (nas_identifier or "").strip()
+	if not value:
+		return None
+
+	if frappe.db.exists("Nas Device", value):
+		return value
+
+	for field in ("device_name", "short_name", "ip_address"):
+		name = frappe.db.get_value("Nas Device", {field: value}, "name")
+		if name:
+			return name
+
+	return None
+
+
+def _build_status_url(session_id: str, voucher_code: str, upstream_redir: str | None = None) -> str:
+	params = {"session_id": session_id, "voucher_code": voucher_code}
+	if upstream_redir:
+		params["upstream_redir"] = upstream_redir
+	return frappe.utils.get_url(f"/hotspot/status?{urlencode(params)}")
+
+
+def _append_query(base_url: str, query: dict[str, str]) -> str:
+	parsed = urlsplit(base_url)
+	existing_query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+	existing_query.update({k: v for k, v in query.items() if v is not None and str(v).strip() != ""})
+	return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, urlencode(existing_query), parsed.fragment))
 
 
 @frappe.whitelist(allow_guest=True)
@@ -171,8 +205,9 @@ def activate_voucher(
 		voucher.device_mac = mac_address
 	if ip_address:
 		voucher.ip_address = ip_address
-	if nas_device:
-		voucher.last_nas = nas_device
+	resolved_nas = _resolve_nas_device(nas_device)
+	if resolved_nas:
+		voucher.last_nas = resolved_nas
 	if customer:
 		voucher.customer = customer
 
@@ -183,7 +218,7 @@ def activate_voucher(
 	session.session_status = "Open"
 	session.voucher = voucher.name
 	session.customer = voucher.customer
-	session.nas_device = nas_device
+	session.nas_device = resolved_nas
 	session.mac_address = voucher.device_mac
 	session.ip_address = voucher.ip_address
 	session.start_time = now
@@ -203,6 +238,41 @@ def activate_voucher(
 			"data_used_mb": voucher.data_used_mb,
 		},
 	)
+
+
+@frappe.whitelist(allow_guest=True)
+def build_opennds_redirect(
+	session_id: str,
+	voucher_code: str,
+	tok: str | None = None,
+	redir: str | None = None,
+	authaction: str | None = None,
+	fas: str | None = None,
+) -> dict[str, Any]:
+	"""
+	Build a browser redirect URL for openNDS FAS flow.
+	- If authaction/fas + tok are present: return gateway auth URL with tok + redir.
+	- Else: fallback directly to hotspot status page.
+	"""
+	session_id = (session_id or "").strip()
+	voucher_code = (voucher_code or "").strip()
+	tok = (tok or "").strip()
+	authaction = (authaction or "").strip()
+	fas = (fas or "").strip()
+
+	if not session_id:
+		return _error("session_id is required", "MISSING_SESSION")
+	if not voucher_code:
+		return _error("voucher_code is required", "MISSING_VOUCHER")
+
+	status_url = _build_status_url(session_id, voucher_code, upstream_redir=redir)
+
+	auth_base = authaction or fas
+	if auth_base and tok:
+		redirect_url = _append_query(auth_base, {"tok": tok, "redir": status_url})
+		return _success("Redirect URL prepared", redirect_url=redirect_url, status_url=status_url, mode="fas")
+
+	return _success("Status URL prepared", redirect_url=status_url, status_url=status_url, mode="direct")
 
 
 @frappe.whitelist(allow_guest=True)
