@@ -107,6 +107,9 @@ app_license = "mit"
 # before_app_uninstall = "hotspot_ms.utils.before_app_uninstall"
 # after_app_uninstall = "hotspot_ms.utils.after_app_uninstall"
 
+# Run idempotent data seeding after each migrate
+after_migrate = ["hotspot_ms.defaults.after_migrate"]
+
 # Desk Notifications
 # ------------------
 # See frappe.core.notifications.get_notification_config
@@ -246,4 +249,3 @@ app_license = "mit"
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
-
