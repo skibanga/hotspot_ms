@@ -4,32 +4,24 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tanzania Hotspot Login</title>
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
-  <script id="tailwind-config">
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          colors: {
-            primary: "#135bec",
-            "background-light": "#f6f6f8",
-            "background-dark": "#101622",
-          },
-          fontFamily: {
-            display: ["Inter", "sans-serif"],
-          },
-          borderRadius: { DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px" },
-        },
-      },
-    };
-  </script>
   <style>
     body {
       font-family: "Inter", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f6f6f8;
     }
     .gradient-bg {
       background: linear-gradient(135deg, #135bec 0%, #7c3aed 100%);
+    }
+    .captive-hint {
+      background: #fff7d6;
+      border: 1px solid #f1da9b;
+      color: #7a5a00;
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-top: 8px;
+      font-size: 13px;
     }
   </style>
 </head>
@@ -52,6 +44,7 @@
           <div class="mb-8 text-center">
             <h2 class="text-slate-900 text-3xl font-black mb-3">Welcome Back</h2>
             <p class="text-slate-500">Enter your voucher code to start your session.</p>
+            <div id="captive-info" class="captive-hint" style="display:none;"></div>
           </div>
 
           <form id="voucher-form" class="space-y-6">
@@ -117,17 +110,35 @@
       const feedback = document.getElementById("voucher-feedback");
       const feedbackText = document.getElementById("feedback-text");
       const feedbackIcon = document.getElementById("feedback-icon");
+      const captiveInfo = document.getElementById("captive-info");
       const qs = new URLSearchParams(window.location.search || "");
+
+      function parseEmbeddedParam(urlValue, key) {
+        if (!urlValue) return "";
+        try {
+          const nested = new URL(urlValue);
+          return (nested.searchParams.get(key) || "").trim();
+        } catch (e) {
+          return "";
+        }
+      }
+
+      const authactionRaw = (qs.get("authaction") || "").trim();
       const captive = {
         tok: (qs.get("tok") || "").trim(),
         redir: (qs.get("redir") || "").trim(),
-        clientip: (qs.get("clientip") || "").trim(),
-        clientmac: (qs.get("clientmac") || "").trim(),
-        authaction: (qs.get("authaction") || "").trim(),
+        clientip: (qs.get("clientip") || parseEmbeddedParam(authactionRaw, "clientip") || "").trim(),
+        clientmac: (qs.get("clientmac") || parseEmbeddedParam(authactionRaw, "clientmac") || "").trim(),
+        authaction: authactionRaw,
         fas: (qs.get("fas") || "").trim(),
         gatewayname: (qs.get("gatewayname") || "").trim(),
         hid: (qs.get("hid") || "").trim(),
       };
+
+      if (captive.tok || captive.authaction) {
+        captiveInfo.style.display = "block";
+        captiveInfo.textContent = `Captive session detected${captive.clientip ? ` (IP: ${captive.clientip})` : ""}.`;
+      }
 
       function showFeedback(type, text) {
         feedback.classList.remove("hidden", "bg-red-50", "border-red-200", "text-red-600", "bg-green-50", "border-green-200", "text-green-600");
