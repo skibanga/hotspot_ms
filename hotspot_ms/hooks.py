@@ -169,6 +169,15 @@ after_migrate = ["hotspot_ms.defaults.after_migrate"]
 # 	],
 # }
 
+# Keep hotspot sessions and vouchers in sync with expiry/data consumption.
+scheduler_events = {
+	"cron": {
+		"*/1 * * * *": [
+			"hotspot_ms.tasks.close_expired_or_used_sessions",
+		]
+	}
+}
+
 # Testing
 # -------
 

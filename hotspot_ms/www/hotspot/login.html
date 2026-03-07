@@ -200,7 +200,11 @@
           showFeedback("err", "Enter voucher code first.");
           return null;
         }
-        const result = await callApi("hotspot_ms.api.portal.verify_voucher", { voucher_code: code });
+        const result = await callApi("hotspot_ms.api.portal.verify_voucher", {
+          voucher_code: code,
+          mac_address: captive.clientmac,
+          ip_address: captive.clientip,
+        });
         if (!result.ok) {
           showFeedback("err", result.message || "Invalid or expired voucher code. Please try again.");
           return null;

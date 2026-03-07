@@ -41,13 +41,69 @@ def _compute_expiry(activated_on, plan_doc):
 	return add_to_date(activated_on, days=validity_value)
 
 
-def _expiry_check(voucher, plan_doc):
-	if not voucher.expires_on:
-		return
-	if get_datetime(voucher.expires_on) < now_datetime() and voucher.status != "Expired":
+def _normalize_mac(mac_address: str | None) -> str:
+	value = (mac_address or "").strip().lower()
+	if not value:
+		return ""
+
+	compact = "".join(ch for ch in value if ch.isalnum())
+	if len(compact) == 12 and all(ch in "0123456789abcdef" for ch in compact):
+		return ":".join(compact[i : i + 2] for i in range(0, 12, 2))
+
+	return value
+
+
+def _normalize_ip(ip_address: str | None) -> str:
+	return (ip_address or "").strip()
+
+
+def _is_data_exhausted(voucher) -> bool:
+	limit = flt(voucher.data_limit_mb)
+	if limit <= 0:
+		return False
+	return flt(voucher.data_used_mb) >= limit
+
+
+def _sync_voucher_status(voucher) -> bool:
+	"""Keep voucher status in sync with expiry and data limits."""
+	now = now_datetime()
+	changed = False
+
+	if voucher.expires_on and get_datetime(voucher.expires_on) <= now and voucher.status != "Expired":
 		voucher.status = "Expired"
+		changed = True
+	elif _is_data_exhausted(voucher) and voucher.status not in {"Used", "Expired", "Blocked"}:
+		voucher.status = "Used"
+		changed = True
+
+	if changed:
 		voucher.save(ignore_permissions=True)
-		frappe.db.commit()
+
+	return changed
+
+
+def _validate_device_reuse(voucher, mac_address: str | None = None, ip_address: str | None = None) -> dict[str, Any] | None:
+	"""
+	Strict one-device policy:
+	- Prefer MAC lock when available.
+	- Fall back to IP lock if MAC is unavailable in the captive payload.
+	"""
+	bound_mac = _normalize_mac(voucher.device_mac)
+	incoming_mac = _normalize_mac(mac_address)
+	bound_ip = _normalize_ip(voucher.ip_address)
+	incoming_ip = _normalize_ip(ip_address)
+
+	if bound_mac:
+		if incoming_mac and incoming_mac != bound_mac:
+			return _error("Voucher is locked to another device", "DEVICE_MISMATCH")
+		if not incoming_mac:
+			return _error("Client MAC is required for this voucher", "MISSING_CLIENT_MAC")
+		return None
+
+	if bound_ip and incoming_ip and incoming_ip != bound_ip and voucher.status in {"Active", "Used", "Expired"}:
+		return _error("Voucher is already bound to another client", "DEVICE_MISMATCH")
+
+	return None
 
 
 def _to_mb(octets: float) -> float:
@@ -111,7 +167,11 @@ def get_packages() -> dict[str, Any]:
 
 
 @frappe.whitelist(allow_guest=True)
-def verify_voucher(voucher_code: str) -> dict[str, Any]:
+def verify_voucher(
+	voucher_code: str,
+	mac_address: str | None = None,
+	ip_address: str | None = None,
+) -> dict[str, Any]:
 	voucher_code = (voucher_code or "").strip()
 	if not voucher_code:
 		return _error("Voucher code is required", "MISSING_VOUCHER")
@@ -121,7 +181,12 @@ def verify_voucher(voucher_code: str) -> dict[str, Any]:
 		return _error("Voucher not found", "INVALID_VOUCHER")
 
 	plan_doc = _get_plan(voucher.plan)
-	_expiry_check(voucher, plan_doc)
+	if _sync_voucher_status(voucher):
+		frappe.db.commit()
+
+	device_error = _validate_device_reuse(voucher, mac_address=mac_address, ip_address=ip_address)
+	if device_error:
+		return device_error
 
 	if voucher.status in {"Blocked", "Expired", "Used"}:
 		return _error(f"Voucher is {voucher.status.lower()}", "VOUCHER_NOT_USABLE")
@@ -171,24 +236,36 @@ def activate_voucher(
 		return _error("Voucher not found", "INVALID_VOUCHER")
 
 	plan_doc = _get_plan(voucher.plan)
-	_expiry_check(voucher, plan_doc)
+	if _sync_voucher_status(voucher):
+		frappe.db.commit()
+
+	mac_address = _normalize_mac(mac_address)
+	ip_address = _normalize_ip(ip_address)
+
+	device_error = _validate_device_reuse(voucher, mac_address=mac_address, ip_address=ip_address)
+	if device_error:
+		return device_error
 
 	if voucher.status in {"Blocked", "Expired", "Used"}:
 		return _error(f"Voucher is {voucher.status.lower()}", "VOUCHER_NOT_USABLE")
-
-	if voucher.status == "Active" and voucher.device_mac and mac_address and voucher.device_mac != mac_address:
-		return _error("Voucher is already active on another device", "DEVICE_MISMATCH")
 
 	existing_open_session = frappe.get_all(
 		"Hotspot Session",
 		filters={"voucher": voucher.name, "session_status": "Open"},
 		ignore_permissions=True,
-		fields=["name", "session_id"],
+		fields=["name", "session_id", "mac_address", "ip_address"],
 		order_by="start_time desc",
 		limit=1,
 	)
 	if existing_open_session:
-		return _success("Voucher already active", session_id=existing_open_session[0]["session_id"])
+		open_session = existing_open_session[0]
+		open_mac = _normalize_mac(open_session.get("mac_address"))
+		open_ip = _normalize_ip(open_session.get("ip_address"))
+		if open_mac and mac_address and open_mac != mac_address:
+			return _error("Voucher is already active on another device", "DEVICE_MISMATCH")
+		if open_ip and ip_address and open_ip != ip_address:
+			return _error("Voucher is already active on another device", "DEVICE_MISMATCH")
+		return _success("Voucher already active", session_id=open_session["session_id"])
 
 	now = now_datetime()
 	if voucher.status == "New":
@@ -361,9 +438,7 @@ def logout_session(session_id: str) -> dict[str, Any]:
 
 	if session.voucher:
 		voucher = frappe.get_doc("Hotspot Voucher", session.voucher)
-		if voucher.status == "Active" and voucher.expires_on and get_datetime(voucher.expires_on) <= now:
-			voucher.status = "Expired"
-			voucher.save(ignore_permissions=True)
+		_sync_voucher_status(voucher)
 
 	frappe.db.commit()
 	return _success("Session closed", session_id=session.session_id)
