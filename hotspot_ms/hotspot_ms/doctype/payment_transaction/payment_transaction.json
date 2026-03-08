@@ -8,8 +8,11 @@
   "payment_ref",
   "status",
   "column_break_1",
+  "plan",
   "amount",
   "currency",
+  "payment_type",
+  "idempotency_key",
   "section_break_1",
   "customer",
   "voucher",
@@ -18,9 +21,13 @@
   "requested_on",
   "completed_on",
   "external_id",
+  "checkout_url",
+  "payment_url",
   "section_break_3",
   "provider_response_code",
   "provider_response_message",
+  "webhook_event_id",
+  "webhook_payload",
   "notes"
  ],
  "fields": [
@@ -47,6 +54,13 @@
    "fieldtype": "Column Break"
   },
   {
+   "fieldname": "plan",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Plan",
+   "options": "Hotspot Plan"
+  },
+  {
    "fieldname": "amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
@@ -59,6 +73,19 @@
    "fieldtype": "Link",
    "label": "Currency",
    "options": "Currency"
+  },
+  {
+   "default": "mobile",
+   "fieldname": "payment_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Payment Type",
+   "options": "mobile\ncard\ndynamic-qr\nsession"
+  },
+  {
+   "fieldname": "idempotency_key",
+   "fieldtype": "Data",
+   "label": "Idempotency Key"
   },
   {
    "fieldname": "section_break_1",
@@ -80,12 +107,12 @@
    "options": "Hotspot Voucher"
   },
   {
-   "default": "M-Pesa",
+   "default": "Snippe",
    "fieldname": "provider",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Provider",
-   "options": "M-Pesa\nAirtel Money\nTigo Pesa\nHaloPesa\nBank\nCash"
+   "options": "Snippe\nM-Pesa\nAirtel Money\nTigo Pesa\nHaloPesa\nBank\nCash"
   },
   {
    "fieldname": "section_break_2",
@@ -110,6 +137,16 @@
    "label": "External ID"
   },
   {
+   "fieldname": "checkout_url",
+   "fieldtype": "Data",
+   "label": "Checkout URL"
+  },
+  {
+   "fieldname": "payment_url",
+   "fieldtype": "Data",
+   "label": "Payment URL"
+  },
+  {
    "fieldname": "section_break_3",
    "fieldtype": "Section Break",
    "label": "Provider Response"
@@ -123,6 +160,16 @@
    "fieldname": "provider_response_message",
    "fieldtype": "Small Text",
    "label": "Response Message"
+  },
+  {
+   "fieldname": "webhook_event_id",
+   "fieldtype": "Data",
+   "label": "Webhook Event ID"
+  },
+  {
+   "fieldname": "webhook_payload",
+   "fieldtype": "Long Text",
+   "label": "Webhook Payload"
   },
   {
    "fieldname": "notes",

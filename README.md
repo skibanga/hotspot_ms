@@ -167,6 +167,21 @@ Router deauth flow:
 - `/api/method/hotspot_ms.api.portal.pull_disconnect_actions`
 - `/api/method/hotspot_ms.api.portal.acknowledge_disconnect_action`
 
+Snippe payments:
+- `/api/method/hotspot_ms.api.snippe.get_snippe_settings`
+- `/api/method/hotspot_ms.api.snippe.create_snippe_payment`
+- `/api/method/hotspot_ms.api.snippe.create_snippe_session`
+- `/api/method/hotspot_ms.api.snippe.sync_snippe_payment_status`
+- `/api/method/hotspot_ms.api.snippe.snippe_webhook`
+
+Snippe setup:
+1. Open `Snippe Settings` (single DocType).
+2. Set `enabled=1`, `base_url=https://api.snippe.sh`, API key, and optional webhook secret.
+3. Use webhook URL:
+   - `https://<your-site>/api/method/hotspot_ms.api.snippe.snippe_webhook`
+4. For payment/session create requests, send idempotency key (the API supports it).
+5. For `card` payments, include required billing fields: `address`, `city`, `state`, `postcode`, `country`.
+
 ## 7) Session Expiry and Deauth Queue
 
 Scheduler task:
