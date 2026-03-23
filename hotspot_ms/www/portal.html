@@ -16,14 +16,14 @@
 
       const target = isCaptive
         ? `/hotspot/login${search}`
-        : `/app/login${search}`;
+        : `/login${search}`;
 
       window.location.replace(target);
     })();
   </script>
   <noscript>
     <p><a href="/hotspot/login">Continue to hotspot login</a></p>
-    <p><a href="/app/login">Continue to desk login</a></p>
+    <p><a href="/login">Continue to desk login</a></p>
   </noscript>
 </body>
 </html>
