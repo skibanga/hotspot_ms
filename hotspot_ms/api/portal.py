@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import hashlib
 import hmac
 import secrets
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -60,6 +62,141 @@ def _normalize_ip(ip_address: str | None) -> str:
 	return (ip_address or "").strip()
 
 
+def _normalize_host_port(value: str | None) -> str:
+	text = (value or "").strip()
+	if not text:
+		return ""
+
+	parsed = urlsplit(text if "://" in text else f"//{text}", scheme="http")
+	host_port = parsed.netloc or parsed.path
+	return host_port.strip().strip("/")
+
+
+def _b64decode_text(value: str) -> str:
+	text = (value or "").strip().replace(" ", "+")
+	if not text:
+		return ""
+
+	padding = (-len(text)) % 4
+	if padding:
+		text += "=" * padding
+
+	return base64.b64decode(text).decode("utf-8", errors="replace").strip()
+
+
+def _normalize_opennds_payload(payload: dict[str, Any]) -> dict[str, Any]:
+	normalized: dict[str, Any] = {}
+	for key, value in (payload or {}).items():
+		if value is None:
+			continue
+		text = str(value).strip()
+		if not text:
+			continue
+		normalized[key.strip()] = text
+
+	aliases = {
+		"client_hid": "hid",
+		"clientipaddress": "clientip",
+		"clientmacaddress": "clientmac",
+		"gateway_addr": "gatewayaddress",
+		"gateway_port": "gatewayport",
+	}
+	for source, target in aliases.items():
+		if source in normalized and target not in normalized:
+			normalized[target] = normalized[source]
+
+	return normalized
+
+
+def _decode_opennds_secure_fas(fas_value: str | None) -> dict[str, Any]:
+	text = (fas_value or "").strip()
+	if not text:
+		return {}
+
+	decoded = _b64decode_text(text)
+	if not decoded:
+		return {}
+
+	if "&" not in decoded and ", " in decoded:
+		decoded = decoded.replace(", ", "&")
+
+	parsed = dict(parse_qsl(decoded, keep_blank_values=True))
+	return _normalize_opennds_payload(parsed)
+
+
+def get_opennds_captive_context(form_dict: Any | None = None) -> dict[str, Any]:
+	"""
+	Normalize captive portal parameters from openNDS.
+	Supports insecure redirects and secure level 1 base64 payloads.
+	"""
+	args = dict(form_dict or {})
+	context = _normalize_opennds_payload(args)
+	secure_payload = _decode_opennds_secure_fas(context.get("fas"))
+	if secure_payload:
+		context.update(secure_payload)
+		context["secure_fas"] = True
+	else:
+		context["secure_fas"] = False
+
+	if not context.get("clientip") and context.get("authaction"):
+		try:
+			auth_url = urlsplit(context["authaction"])
+			for key, value in parse_qsl(auth_url.query, keep_blank_values=True):
+				key = key.strip()
+				value = value.strip()
+				if key in {"clientip", "clientmac", "gatewayname", "hid", "gatewayaddress", "authdir", "originurl", "clientif", "tok", "gatewayport"} and value:
+					context.setdefault(key, value)
+		except Exception:
+			pass
+
+	return context
+
+
+def _get_opennds_fas_key(nas_device: str | None = None) -> str:
+	nas_name = _resolve_nas_device(nas_device)
+	if not nas_name:
+		nas = frappe.get_all(
+			"Nas Device",
+			filters={"enabled": 1},
+			ignore_permissions=True,
+			fields=["name"],
+			limit=1,
+		)
+		nas_name = nas[0]["name"] if nas else ""
+
+	if not nas_name:
+		return ""
+
+	nas_doc = frappe.get_doc("Nas Device", nas_name)
+	key = (nas_doc.get_password("opennds_fas_key") or "").strip()
+	if key:
+		return key
+	return (frappe.conf.get("opennds_fas_key") or "").strip()
+
+
+def _get_opennds_gateway_port(nas_device: str | None = None) -> str:
+	nas_name = _resolve_nas_device(nas_device)
+	if not nas_name:
+		nas = frappe.get_all(
+			"Nas Device",
+			filters={"enabled": 1},
+			ignore_permissions=True,
+			fields=["name"],
+			limit=1,
+		)
+		nas_name = nas[0]["name"] if nas else ""
+
+	if not nas_name:
+		return "2050"
+
+	nas_doc = frappe.get_doc("Nas Device", nas_name)
+	return str(cint(nas_doc.get("opennds_gateway_port") or 2050) or 2050)
+
+
+def _compute_opennds_return_token(hid: str, faskey: str) -> str:
+	return hashlib.sha256(f"{(hid or '').strip()}{(faskey or '').strip()}".encode()).hexdigest()
+
+
 def _is_data_exhausted(voucher) -> bool:
 	limit = flt(voucher.data_limit_mb)
 	if limit <= 0:
@@ -117,7 +254,7 @@ def _resolve_nas_device(nas_identifier: str | None) -> str | None:
 	if not nas_identifier:
 		return None
 
-	value = (nas_identifier or "").strip()
+	value = _normalize_host_port(nas_identifier) or (nas_identifier or "").strip()
 	if not value:
 		return None
 
@@ -351,6 +488,11 @@ def build_opennds_redirect(
 	redir: str | None = None,
 	authaction: str | None = None,
 	fas: str | None = None,
+	gatewayaddress: str | None = None,
+	gatewayport: str | None = None,
+	authdir: str | None = None,
+	hid: str | None = None,
+	nas_device: str | None = None,
 ) -> dict[str, Any]:
 	"""
 	Build a browser redirect URL for openNDS FAS flow.
@@ -362,6 +504,11 @@ def build_opennds_redirect(
 	tok = (tok or "").strip()
 	authaction = (authaction or "").strip()
 	fas = (fas or "").strip()
+	gatewayaddress = (gatewayaddress or "").strip()
+	gatewayport = (gatewayport or "").strip()
+	authdir = (authdir or "").strip()
+	hid = (hid or "").strip()
+	nas_device = (nas_device or "").strip()
 
 	if not session_id:
 		return _error("session_id is required", "MISSING_SESSION")
@@ -369,6 +516,24 @@ def build_opennds_redirect(
 		return _error("voucher_code is required", "MISSING_VOUCHER")
 
 	status_url = _build_status_url(session_id, voucher_code, upstream_redir=redir)
+
+	if gatewayaddress and authdir and hid:
+		faskey = _get_opennds_fas_key(nas_device)
+		if not faskey:
+			return _error("Missing openNDS FAS key", "MISSING_FAS_KEY")
+
+		return_token = _compute_opennds_return_token(hid, faskey)
+		host_port = _normalize_host_port(gatewayaddress)
+		if not host_port:
+			host_port = gatewayaddress
+		if ":" not in host_port:
+			port = gatewayport or _get_opennds_gateway_port(nas_device)
+			host_port = f"{host_port}:{port}" if port else host_port
+
+		auth_path = authdir.lstrip("/")
+		auth_base = f"http://{host_port}/{auth_path}/"
+		redirect_url = _append_query(auth_base, {"tok": return_token, "redir": status_url})
+		return _success("Redirect URL prepared", redirect_url=redirect_url, status_url=status_url, mode="fas-secure")
 
 	auth_base = authaction or fas
 	if auth_base and tok:
@@ -401,6 +566,8 @@ def session_status(voucher_code: str | None = None, session_id: str | None = Non
 			"session_status",
 			"voucher",
 			"customer",
+			"mac_address",
+			"ip_address",
 			"start_time",
 			"stop_time",
 			"input_octets",
@@ -429,6 +596,8 @@ def session_status(voucher_code: str | None = None, session_id: str | None = Non
 		session={
 			"session_id": s.get("session_id"),
 			"status": s.get("session_status"),
+			"mac_address": s.get("mac_address"),
+			"ip_address": s.get("ip_address"),
 			"start_time": s.get("start_time"),
 			"total_mb": s.get("total_mb"),
 		},

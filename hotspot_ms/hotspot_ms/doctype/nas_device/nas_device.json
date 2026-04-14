@@ -14,6 +14,8 @@
   "shared_secret",
   "short_name",
   "column_break_2",
+  "opennds_gateway_port",
+  "opennds_fas_key",
   "auth_port",
   "acct_port",
   "coa_port",
@@ -73,6 +75,17 @@
    "fieldname": "short_name",
    "fieldtype": "Data",
    "label": "Short Name"
+  },
+  {
+   "default": "2050",
+   "fieldname": "opennds_gateway_port",
+   "fieldtype": "Int",
+   "label": "openNDS Gateway Port"
+  },
+  {
+   "fieldname": "opennds_fas_key",
+   "fieldtype": "Password",
+   "label": "openNDS FAS Key"
   },
   {
    "fieldname": "column_break_2",

@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tanzania Hotspot Login</title>
   <link rel="stylesheet" href="/assets/hotspot_ms/css/hotspot_portal.css" />
+  <script>
+    window.__HOTSPOT_CAPTIVE__ = {{ captive_json | safe }};
+  </script>
 </head>
 <body class="bg-background-light min-h-screen font-display">
   {% include "hotspot_ms/www/hotspot/components/nav.html" %}
@@ -93,6 +96,7 @@
       const feedbackIcon = document.getElementById("feedback-icon");
       const captiveInfo = document.getElementById("captive-info");
       const qs = new URLSearchParams(window.location.search || "");
+      const serverCaptive = window.__HOTSPOT_CAPTIVE__ || {};
 
       function parseEmbeddedParam(urlValue, key) {
         if (!urlValue) return "";
@@ -106,14 +110,18 @@
 
       const authactionRaw = (qs.get("authaction") || "").trim();
       const captive = {
-        tok: (qs.get("tok") || "").trim(),
-        redir: (qs.get("redir") || "").trim(),
-        clientip: (qs.get("clientip") || parseEmbeddedParam(authactionRaw, "clientip") || "").trim(),
-        clientmac: (qs.get("clientmac") || parseEmbeddedParam(authactionRaw, "clientmac") || "").trim(),
-        authaction: authactionRaw,
-        fas: (qs.get("fas") || "").trim(),
-        gatewayname: (qs.get("gatewayname") || "").trim(),
-        hid: (qs.get("hid") || "").trim(),
+        tok: (serverCaptive.tok || qs.get("tok") || "").trim(),
+        redir: (serverCaptive.redir || qs.get("redir") || "").trim(),
+        clientip: (serverCaptive.clientip || qs.get("clientip") || parseEmbeddedParam(authactionRaw, "clientip") || "").trim(),
+        clientmac: (serverCaptive.clientmac || qs.get("clientmac") || parseEmbeddedParam(authactionRaw, "clientmac") || "").trim(),
+        authaction: (serverCaptive.authaction || authactionRaw || "").trim(),
+        fas: (serverCaptive.fas || qs.get("fas") || "").trim(),
+        gatewayname: (serverCaptive.gatewayname || qs.get("gatewayname") || "").trim(),
+        gatewayaddress: (serverCaptive.gatewayaddress || qs.get("gatewayaddress") || "").trim(),
+        gatewayport: (serverCaptive.gatewayport || qs.get("gatewayport") || "").trim(),
+        authdir: (serverCaptive.authdir || qs.get("authdir") || "").trim(),
+        hid: (serverCaptive.hid || qs.get("hid") || "").trim(),
+        secure_fas: Boolean(serverCaptive.secure_fas),
       };
 
       if (captive.tok || captive.authaction) {
@@ -249,6 +257,11 @@
             redir: captive.redir,
             authaction: captive.authaction,
             fas: captive.fas,
+            gatewayaddress: captive.gatewayaddress,
+            gatewayport: captive.gatewayport,
+            authdir: captive.authdir,
+            hid: captive.hid,
+            nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
           });
 
           if (!redirectResult.ok || !redirectResult.redirect_url) {
