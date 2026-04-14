@@ -84,7 +84,7 @@
   },
   {
    "fieldname": "opennds_fas_key",
-   "fieldtype": "Password",
+   "fieldtype": "Small Text",
    "label": "openNDS FAS Key"
   },
   {

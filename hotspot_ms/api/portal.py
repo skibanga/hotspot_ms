@@ -168,7 +168,7 @@ def _get_opennds_fas_key(nas_device: str | None = None) -> str:
 		return ""
 
 	nas_doc = frappe.get_doc("Nas Device", nas_name)
-	key = (nas_doc.get_password("opennds_fas_key") or "").strip()
+	key = (nas_doc.get("opennds_fas_key") or "").strip()
 	if key:
 		return key
 	return (frappe.conf.get("opennds_fas_key") or "").strip()
