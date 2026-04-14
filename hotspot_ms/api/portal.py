@@ -653,6 +653,48 @@ def logout_session(session_id: str) -> dict[str, Any]:
 	return _success("Session closed", session_id=session.session_id)
 
 
+@frappe.whitelist()
+def request_session_deauth(session_id: str, reason: str | None = None) -> dict[str, Any]:
+	"""
+	Queue a session for router-side deauthentication from Desk.
+	The OpenWrt agent polls the pending marker and applies ndsctl deauth.
+	"""
+	session_id = (session_id or "").strip()
+	if not session_id:
+		return _error("session_id is required", "MISSING_SESSION")
+
+	session_name = frappe.db.get_value("Hotspot Session", {"session_id": session_id}, "name")
+	if not session_name:
+		return _error("Session not found", "INVALID_SESSION")
+
+	session = frappe.get_doc("Hotspot Session", session_name)
+	if session.terminate_cause and session.terminate_cause.startswith(DEAUTH_PENDING_PREFIX):
+		return _success("Deauth already queued", session_id=session.session_id)
+
+	now = now_datetime()
+	session.session_status = "Terminated"
+	session.stop_time = now
+	if not flt(session.total_mb):
+		session.total_mb = _to_mb(flt(session.input_octets) + flt(session.output_octets))
+
+	base_reason = (reason or "Admin deauth").strip() or "Admin deauth"
+	if session.mac_address or session.ip_address:
+		session.terminate_cause = f"{DEAUTH_PENDING_PREFIX}{base_reason}"
+	else:
+		session.terminate_cause = base_reason
+
+	session.save(ignore_permissions=True)
+	frappe.db.commit()
+
+	return _success(
+		"Deauth queued",
+		session_id=session.session_id,
+		mac_address=session.mac_address,
+		ip_address=session.ip_address,
+		reason=base_reason,
+	)
+
+
 @frappe.whitelist(allow_guest=True)
 def pull_disconnect_actions(nas_identifier: str, secret: str, limit: int = 20) -> dict[str, Any]:
 	"""
