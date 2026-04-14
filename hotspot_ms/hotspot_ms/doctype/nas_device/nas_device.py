@@ -55,6 +55,7 @@ def _render_openwrt_hardening_bundle(hotspot_iface: str = "br-lan", conn_limit: 
 		table inet fw4 {{
 		  set hotspot_connlimit {{
 		    type ipv4_addr
+		    size 65535
 		    flags dynamic
 		  }}
 

@@ -19,6 +19,7 @@ cat >"$OUT_FILE" <<EOF
 table inet fw4 {
   set hotspot_connlimit {
     type ipv4_addr
+    size 65535
     flags dynamic
   }
 
