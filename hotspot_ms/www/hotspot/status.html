@@ -110,15 +110,6 @@
               </div>
 
               <div id="status-message" class="mt-5 text-sm font-medium"></div>
-
-              <div class="flex flex-col md:flex-row gap-4 mt-12 pt-8 border-t border-slate-100">
-                <button id="btn-refresh" class="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg border-2 border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-colors focus:ring-4 focus:ring-slate-100" type="button">
-                  Refresh Status
-                </button>
-                <button id="btn-disconnect" class="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-red-600 text-white font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-500/30 focus:ring-4 focus:ring-red-100" type="button">
-                  Disconnect
-                </button>
-              </div>
             </div>
           </div>
 
@@ -159,8 +150,8 @@
       const remainingTextEl = document.getElementById("remaining-text");
       const remainingBarEl = document.getElementById("remaining-bar");
       const remainingNoteEl = document.getElementById("remaining-note");
-      const refreshBtn = document.getElementById("btn-refresh");
-      const disconnectBtn = document.getElementById("btn-disconnect");
+      let closeTimer = null;
+      let closeTriggered = false;
 
       function showMessage(ok, text) {
         statusMessage.textContent = text || "";
@@ -208,6 +199,22 @@
         }
       }
 
+      function closeSessionPage() {
+        if (closeTriggered) return;
+        closeTriggered = true;
+        window.setTimeout(() => {
+          try {
+            window.close();
+          } catch (e) {
+            // Ignore browser restrictions and fall back below.
+          }
+
+          if (!window.closed) {
+            window.location.replace("/hotspot/login");
+          }
+        }, 2000);
+      }
+
       async function refreshStatus() {
         const params = urlSessionId ? { session_id: urlSessionId } : { voucher_code: urlVoucherCode };
         const result = await callApi("hotspot_ms.api.portal.session_status", params);
@@ -237,36 +244,16 @@
         statusPill.className = "px-2 py-0.5 bg-green-500 text-white text-[10px] font-bold uppercase rounded-full w-fit mb-2 flex items-center gap-1";
         statusPill.innerHTML = '<span class="size-1.5 bg-white rounded-full animate-pulse"></span> Connected';
         showMessage(true, "Session is active.");
+        closeSessionPage();
       }
 
-      refreshBtn.addEventListener("click", async function () {
+      window.addEventListener("load", async function () {
         try {
           await refreshStatus();
         } catch (e) {
-          showMessage(false, "Failed to refresh status.");
+          showMessage(false, "Failed to load session status.");
         }
       });
-
-      disconnectBtn.addEventListener("click", async function () {
-        const sid = urlSessionId || sessionIdEl.textContent;
-        if (!sid || sid === "-") {
-          showMessage(false, "Missing session ID.");
-          return;
-        }
-
-        try {
-          const result = await callApi("hotspot_ms.api.portal.logout_session", { session_id: sid });
-          if (!result.ok) {
-            showMessage(false, result.message || "Failed to disconnect.");
-            return;
-          }
-          window.location.href = "/hotspot/expired";
-        } catch (e) {
-          showMessage(false, "Failed to disconnect.");
-        }
-      });
-
-      refreshStatus();
     })();
   </script>
 </body>
