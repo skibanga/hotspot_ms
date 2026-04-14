@@ -118,7 +118,10 @@
 
       if (captive.tok || captive.authaction) {
         captiveInfo.style.display = "block";
-        captiveInfo.textContent = `Captive session detected${captive.clientip ? ` (IP: ${captive.clientip})` : ""}.`;
+        const bits = [];
+        if (captive.clientip) bits.push(`IP: ${captive.clientip}`);
+        if (captive.clientmac) bits.push(`MAC: ${captive.clientmac}`);
+        captiveInfo.textContent = `Captive session detected${bits.length ? ` (${bits.join(", ")})` : ""}.`;
       }
 
       function showFeedback(type, text) {
