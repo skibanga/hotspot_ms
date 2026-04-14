@@ -7,7 +7,7 @@ frappe.ui.form.on("Nas Device", {
 
 		frm.add_custom_button(__("Generate FAS Key"), async () => {
 			const result = await frappe.call({
-				method: "hotspot_ms.hotspot_ms.doctype.nas_device.nas_device.generate_opennds_fas_key",
+				method: "hotspot_ms.api.portal.generate_opennds_fas_key",
 				args: { name: frm.doc.name },
 			});
 

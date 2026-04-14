@@ -197,6 +197,20 @@ def _compute_opennds_return_token(hid: str, faskey: str) -> str:
 	return hashlib.sha256(f"{(hid or '').strip()}{(faskey or '').strip()}".encode()).hexdigest()
 
 
+@frappe.whitelist()
+def generate_opennds_fas_key(name: str | None = None) -> dict[str, Any]:
+	"""Generate a shared secret for openNDS secure FAS and save it to the NAS record."""
+	key = secrets.token_hex(32)
+
+	if name:
+		doc = frappe.get_doc("Nas Device", name)
+		doc.opennds_fas_key = key
+		doc.save(ignore_permissions=True)
+		frappe.db.commit()
+
+	return _success("FAS key generated", opennds_fas_key=key)
+
+
 def _is_data_exhausted(voucher) -> bool:
 	limit = flt(voucher.data_limit_mb)
 	if limit <= 0:
