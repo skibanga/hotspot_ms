@@ -320,6 +320,14 @@ def _append_query(base_url: str, query: dict[str, str]) -> str:
 	return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, urlencode(existing_query), parsed.fragment))
 
 
+def _default_opennds_authdir() -> str:
+	"""
+	openNDS uses a virtual auth directory. If the captive payload omits it,
+	fall back to the documented default.
+	"""
+	return "opennds_auth"
+
+
 @frappe.whitelist(allow_guest=True)
 def get_packages() -> dict[str, Any]:
 	plans = frappe.get_all(
@@ -533,7 +541,7 @@ def build_opennds_redirect(
 
 	status_url = _build_status_url(session_id, voucher_code, upstream_redir=redir)
 
-	if gatewayaddress and authdir and hid:
+	if gatewayaddress and hid:
 		faskey = _get_opennds_fas_key(nas_device)
 		if not faskey:
 			return _error("Missing openNDS FAS key", "MISSING_FAS_KEY")
@@ -546,7 +554,7 @@ def build_opennds_redirect(
 			port = gatewayport or _get_opennds_gateway_port(nas_device)
 			host_port = f"{host_port}:{port}" if port else host_port
 
-		auth_path = authdir.lstrip("/")
+		auth_path = (authdir or _default_opennds_authdir()).lstrip("/")
 		auth_base = f"http://{host_port}/{auth_path}/"
 		redirect_url = _append_query(auth_base, {"tok": return_token, "redir": status_url})
 		return _success("Redirect URL prepared", redirect_url=redirect_url, status_url=status_url, mode="fas-secure")
