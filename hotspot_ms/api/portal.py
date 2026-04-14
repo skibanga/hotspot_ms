@@ -238,6 +238,19 @@ def _sync_voucher_status(voucher) -> bool:
 	return changed
 
 
+def _consume_voucher_on_termination(voucher) -> bool:
+	"""
+	Consume a voucher immediately when an admin terminates the session.
+	This closes the reuse loophole that remains if the voucher stays Active.
+	"""
+	if not voucher or voucher.status in {"Expired", "Blocked", "Used"}:
+		return False
+
+	voucher.status = "Used"
+	voucher.save(ignore_permissions=True)
+	return True
+
+
 def _validate_device_reuse(voucher, mac_address: str | None = None, ip_address: str | None = None) -> dict[str, Any] | None:
 	"""
 	Strict one-device policy:
@@ -692,6 +705,10 @@ def request_session_deauth(session_id: str, reason: str | None = None) -> dict[s
 		session.terminate_cause = base_reason
 
 	session.save(ignore_permissions=True)
+	voucher_consumed = False
+	if session.voucher:
+		voucher = frappe.get_doc("Hotspot Voucher", session.voucher)
+		voucher_consumed = _consume_voucher_on_termination(voucher)
 	frappe.db.commit()
 
 	return _success(
@@ -700,6 +717,7 @@ def request_session_deauth(session_id: str, reason: str | None = None) -> dict[s
 		mac_address=session.mac_address,
 		ip_address=session.ip_address,
 		reason=base_reason,
+		voucher_consumed=voucher_consumed,
 	)
 
 
