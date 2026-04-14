@@ -4,6 +4,7 @@ import base64
 import hashlib
 import hmac
 import secrets
+import string
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from typing import Any
 
@@ -200,7 +201,8 @@ def _compute_opennds_return_token(hid: str, faskey: str) -> str:
 @frappe.whitelist()
 def generate_opennds_fas_key(name: str | None = None) -> dict[str, Any]:
 	"""Generate a shared secret for openNDS secure FAS and save it to the NAS record."""
-	key = secrets.token_hex(32)
+	alphabet = string.ascii_letters + string.digits
+	key = "".join(secrets.choice(alphabet) for _ in range(16))
 
 	if name:
 		doc = frappe.get_doc("Nas Device", name)
