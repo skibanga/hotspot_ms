@@ -24,5 +24,46 @@ frappe.ui.form.on("Nas Device", {
 				message: __("The openNDS FAS key has been generated and saved on this NAS Device."),
 			});
 		});
+
+		frm.add_custom_button(__("Generate Hardening Bundle"), async () => {
+			const result = await frappe.call({
+				method: "hotspot_ms.hotspot_ms.doctype.nas_device.nas_device.generate_openwrt_hardening_bundle",
+				args: {
+					name: frm.doc.name,
+					hotspot_iface: frm.doc.hotspot_iface || "br-lan",
+					conn_limit: 150,
+					ttl_value: 64,
+				},
+			});
+
+			const bundle = result.message && result.message.bundle;
+			if (!bundle) {
+				frappe.msgprint(__("Could not generate hardening bundle."));
+				return;
+			}
+
+			const dialog = new frappe.ui.Dialog({
+				title: __("OpenWrt Hardening Bundle"),
+				fields: [
+					{
+						fieldname: "bundle",
+						fieldtype: "Code",
+						label: __("Bundle"),
+						options: "Shell",
+						read_only: 1,
+						default: bundle,
+					},
+				],
+				size: "extra-large",
+				primary_action_label: __("Copy"),
+				primary_action() {
+					frappe.utils.copy_to_clipboard(bundle);
+					dialog.hide();
+					frappe.show_alert({ message: __("Bundle copied to clipboard"), indicator: "green" });
+				},
+			});
+
+			dialog.show();
+		});
 	},
 });
