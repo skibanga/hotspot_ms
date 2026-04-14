@@ -6,7 +6,7 @@
   <title>Tanzania Hotspot Login</title>
   <link rel="stylesheet" href="/assets/hotspot_ms/css/hotspot_portal.css" />
   <script>
-    window.__HOTSPOT_CAPTIVE__ = {{ captive_json | safe }};
+    window.HOTSPOT_CAPTIVE = {{ captive_json | safe }};
   </script>
 </head>
 <body class="bg-background-light min-h-screen font-display">
@@ -96,7 +96,7 @@
       const feedbackIcon = document.getElementById("feedback-icon");
       const captiveInfo = document.getElementById("captive-info");
       const qs = new URLSearchParams(window.location.search || "");
-      const serverCaptive = window.__HOTSPOT_CAPTIVE__ || {};
+      const serverCaptive = window.HOTSPOT_CAPTIVE || {};
 
       function parseEmbeddedParam(urlValue, key) {
         if (!urlValue) return "";
