@@ -206,11 +206,7 @@
           try {
             window.close();
           } catch (e) {
-            // Ignore browser restrictions and fall back below.
-          }
-
-          if (!window.closed) {
-            window.location.replace("about:blank");
+            // If the browser blocks closing, stay on this screen.
           }
         }, 2000);
       }
