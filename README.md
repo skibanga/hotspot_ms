@@ -293,6 +293,31 @@ Expected success path:
 3. Acknowledge call succeeds.
 4. Next `pull_disconnect_actions` returns `actions: []`.
 
+## 12) OpenWrt Hardening Bundle
+
+Generate a router-side hardening script from the `Nas Device` form or use the helper script directly.
+
+The generated bundle writes a standalone nftables ruleset to:
+
+```text
+/usr/share/nftables.d/table-pre/99-hotspot-hardening.nft
+```
+
+It also enables wireless client isolation across all `wifi-iface` sections.
+
+Apply on the router:
+
+```sh
+chmod +x /root/openwrt_hotspot_hardening.sh
+HOTSPOT_IFACE=br-lan CONN_LIMIT=150 TTL_VALUE=64 \
+  /root/openwrt_hotspot_hardening.sh /usr/share/nftables.d/table-pre/99-hotspot-hardening.nft
+/etc/init.d/firewall restart
+```
+
+If your hotspot bridge is not `br-lan`, set `HOTSPOT_IFACE` to the actual bridge name before running the bundle.
+The generated file is a fragment that firewall4 includes inside `table inet fw4`, so `nft -c -f` on the file by itself will fail.
+The current hardening bundle uses a per-client new-connection meter rather than a simultaneous-connection counter, because the counter form is not accepted by this router build.
+
 ## License
 
 mit

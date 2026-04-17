@@ -37,6 +37,10 @@ def _get_settings(require_enabled: bool = True, require_api_key: bool = True):
 	default_payment_type = (settings.default_payment_type or "mobile").strip()
 	webhook_url = (settings.webhook_url or "").strip()
 	webhook_secret = (settings.get_password("webhook_secret") or "").strip()
+	wapbridge_relay_token = (settings.get_password("wapbridge_relay_token") or "").strip()
+	wapbridge_relay_signing_secret = (
+		settings.get_password("wapbridge_relay_signing_secret") or ""
+	).strip()
 
 	return {
 		"doc": settings,
@@ -47,6 +51,8 @@ def _get_settings(require_enabled: bool = True, require_api_key: bool = True):
 		"default_payment_type": default_payment_type,
 		"webhook_url": webhook_url,
 		"webhook_secret": webhook_secret,
+		"wapbridge_relay_token": wapbridge_relay_token,
+		"wapbridge_relay_signing_secret": wapbridge_relay_signing_secret,
 	}, None
 
 
@@ -208,6 +214,134 @@ def _get_transaction_by_reference(snippe_reference: str | None, payment_ref: str
 	return None
 
 
+def _extract_signature(signature_header: str) -> str:
+	signature = (signature_header or "").strip()
+	if not signature:
+		return ""
+	if "," in signature:
+		for part in signature.split(","):
+			token = part.strip()
+			if token.startswith("v1="):
+				return token.split("=", 1)[1].strip()
+	if "=" in signature:
+		return signature.split("=", 1)[1].strip()
+	return signature
+
+
+def _verify_snippe_signature(settings: dict[str, Any], raw_body: str) -> dict[str, Any] | None:
+	webhook_secret = settings["webhook_secret"]
+	if not webhook_secret:
+		return None
+
+	signature = _extract_signature(frappe.get_request_header("X-Webhook-Signature") or "")
+	if not signature:
+		return _err("Missing webhook signature", "INVALID_WEBHOOK_SIGNATURE", 401)
+
+	timestamp = (frappe.get_request_header("X-Webhook-Timestamp") or "").strip()
+	if timestamp:
+		signed_payload = f"{timestamp}.{raw_body}".encode()
+		expected = hmac.new(webhook_secret.encode(), signed_payload, hashlib.sha256).hexdigest()
+		if hmac.compare_digest(expected, signature):
+			return None
+
+	# Backward-compatible fallback for old integrations
+	expected_legacy = hmac.new(webhook_secret.encode(), raw_body.encode(), hashlib.sha256).hexdigest()
+	if not hmac.compare_digest(expected_legacy, signature):
+		return _err("Invalid webhook signature", "INVALID_WEBHOOK_SIGNATURE", 401)
+
+	return None
+
+
+def _verify_wapbridge_relay(settings: dict[str, Any], raw_body: str) -> dict[str, Any] | None:
+	expected_token = settings["wapbridge_relay_token"]
+	if not expected_token:
+		return _err("Relay token is not configured", "RELAY_TOKEN_MISSING", 500)
+
+	header_token = (frappe.get_request_header("X-Webhook-Token") or "").strip()
+	auth_header = (frappe.get_request_header("Authorization") or "").strip()
+	bearer_token = ""
+	if auth_header.lower().startswith("bearer "):
+		bearer_token = auth_header.split(" ", 1)[1].strip()
+
+	if not (hmac.compare_digest(header_token, expected_token) or hmac.compare_digest(bearer_token, expected_token)):
+		return _err("Unauthorized relay request", "UNAUTHORIZED_RELAY", 401)
+
+	signing_secret = settings["wapbridge_relay_signing_secret"]
+	if signing_secret:
+		timestamp = (frappe.get_request_header("X-Relay-Timestamp") or "").strip()
+		signature = _extract_signature(frappe.get_request_header("X-Webhook-Signature") or "")
+		if not timestamp or not signature:
+			return _err("Missing relay signature headers", "INVALID_RELAY_SIGNATURE", 401)
+		expected = hmac.new(
+			signing_secret.encode(),
+			f"{timestamp}.{raw_body}".encode(),
+			hashlib.sha256,
+		).hexdigest()
+		if not hmac.compare_digest(expected, signature):
+			return _err("Invalid relay signature", "INVALID_RELAY_SIGNATURE", 401)
+
+	return None
+
+
+def _process_snippe_event_payload(payload: dict[str, Any], raw_body: str, settings: dict[str, Any]) -> dict[str, Any]:
+	event_type = (payload.get("type") or frappe.get_request_header("X-Webhook-Event") or "").strip()
+	event_id = (payload.get("id") or "").strip()
+
+	if event_id:
+		duplicate = frappe.db.get_value(
+			"Payment Transaction", {"webhook_event_id": event_id}, ["name", "payment_ref"], as_dict=True
+		)
+		if duplicate:
+			return _ok("Duplicate webhook event", duplicate=True, payment_ref=duplicate.get("payment_ref"))
+
+	data = payload.get("data") or {}
+	reference = (data.get("reference") or "").strip()
+	session_reference = (data.get("session_reference") or "").strip()
+	metadata = data.get("metadata") if isinstance(data.get("metadata"), dict) else {}
+	payment_ref = (metadata.get("payment_ref") or "").strip()
+
+	tx_name = _get_transaction_by_reference(reference, payment_ref=payment_ref)
+	if not tx_name and session_reference:
+		tx_name = _get_transaction_by_reference(session_reference, payment_ref=payment_ref)
+	if not tx_name:
+		# Accept webhook to prevent retries, but expose missing mapping.
+		return _ok(
+			"Webhook received but transaction not found",
+			reference=reference,
+			session_reference=session_reference,
+			event_type=event_type,
+		)
+
+	tx = frappe.get_doc("Payment Transaction", tx_name)
+	tx.external_id = session_reference or reference or tx.external_id
+	tx.webhook_event_id = event_id
+	tx.webhook_payload = raw_body
+	tx.provider_response_message = event_type or tx.provider_response_message
+	tx.provider_response_code = str(payload.get("code") or tx.provider_response_code or "")
+
+	snippe_status = (data.get("status") or "").strip().lower()
+	if event_type == "payment.completed" or snippe_status == "completed":
+		tx.status = "Successful"
+		if not tx.completed_on:
+			tx.completed_on = now_datetime()
+	elif event_type == "payment.failed" or snippe_status in {"failed", "voided"}:
+		tx.status = "Failed"
+	elif snippe_status in {"expired", "cancelled"}:
+		tx.status = "Cancelled"
+	else:
+		tx.status = tx.status or "Pending"
+
+	if tx.status == "Successful" and not tx.voucher and cint(settings["doc"].auto_issue_voucher):
+		plan_name = (metadata.get("plan_name") or tx.plan or "").strip()
+		if plan_name and frappe.db.exists("Hotspot Plan", plan_name):
+			voucher = _issue_voucher(plan_name, customer=tx.customer)
+			tx.voucher = voucher.name
+
+	tx.save(ignore_permissions=True)
+	frappe.db.commit()
+	return _ok("Webhook processed", payment_ref=tx.payment_ref, status=tx.status, voucher=tx.voucher)
+
+
 @frappe.whitelist()
 def get_snippe_settings() -> dict[str, Any]:
 	settings, error = _get_settings(require_enabled=False, require_api_key=False)
@@ -224,6 +358,7 @@ def get_snippe_settings() -> dict[str, Any]:
 			"default_payment_type": settings["default_payment_type"],
 			"webhook_url": settings["webhook_url"],
 			"auto_issue_voucher": cint(doc.auto_issue_voucher),
+			"wapbridge_relay_enabled": 1 if settings["wapbridge_relay_token"] else 0,
 		},
 	)
 
@@ -508,64 +643,32 @@ def snippe_webhook() -> dict[str, Any]:
 		return error
 
 	raw_body = frappe.request.get_data(as_text=True) or ""
-	signature = (frappe.get_request_header("X-Webhook-Signature") or "").strip()
-	webhook_secret = settings["webhook_secret"]
-	if webhook_secret:
-		expected = hmac.new(webhook_secret.encode(), raw_body.encode(), hashlib.sha256).hexdigest()
-		if not hmac.compare_digest(expected, signature):
-			return _err("Invalid webhook signature", "INVALID_WEBHOOK_SIGNATURE", 401)
+	signature_error = _verify_snippe_signature(settings, raw_body)
+	if signature_error:
+		return signature_error
 
 	try:
 		payload = json.loads(raw_body or "{}")
 	except json.JSONDecodeError:
 		return _err("Invalid webhook JSON payload", "INVALID_WEBHOOK_PAYLOAD")
 
-	event_type = (payload.get("type") or frappe.get_request_header("X-Webhook-Event") or "").strip()
-	event_id = (payload.get("id") or "").strip()
-	data = payload.get("data") or {}
-	reference = (data.get("reference") or "").strip()
-	session_reference = (data.get("session_reference") or "").strip()
-	metadata = data.get("metadata") if isinstance(data.get("metadata"), dict) else {}
-	payment_ref = (metadata.get("payment_ref") or "").strip()
+	return _process_snippe_event_payload(payload, raw_body, settings)
 
-	tx_name = _get_transaction_by_reference(reference, payment_ref=payment_ref)
-	if not tx_name and session_reference:
-		tx_name = _get_transaction_by_reference(session_reference, payment_ref=payment_ref)
-	if not tx_name:
-		# Accept webhook to prevent repeated retries, but surface mismatch.
-		return _ok(
-			"Webhook received but transaction not found",
-			reference=reference,
-			session_reference=session_reference,
-			event_type=event_type,
-		)
 
-	tx = frappe.get_doc("Payment Transaction", tx_name)
-	tx.external_id = session_reference or reference or tx.external_id
-	tx.webhook_event_id = event_id
-	tx.webhook_payload = raw_body
-	tx.provider_response_message = event_type or tx.provider_response_message
-	tx.provider_response_code = str(payload.get("code") or tx.provider_response_code or "")
+@frappe.whitelist(allow_guest=True)
+def wapbridge_webhook() -> dict[str, Any]:
+	settings, error = _get_settings(require_enabled=False, require_api_key=False)
+	if error:
+		return error
 
-	snippe_status = (data.get("status") or "").strip().lower()
-	if event_type == "payment.completed" or snippe_status == "completed":
-		tx.status = "Successful"
-		if not tx.completed_on:
-			tx.completed_on = now_datetime()
-	elif event_type == "payment.failed" or snippe_status in {"failed", "voided"}:
-		tx.status = "Failed"
-	elif snippe_status == "expired":
-		tx.status = "Cancelled"
-	else:
-		tx.status = tx.status or "Pending"
+	raw_body = frappe.request.get_data(as_text=True) or ""
+	relay_error = _verify_wapbridge_relay(settings, raw_body)
+	if relay_error:
+		return relay_error
 
-	if tx.status == "Successful" and not tx.voucher and cint(settings["doc"].auto_issue_voucher):
-		plan_name = (metadata.get("plan_name") or tx.plan or "").strip()
-		if plan_name and frappe.db.exists("Hotspot Plan", plan_name):
-			voucher = _issue_voucher(plan_name, customer=tx.customer)
-			tx.voucher = voucher.name
+	try:
+		payload = json.loads(raw_body or "{}")
+	except json.JSONDecodeError:
+		return _err("Invalid webhook JSON payload", "INVALID_WEBHOOK_PAYLOAD")
 
-	tx.save(ignore_permissions=True)
-	frappe.db.commit()
-
-	return _ok("Webhook processed", payment_ref=tx.payment_ref, status=tx.status, voucher=tx.voucher)
+	return _process_snippe_event_payload(payload, raw_body, settings)

@@ -16,6 +16,8 @@
   "webhook_secret",
   "section_break_3",
   "webhook_url",
+  "wapbridge_relay_token",
+  "wapbridge_relay_signing_secret",
   "auto_issue_voucher",
   "notes"
  ],
@@ -90,6 +92,17 @@
    "label": "Webhook URL"
   },
   {
+   "fieldname": "wapbridge_relay_token",
+   "fieldtype": "Password",
+   "label": "WapBridge Relay Token"
+  },
+  {
+   "description": "Optional secret to verify X-Webhook-Signature from WapBridge relay.",
+   "fieldname": "wapbridge_relay_signing_secret",
+   "fieldtype": "Password",
+   "label": "WapBridge Relay Signing Secret"
+  },
+  {
    "default": "1",
    "fieldname": "auto_issue_voucher",
    "fieldtype": "Check",
@@ -129,4 +142,3 @@
  "states": [],
  "track_changes": 1
 }
-

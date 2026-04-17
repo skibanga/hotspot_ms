@@ -42,32 +42,27 @@ def _render_openwrt_hardening_bundle(hotspot_iface: str = "br-lan", conn_limit: 
 		set -eu
 
 		# Hotspot hardening bundle for OpenWrt firewall4 / nftables.
-		# Apply client isolation, then install nftables rules for:
-		# - per-client connection cap
+		# Apply client isolation, then install a fragment that fw4 includes inside table inet fw4 for:
+		# - per-client new-connection throttle
 		# - TTL normalization as a heuristic anti-tethering layer
 
 		HOTSPOT_IFACE="{hotspot_iface}"
 		CONN_LIMIT="{conn_limit}"
 		TTL_VALUE="{ttl_value}"
-		OUT_FILE="${{1:-/etc/nftables.d/99-hotspot-hardening.nft}}"
+		OUT_FILE="${{1:-/usr/share/nftables.d/table-pre/99-hotspot-hardening.nft}}"
+
+		mkdir -p "$(dirname "$OUT_FILE")"
 
 		cat >"$OUT_FILE" <<EOF
-		table inet fw4 {{
-		  set hotspot_connlimit {{
-		    type ipv4_addr
-		    size 65535
-		    flags dynamic
-		  }}
+		chain hotspot_hardening {{
+		  type filter hook prerouting priority mangle; policy accept;
 
-		  chain hotspot_hardening {{
-		    type filter hook prerouting priority mangle; policy accept;
+		  # Throttle excessive new connections from a single guest IP.
+		  # This is a loadable meter-based control, not a simultaneous-connection counter.
+		  iifname "$HOTSPOT_IFACE" ct state new meter hotspot_newconn {{ ip saddr limit rate over ${CONN_LIMIT}/minute }} counter drop
 
-		    # Cap excessive new tracked connections from a single guest IP.
-		    iifname "$HOTSPOT_IFACE" ct state new add @hotspot_connlimit {{ ip saddr ct count over $CONN_LIMIT }} counter drop
-
-		    # Normalize TTL for guest traffic. This is a heuristic, not a guarantee.
-		    iifname "$HOTSPOT_IFACE" ip ttl 63 ip ttl set $TTL_VALUE
-		  }}
+		  # Normalize TTL for guest traffic. This is a heuristic, not a guarantee.
+		  iifname "$HOTSPOT_IFACE" ip ttl 63 ip ttl set $TTL_VALUE
 		}}
 		EOF
 
