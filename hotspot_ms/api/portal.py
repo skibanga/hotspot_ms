@@ -37,6 +37,20 @@ def _resolve_voucher(voucher_code: str):
 	return frappe.get_doc("Hotspot Voucher", voucher_name)
 
 
+def _issue_payment_voucher(plan_name: str, customer: str | None = None):
+	plan = frappe.get_doc("Hotspot Plan", plan_name)
+	voucher = frappe.new_doc("Hotspot Voucher")
+	voucher.voucher_code = f"SNP-{secrets.token_hex(5).upper()}"
+	voucher.status = "New"
+	voucher.plan = plan.name
+	if flt(plan.data_limit_mb) > 0:
+		voucher.data_limit_mb = flt(plan.data_limit_mb)
+	if customer:
+		voucher.customer = customer
+	voucher.insert(ignore_permissions=True)
+	return voucher
+
+
 def _compute_expiry(activated_on, plan_doc):
 	validity_value = cint(plan_doc.validity_value) or 1
 	validity_unit = (plan_doc.validity_unit or "Days").lower()
@@ -362,6 +376,111 @@ def get_packages() -> dict[str, Any]:
 		order_by="price asc",
 	)
 	return _success("Packages fetched", packages=plans)
+
+
+@frappe.whitelist(allow_guest=True)
+def payment_transaction_status(payment_ref: str) -> dict[str, Any]:
+	payment_ref = (payment_ref or "").strip()
+	if not payment_ref:
+		return _error("payment_ref is required", "MISSING_PAYMENT_REF")
+
+	tx = frappe.get_value(
+		"Payment Transaction",
+		{"payment_ref": payment_ref},
+		[
+			"name",
+			"payment_ref",
+			"status",
+			"plan",
+			"voucher",
+			"provider_response_message",
+			"requested_on",
+			"completed_on",
+		],
+		as_dict=True,
+	)
+	if not tx:
+		return _error("Payment transaction not found", "PAYMENT_NOT_FOUND")
+
+	return _success("Payment status fetched", payment=tx)
+
+
+@frappe.whitelist(allow_guest=True)
+def activate_paid_access(
+	payment_ref: str,
+	mac_address: str | None = None,
+	ip_address: str | None = None,
+	nas_device: str | None = None,
+	tok: str | None = None,
+	redir: str | None = None,
+	authaction: str | None = None,
+	fas: str | None = None,
+	gatewayaddress: str | None = None,
+	gatewayport: str | None = None,
+	authdir: str | None = None,
+	hid: str | None = None,
+) -> dict[str, Any]:
+	payment_ref = (payment_ref or "").strip()
+	if not payment_ref:
+		return _error("payment_ref is required", "MISSING_PAYMENT_REF")
+
+	tx = frappe.get_value(
+		"Payment Transaction",
+		{"payment_ref": payment_ref},
+		["name", "status", "plan", "voucher", "customer"],
+		as_dict=True,
+	)
+	if not tx:
+		return _error("Payment transaction not found", "PAYMENT_NOT_FOUND")
+
+	status = (tx.get("status") or "").strip()
+	if status != "Successful":
+		if status in {"Failed", "Cancelled"}:
+			return _error(f"Payment is {status.lower()}", "PAYMENT_NOT_SUCCESSFUL")
+		return _error("Payment is still pending", "PAYMENT_PENDING")
+
+	voucher_name = (tx.get("voucher") or "").strip()
+	voucher = frappe.get_doc("Hotspot Voucher", voucher_name) if voucher_name and frappe.db.exists("Hotspot Voucher", voucher_name) else None
+	if not voucher:
+		plan_name = (tx.get("plan") or "").strip()
+		if not plan_name:
+			return _error("Paid transaction has no plan", "MISSING_PLAN")
+		voucher = _issue_payment_voucher(plan_name, customer=tx.get("customer"))
+		frappe.db.set_value("Payment Transaction", tx["name"], "voucher", voucher.name, update_modified=True)
+
+	activated = activate_voucher(
+		voucher_code=voucher.voucher_code,
+		mac_address=mac_address,
+		ip_address=ip_address,
+		nas_device=nas_device,
+		customer=tx.get("customer"),
+	)
+	if not activated.get("ok"):
+		return activated
+
+	redirect_result = build_opennds_redirect(
+		session_id=activated.get("session_id"),
+		voucher_code=voucher.voucher_code,
+		tok=tok,
+		redir=redir,
+		authaction=authaction,
+		fas=fas,
+		gatewayaddress=gatewayaddress,
+		gatewayport=gatewayport,
+		authdir=authdir,
+		hid=hid,
+		nas_device=nas_device,
+	)
+	if not redirect_result.get("ok"):
+		return redirect_result
+
+	return _success(
+		"Payment confirmed and access granted",
+		payment_ref=payment_ref,
+		voucher_code=voucher.voucher_code,
+		session_id=activated.get("session_id"),
+		redirect_url=redirect_result.get("redirect_url"),
+	)
 
 
 @frappe.whitelist(allow_guest=True)

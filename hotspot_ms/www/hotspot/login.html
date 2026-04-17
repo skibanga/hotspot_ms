@@ -104,6 +104,33 @@
 
   {% include "templates/includes/hotspot/footer.html" %}
 
+  <div id="buy-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" style="background: rgba(15, 23, 42, 0.45);">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl p-6" style="width:min(560px, 100%);">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-slate-900 text-xl font-black">Buy Package</h3>
+        <button id="buy-close" type="button" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
+      </div>
+      <p id="buy-plan-label" class="text-slate-700 text-sm font-semibold mb-1"></p>
+      <p id="buy-plan-amount" class="text-slate-900 text-2xl font-black mb-4"></p>
+
+      <label class="block text-sm font-bold text-slate-700 uppercase tracking-wider mb-2" for="buy-phone">Phone Number</label>
+      <div class="flex items-center gap-2 mb-4">
+        <span class="h-12 px-3 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 font-bold inline-flex items-center">+255</span>
+        <input id="buy-phone" type="tel" inputmode="numeric" placeholder="7XXXXXXXX" class="w-full h-12 px-4 rounded-lg border border-slate-200 bg-white text-slate-900 focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none" />
+      </div>
+
+      <div id="buy-feedback" class="hidden items-center gap-2 p-3 rounded-lg border text-sm mb-4">
+        <span id="buy-feedback-icon" class="font-black">i</span>
+        <p id="buy-feedback-text"></p>
+      </div>
+
+      <div class="flex gap-3">
+        <button id="buy-cancel" type="button" class="flex-1 h-11 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50">Cancel</button>
+        <button id="buy-confirm" type="button" class="flex-1 h-11 rounded-lg bg-primary text-white font-black hover:bg-primary/90">Confirm</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     (function () {
       const packageList = document.getElementById("package-list");
@@ -114,8 +141,19 @@
       const feedbackText = document.getElementById("feedback-text");
       const feedbackIcon = document.getElementById("feedback-icon");
       const captiveInfo = document.getElementById("captive-info");
+      const buyModal = document.getElementById("buy-modal");
+      const buyClose = document.getElementById("buy-close");
+      const buyCancel = document.getElementById("buy-cancel");
+      const buyConfirm = document.getElementById("buy-confirm");
+      const buyPhone = document.getElementById("buy-phone");
+      const buyPlanLabel = document.getElementById("buy-plan-label");
+      const buyPlanAmount = document.getElementById("buy-plan-amount");
+      const buyFeedback = document.getElementById("buy-feedback");
+      const buyFeedbackText = document.getElementById("buy-feedback-text");
+      const buyFeedbackIcon = document.getElementById("buy-feedback-icon");
       const qs = new URLSearchParams(window.location.search || "");
       const serverCaptive = window.HOTSPOT_CAPTIVE || {};
+      let selectedPlan = null;
 
       function parseEmbeddedParam(urlValue, key) {
         if (!urlValue) return "";
@@ -163,6 +201,56 @@
         feedbackText.textContent = text || "";
       }
 
+      function showBuyFeedback(type, text) {
+        buyFeedback.classList.remove("hidden", "bg-red-50", "border-red-200", "text-red-600", "bg-green-50", "border-green-200", "text-green-600", "bg-blue-50", "border-blue-200", "text-blue-700");
+        if (type === "ok") {
+          buyFeedback.classList.add("bg-green-50", "border-green-200", "text-green-600", "flex");
+          buyFeedbackIcon.textContent = "✓";
+        } else if (type === "info") {
+          buyFeedback.classList.add("bg-blue-50", "border-blue-200", "text-blue-700", "flex");
+          buyFeedbackIcon.textContent = "i";
+        } else {
+          buyFeedback.classList.add("bg-red-50", "border-red-200", "text-red-600", "flex");
+          buyFeedbackIcon.textContent = "!";
+        }
+        buyFeedbackText.textContent = text || "";
+      }
+
+      function hideBuyFeedback() {
+        buyFeedback.classList.add("hidden");
+      }
+
+      function normalizePhone(value) {
+        const digits = String(value || "").replace(/\D/g, "");
+        if (!digits) return "";
+        if (digits.startsWith("255")) return digits;
+        if (digits.startsWith("0")) return `255${digits.slice(1)}`;
+        return `255${digits}`;
+      }
+
+      function closeBuyModal() {
+        selectedPlan = null;
+        buyModal.classList.add("hidden");
+        buyModal.classList.remove("flex");
+        buyPhone.value = "";
+        hideBuyFeedback();
+        buyConfirm.disabled = false;
+        buyConfirm.textContent = "Confirm";
+      }
+
+      function openBuyModal(plan) {
+        selectedPlan = plan;
+        buyPlanLabel.textContent = plan.plan_name || plan.name || "Package";
+        buyPlanAmount.textContent = `TSh ${Number(plan.price || 0).toLocaleString()}`;
+        hideBuyFeedback();
+        buyPhone.value = "";
+        buyConfirm.disabled = false;
+        buyConfirm.textContent = "Confirm";
+        buyModal.classList.remove("hidden");
+        buyModal.classList.add("flex");
+        setTimeout(() => buyPhone.focus(), 50);
+      }
+
       function cleanParams(input) {
         const out = {};
         for (const [key, value] of Object.entries(input || {})) {
@@ -205,7 +293,13 @@
               <div class="flex items-center gap-2 text-sm text-slate-600"><span class="text-primary font-bold">•</span>${speed}</div>
               <div class="flex items-center gap-2 text-sm text-slate-600"><span class="text-primary font-bold">•</span>${p.data_limit_mb ? `${p.data_limit_mb} MB data` : "Unlimited data"}</div>
             </div>
-            <button class="w-full flex items-center justify-center rounded-lg h-11 bg-slate-100 text-slate-400 text-sm font-bold cursor-not-allowed" disabled>Buy</button>
+            <button
+              type="button"
+              class="buy-plan-btn w-full flex items-center justify-center rounded-lg h-11 bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-colors"
+              data-plan="${p.name}"
+              data-plan-name="${(p.plan_name || "").replace(/"/g, "&quot;")}"
+              data-price="${p.price || 0}"
+            >Buy</button>
           </div>
         `;
       }
@@ -222,6 +316,88 @@
         } catch (e) {
           packageList.innerHTML = '<p class="text-sm text-red-500">Failed to load packages.</p>';
         }
+      }
+
+      async function waitForPaymentSuccess(paymentRef) {
+        const maxChecks = 45; // ~135 seconds
+        for (let i = 0; i < maxChecks; i += 1) {
+          const statusResult = await callApi("hotspot_ms.api.portal.payment_transaction_status", {
+            payment_ref: paymentRef,
+          });
+
+          const status = (statusResult.payment?.status || "").trim();
+          if (status === "Successful") return { ok: true, status };
+          if (status === "Failed" || status === "Cancelled") {
+            return { ok: false, status, message: `Payment ${status.toLowerCase()}` };
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+        }
+        return { ok: false, status: "Pending", message: "Payment confirmation timed out. If you already approved USSD, wait a bit and try again." };
+      }
+
+      async function confirmBuyFlow() {
+        if (!selectedPlan || !selectedPlan.plan) {
+          showBuyFeedback("err", "No package selected.");
+          return;
+        }
+
+        const normalizedPhone = normalizePhone(buyPhone.value);
+        if (!/^255\d{9}$/.test(normalizedPhone)) {
+          showBuyFeedback("err", "Enter a valid Tanzania number, e.g. 712345678.");
+          return;
+        }
+
+        buyConfirm.disabled = true;
+        buyConfirm.textContent = "Sending...";
+        showBuyFeedback("info", "Initiating USSD push...");
+
+        const created = await callApi("hotspot_ms.api.snippe.create_snippe_payment", {
+          plan: selectedPlan.plan,
+          payment_type: "mobile",
+          phone_number: normalizedPhone,
+        });
+        if (!created.ok || !created.payment_ref) {
+          showBuyFeedback("err", created.message || "Could not initiate payment.");
+          buyConfirm.disabled = false;
+          buyConfirm.textContent = "Confirm";
+          return;
+        }
+
+        showBuyFeedback("info", "USSD push sent. Approve on your phone, then waiting for confirmation...");
+        const paymentRef = created.payment_ref;
+        const waited = await waitForPaymentSuccess(paymentRef);
+        if (!waited.ok) {
+          showBuyFeedback("err", waited.message || "Payment not completed.");
+          buyConfirm.disabled = false;
+          buyConfirm.textContent = "Confirm";
+          return;
+        }
+
+        showBuyFeedback("ok", "Payment confirmed. Granting internet access...");
+        const access = await callApi("hotspot_ms.api.portal.activate_paid_access", {
+          payment_ref: paymentRef,
+          mac_address: captive.clientmac,
+          ip_address: captive.clientip,
+          nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
+          tok: captive.tok,
+          redir: captive.redir,
+          authaction: captive.authaction,
+          fas: captive.fas,
+          gatewayaddress: captive.gatewayaddress,
+          gatewayport: captive.gatewayport,
+          authdir: captive.authdir,
+          hid: captive.hid,
+        });
+
+        if (!access.ok || !access.redirect_url) {
+          showBuyFeedback("err", access.message || "Paid, but could not grant access.");
+          buyConfirm.disabled = false;
+          buyConfirm.textContent = "Confirm";
+          return;
+        }
+
+        window.location.href = access.redirect_url;
       }
 
       async function verifyVoucher() {
@@ -291,6 +467,31 @@
           window.location.href = redirectResult.redirect_url;
         } catch (err) {
           showFeedback("err", "Connection request failed.");
+        }
+      });
+
+      packageList.addEventListener("click", function (event) {
+        const btn = event.target.closest(".buy-plan-btn");
+        if (!btn) return;
+        openBuyModal({
+          plan: (btn.getAttribute("data-plan") || "").trim(),
+          plan_name: (btn.getAttribute("data-plan-name") || "").trim(),
+          price: Number(btn.getAttribute("data-price") || 0),
+        });
+      });
+
+      buyClose.addEventListener("click", closeBuyModal);
+      buyCancel.addEventListener("click", closeBuyModal);
+      buyModal.addEventListener("click", function (event) {
+        if (event.target === buyModal) closeBuyModal();
+      });
+      buyConfirm.addEventListener("click", async function () {
+        try {
+          await confirmBuyFlow();
+        } catch (error) {
+          showBuyFeedback("err", "Payment flow failed. Please try again.");
+          buyConfirm.disabled = false;
+          buyConfirm.textContent = "Confirm";
         }
       });
 
