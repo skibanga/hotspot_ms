@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import math
 import secrets
 import string
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -59,6 +60,17 @@ def _compute_expiry(activated_on, plan_doc):
 	if validity_unit.startswith("hour"):
 		return add_to_date(activated_on, hours=validity_value)
 	return add_to_date(activated_on, days=validity_value)
+
+
+def _remaining_session_minutes(expires_on) -> int:
+	if not expires_on:
+		return 0
+
+	remaining_seconds = (get_datetime(expires_on) - now_datetime()).total_seconds()
+	if remaining_seconds <= 0:
+		return 0
+
+	return max(1, int(math.ceil(remaining_seconds / 60)))
 
 
 def _normalize_mac(mac_address: str | None) -> str:
@@ -308,6 +320,37 @@ def _resolve_nas_device(nas_identifier: str | None) -> str | None:
 		name = frappe.db.get_value("Nas Device", {field: value}, "name")
 		if name:
 			return name
+
+	return None
+
+
+def _find_restorable_voucher(mac_address: str, nas_name: str | None = None):
+	if not mac_address:
+		return None
+
+	rows = frappe.get_all(
+		"Hotspot Voucher",
+		filters={"device_mac": mac_address, "status": "Active"},
+		fields=["name", "last_nas", "expires_on", "modified"],
+		order_by="expires_on desc, modified desc",
+		ignore_permissions=True,
+	)
+
+	for row in rows:
+		if row.get("last_nas") and nas_name and row.get("last_nas") != nas_name:
+			continue
+
+		voucher = frappe.get_doc("Hotspot Voucher", row["name"])
+		if _sync_voucher_status(voucher):
+			frappe.db.commit()
+
+		if voucher.status != "Active":
+			continue
+
+		if voucher.expires_on and get_datetime(voucher.expires_on) <= now_datetime():
+			continue
+
+		return voucher
 
 	return None
 
@@ -765,6 +808,106 @@ def session_status(voucher_code: str | None = None, session_id: str | None = Non
 			"data_used_mb": voucher.data_used_mb,
 			"remaining_mb": remaining_mb,
 		},
+	)
+
+
+@frappe.whitelist(allow_guest=True)
+def restore_active_access(
+	nas_identifier: str,
+	secret: str,
+	mac_address: str,
+	ip_address: str | None = None,
+) -> dict[str, Any]:
+	"""
+	Allow the router to restore a valid authenticated client after reboot/power loss.
+	The router supplies the reconnecting client MAC/IP and a NAS shared secret.
+	Frappe decides whether there is still a valid active voucher and returns the
+	remaining session time so openNDS can reauthenticate without resetting the plan.
+	"""
+	nas_doc, error = _validate_nas_access(nas_identifier, secret)
+	if error:
+		return error
+
+	mac_address = _normalize_mac(mac_address)
+	ip_address = _normalize_ip(ip_address)
+	if not mac_address:
+		return _error("mac_address is required", "MISSING_MAC")
+
+	voucher = _find_restorable_voucher(mac_address, nas_name=nas_doc.name)
+	if not voucher:
+		return _success("No restorable access", allow=False, mac_address=mac_address)
+
+	device_error = _validate_device_reuse(voucher, mac_address=mac_address, ip_address=ip_address)
+	if device_error:
+		return _success(
+			"Active voucher belongs to another device",
+			allow=False,
+			code=device_error.get("code") or "DEVICE_MISMATCH",
+			mac_address=mac_address,
+		)
+
+	if voucher.expires_on and get_datetime(voucher.expires_on) <= now_datetime():
+		_sync_voucher_status(voucher)
+		frappe.db.commit()
+		return _success("Voucher already expired", allow=False, mac_address=mac_address)
+
+	open_session_rows = frappe.get_all(
+		"Hotspot Session",
+		filters={"voucher": voucher.name, "session_status": "Open"},
+		fields=["name", "session_id", "mac_address", "ip_address", "nas_device"],
+		order_by="start_time desc",
+		limit=1,
+		ignore_permissions=True,
+	)
+
+	if open_session_rows:
+		session = frappe.get_doc("Hotspot Session", open_session_rows[0]["name"])
+		session_changed = False
+		if ip_address and session.ip_address != ip_address:
+			session.ip_address = ip_address
+			session_changed = True
+		if session.nas_device != nas_doc.name:
+			session.nas_device = nas_doc.name
+			session_changed = True
+		if session_changed:
+			session.save(ignore_permissions=True)
+	else:
+		session = frappe.new_doc("Hotspot Session")
+		session.session_id = f"HS-{secrets.token_hex(6).upper()}"
+		session.session_status = "Open"
+		session.voucher = voucher.name
+		session.customer = voucher.customer
+		session.nas_device = nas_doc.name
+		session.mac_address = mac_address
+		session.ip_address = ip_address
+		session.start_time = now_datetime()
+		session.insert(ignore_permissions=True)
+
+	voucher_changed = False
+	if ip_address and voucher.ip_address != ip_address:
+		voucher.ip_address = ip_address
+		voucher_changed = True
+	if voucher.last_nas != nas_doc.name:
+		voucher.last_nas = nas_doc.name
+		voucher_changed = True
+	if voucher_changed:
+		voucher.save(ignore_permissions=True)
+
+	frappe.db.commit()
+
+	session_timeout_minutes = _remaining_session_minutes(voucher.expires_on)
+	if session_timeout_minutes <= 0:
+		return _success("Voucher already expired", allow=False, mac_address=mac_address)
+
+	return _success(
+		"Active access restored",
+		allow=True,
+		mac_address=mac_address,
+		ip_address=ip_address,
+		voucher_code=voucher.voucher_code,
+		session_id=session.session_id,
+		session_timeout_minutes=session_timeout_minutes,
+		expires_on=voucher.expires_on,
 	)
 
 

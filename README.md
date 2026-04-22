@@ -167,6 +167,9 @@ Router deauth flow:
 - `/api/method/hotspot_ms.api.portal.pull_disconnect_actions`
 - `/api/method/hotspot_ms.api.portal.acknowledge_disconnect_action`
 
+Router session-restore flow:
+- `/api/method/hotspot_ms.api.portal.restore_active_access`
+
 Snippe payments:
 - `/api/method/hotspot_ms.api.snippe.get_snippe_settings`
 - `/api/method/hotspot_ms.api.snippe.create_snippe_payment`
@@ -215,6 +218,32 @@ Check running:
 
 ```sh
 pgrep -af 'opennds|hotspot_deauth_worker|opennds_watchdog'
+```
+
+Session restore worker:
+
+```sh
+install -m 0755 /root/openwrt_restore_active_clients.sh /usr/bin/hotspot_restore_active_clients.sh
+install -m 0755 /root/openwrt_hotspot_restore.init /etc/init.d/hotspot_restore
+
+cat >/etc/hotspot_restore.conf <<'EOF'
+FRAPPE_BASE_URL='https://hotspot.uniquemindpro.xyz'
+NAS_IDENTIFIER='OpenWrt-Main'
+NAS_SECRET='REPLACE_WITH_NAS_SHARED_SECRET'
+POLL_INTERVAL='15'
+EOF
+
+/etc/init.d/hotspot_restore enable
+/etc/init.d/hotspot_restore start
+```
+
+Manual one-shot test:
+
+```sh
+FRAPPE_BASE_URL='https://hotspot.uniquemindpro.xyz' \
+NAS_IDENTIFIER='OpenWrt-Main' \
+NAS_SECRET='<NAS_SHARED_SECRET>' \
+/usr/bin/hotspot_restore_active_clients.sh --once
 ```
 
 ## 9) Tailwind CSS (Portal UI)
