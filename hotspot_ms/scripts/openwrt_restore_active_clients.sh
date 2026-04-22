@@ -46,15 +46,24 @@ log() {
 urlencode() {
   local s="$1"
   local out=""
-  local i ch hex
+  local i ch
   i=1
   while [ "$i" -le "${#s}" ]; do
     ch="$(printf '%s' "$s" | cut -c "$i")"
     case "$ch" in
       [a-zA-Z0-9.~_-]) out="${out}${ch}" ;;
+      :) out="${out}%3A" ;;
+      /) out="${out}%2F" ;;
+      \?) out="${out}%3F" ;;
+      \&) out="${out}%26" ;;
+      =) out="${out}%3D" ;;
+      +) out="${out}%2B" ;;
+      @) out="${out}%40" ;;
+      " ") out="${out}%20" ;;
       *)
-        hex="$(printf '%s' "$ch" | od -An -tx1 | tr -d ' \n')"
-        out="${out}%${hex}"
+        # Keep the worker BusyBox-safe. Inputs here are controlled values
+        # (MAC/IP/NAS/secret), so explicit substitutions are sufficient.
+        out="${out}${ch}"
         ;;
     esac
     i=$((i + 1))
