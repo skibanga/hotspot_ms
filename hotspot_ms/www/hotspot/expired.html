@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Session Expired | TZ Hotspot</title>
+  <title>{{ title or "Session Expired" }}</title>
   <link rel="stylesheet" href="/assets/hotspot_ms/css/hotspot_portal.css" />
 </head>
 <body class="bg-background-light font-display min-h-screen flex flex-col">
@@ -44,7 +44,14 @@
           </div>
 
           <div class="mt-8 pt-8 border-t border-slate-100">
-            <p class="text-sm text-slate-500">Having trouble? <a class="text-primary font-medium hover:underline" href="#">Contact Support</a></p>
+            <p class="text-sm text-slate-500">
+              Having trouble?
+              {% if customer_support_tel %}
+                <a class="text-primary font-medium hover:underline" href="tel:{{ customer_support_tel | e }}">Contact Support</a>
+              {% else %}
+                <a class="text-primary font-medium hover:underline" href="#">Contact Support</a>
+              {% endif %}
+            </p>
           </div>
         </div>
       </div>

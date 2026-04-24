@@ -4,7 +4,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "portal_brand"
+  "portal_brand",
+  "customer_support_number"
  ],
  "fields": [
   {
@@ -13,6 +14,11 @@
    "fieldtype": "Data",
    "label": "Portal Brand",
    "reqd": 1
+  },
+  {
+   "fieldname": "customer_support_number",
+   "fieldtype": "Phone",
+   "label": "Customer Support Number"
   }
  ],
  "grid_page_length": 50,
