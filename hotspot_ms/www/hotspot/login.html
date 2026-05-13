@@ -34,6 +34,22 @@
 
       <div class="flex flex-col lg:flex-row gap-8 lg:gap-16">
         <div class="w-full lg:w-5/12 flex flex-col gap-6">
+
+        <div id="free-banner" class="hidden rounded-2xl border-2 border-green-400 bg-gradient-to-br from-green-50 to-emerald-50 p-6 shadow-lg relative overflow-hidden">
+          <div class="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-black px-8 py-1 rotate-45 translate-x-6 translate-y-2">FREE</div>
+          <div class="flex flex-col gap-3">
+            <div class="flex items-center gap-2">
+              <span class="text-3xl">🎁</span>
+              <h3 class="text-green-900 text-xl font-black">Free Internet Access</h3>
+            </div>
+            <p class="text-green-800 text-sm leading-relaxed">Get <strong>1 hour</strong> of free high-speed internet — no payment needed. One free session per device per day.</p>
+            <button id="btn-claim-free" type="button" class="w-full h-12 bg-green-500 hover:bg-green-600 text-white font-black text-base rounded-xl shadow-lg shadow-green-500/25 transition-all flex items-center justify-center gap-2">
+              🚀 Get Free Access
+            </button>
+            <div id="free-feedback" class="hidden items-center gap-2 p-3 rounded-lg border text-sm font-medium"></div>
+          </div>
+        </div>
+
         <div class="space-y-2">
           <h1 class="text-slate-900 text-3xl font-black tracking-tight">Available Packages</h1>
           <p class="text-slate-600 text-lg">Purchase a voucher at our local kiosks to enjoy premium high-speed access.</p>
@@ -312,7 +328,23 @@
             packageList.innerHTML = '<p class="text-sm text-slate-500">No packages available.</p>';
             return;
           }
-          packageList.innerHTML = items.map((p, idx) => packageCard(p, idx)).join("");
+
+          const hasFree = items.some((p) => Number(p.is_free) === 1);
+          const paidItems = items.filter((p) => Number(p.is_free) !== 1);
+
+          if (hasFree && captive.clientmac) {
+            const freeBanner = document.getElementById("free-banner");
+            if (freeBanner) {
+              freeBanner.classList.remove("hidden");
+              freeBanner.classList.add("flex");
+            }
+          }
+
+          if (!paidItems.length) {
+            packageList.innerHTML = '<p class="text-sm text-slate-500">No paid packages available.</p>';
+          } else {
+            packageList.innerHTML = paidItems.map((p, idx) => packageCard(p, idx)).join("");
+          }
         } catch (e) {
           packageList.innerHTML = '<p class="text-sm text-red-500">Failed to load packages.</p>';
         }
@@ -496,6 +528,80 @@
       });
 
       loadPackages();
+
+      // ── Free access claim flow ──
+      const freeBanner = document.getElementById("free-banner");
+      const btnClaimFree = document.getElementById("btn-claim-free");
+      const freeFeedback = document.getElementById("free-feedback");
+
+      function showFreeFeedback(type, text) {
+        if (!freeFeedback) return;
+        freeFeedback.className = "flex items-center gap-2 p-3 rounded-lg border text-sm font-medium";
+        if (type === "ok") {
+          freeFeedback.classList.add("bg-green-50", "border-green-200", "text-green-700");
+        } else if (type === "info") {
+          freeFeedback.classList.add("bg-blue-50", "border-blue-200", "text-blue-700");
+        } else {
+          freeFeedback.classList.add("bg-red-50", "border-red-200", "text-red-600");
+        }
+        freeFeedback.textContent = text || "";
+      }
+
+      if (btnClaimFree) {
+        btnClaimFree.addEventListener("click", async function () {
+          if (!captive.clientmac) {
+            showFreeFeedback("err", "Cannot detect your device. Please connect via the hotspot WiFi.");
+            return;
+          }
+
+          btnClaimFree.disabled = true;
+          btnClaimFree.textContent = "Claiming...";
+          showFreeFeedback("info", "Setting up your free access...");
+
+          try {
+            const claimed = await callApi("hotspot_ms.api.portal.claim_free_voucher", {
+              mac_address: captive.clientmac,
+              ip_address: captive.clientip,
+              nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
+            });
+
+            if (!claimed.ok) {
+              showFreeFeedback("err", claimed.message || "Could not claim free access.");
+              btnClaimFree.disabled = false;
+              btnClaimFree.textContent = "🚀 Get Free Access";
+              return;
+            }
+
+            showFreeFeedback("ok", claimed.message || "Free access granted!");
+
+            // Build captive redirect
+            const redirectResult = await callApi("hotspot_ms.api.portal.build_opennds_redirect", {
+              session_id: claimed.session_id,
+              voucher_code: claimed.voucher_code,
+              tok: captive.tok,
+              redir: captive.redir,
+              authaction: captive.authaction,
+              fas: captive.fas,
+              gatewayaddress: captive.gatewayaddress,
+              gatewayport: captive.gatewayport,
+              authdir: captive.authdir,
+              hid: captive.hid,
+              nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
+            });
+
+            if (redirectResult.ok && redirectResult.redirect_url) {
+              window.location.href = redirectResult.redirect_url;
+            } else {
+              showFreeFeedback("ok", "Free access active! You can now browse the internet.");
+              btnClaimFree.textContent = "✓ Access Granted";
+            }
+          } catch (error) {
+            showFreeFeedback("err", "Something went wrong. Please try again.");
+            btnClaimFree.disabled = false;
+            btnClaimFree.textContent = "🚀 Get Free Access";
+          }
+        });
+      }
     })();
   </script>
 </body>

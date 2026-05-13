@@ -7,6 +7,7 @@
  "field_order": [
   "plan_name",
   "enabled",
+  "is_free",
   "column_break_1",
   "price",
   "currency",
@@ -37,6 +38,14 @@
    "fieldtype": "Check",
    "in_list_view": 1,
    "label": "Enabled"
+  },
+  {
+   "default": "0",
+   "description": "When checked, this plan is offered as free access (one claim per device per day).",
+   "fieldname": "is_free",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Free"
   },
   {
    "fieldname": "column_break_1",

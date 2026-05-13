@@ -415,10 +415,96 @@ def get_packages() -> dict[str, Any]:
 			"download_kbps",
 			"upload_kbps",
 			"description",
+			"is_free",
 		],
 		order_by="price asc",
 	)
 	return _success("Packages fetched", packages=plans)
+
+
+def _has_claimed_free_today(mac_address: str, plan_name: str) -> bool:
+	"""Check if this MAC already claimed a free voucher today."""
+	if not mac_address:
+		return False
+
+	today_start = now_datetime().replace(hour=0, minute=0, second=0, microsecond=0)
+	existing = frappe.get_all(
+		"Hotspot Voucher",
+		filters={
+			"plan": plan_name,
+			"device_mac": mac_address,
+			"generated_on": (">=", today_start),
+		},
+		fields=["name"],
+		ignore_permissions=True,
+		limit=1,
+	)
+	return bool(existing)
+
+
+@frappe.whitelist(allow_guest=True)
+def claim_free_voucher(
+	mac_address: str | None = None,
+	ip_address: str | None = None,
+	nas_device: str | None = None,
+) -> dict[str, Any]:
+	"""
+	Claim a free 1-hour voucher. One claim per MAC address per calendar day.
+	Issues a new voucher from the free plan, activates it, and returns the session.
+	"""
+	mac_address = _normalize_mac(mac_address)
+	ip_address = _normalize_ip(ip_address)
+
+	if not mac_address:
+		return _error("Device MAC address is required for free access", "MISSING_MAC")
+
+	# Find the active free plan
+	free_plans = frappe.get_all(
+		"Hotspot Plan",
+		filters={"enabled": 1, "is_free": 1},
+		fields=["name", "plan_name"],
+		ignore_permissions=True,
+		limit=1,
+	)
+	if not free_plans:
+		return _error("No free plan is currently available", "NO_FREE_PLAN")
+
+	plan_name = free_plans[0]["name"]
+
+	# Check once-per-day limit
+	if _has_claimed_free_today(mac_address, plan_name):
+		return _error(
+			"You have already used your free access today. Come back tomorrow!",
+			"FREE_ALREADY_CLAIMED",
+		)
+
+	# Issue a free voucher
+	plan_doc = frappe.get_doc("Hotspot Plan", plan_name)
+	voucher = frappe.new_doc("Hotspot Voucher")
+	voucher.voucher_code = f"FREE-{secrets.token_hex(5).upper()}"
+	voucher.status = "New"
+	voucher.plan = plan_doc.name
+	voucher.device_mac = mac_address
+	if ip_address:
+		voucher.ip_address = ip_address
+	if flt(plan_doc.data_limit_mb) > 0:
+		voucher.data_limit_mb = flt(plan_doc.data_limit_mb)
+	voucher.insert(ignore_permissions=True)
+	frappe.db.commit()
+
+	# Activate through the standard flow
+	result = activate_voucher(
+		voucher_code=voucher.voucher_code,
+		mac_address=mac_address,
+		ip_address=ip_address,
+		nas_device=nas_device,
+	)
+	if not result.get("ok"):
+		return result
+
+	result["voucher_code"] = voucher.voucher_code
+	result["message"] = "Free access granted! Enjoy your 1 hour of internet."
+	return result
 
 
 @frappe.whitelist(allow_guest=True)

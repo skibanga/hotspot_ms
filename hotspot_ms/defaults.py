@@ -7,6 +7,15 @@ import frappe
 
 DEFAULT_HOTSPOT_PLANS: tuple[dict[str, Any], ...] = (
 	{
+		"plan_name": "Free - 1 Hour",
+		"price": 0,
+		"currency": "TZS",
+		"validity_value": 1,
+		"validity_unit": "Hours",
+		"is_free": 1,
+		"description": "Free 1-hour access — one claim per device per day.",
+	},
+	{
 		"plan_name": "TSh 500 - 6 Hours",
 		"price": 500,
 		"currency": "TZS",
@@ -48,6 +57,7 @@ def ensure_default_hotspot_plans() -> dict[str, int]:
 
 		doc.plan_name = row["plan_name"]
 		doc.enabled = 1
+		doc.is_free = row.get("is_free", 0)
 		doc.price = row["price"]
 		doc.currency = row["currency"]
 		doc.validity_value = row["validity_value"]
