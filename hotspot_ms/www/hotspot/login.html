@@ -24,7 +24,14 @@
       "Claiming...": "{{ _('Claiming...') }}",
       "Get Free Access": "{{ _('Get Free Access') }}",
       "Enter voucher code first": "{{ _('Enter voucher code first.') }}",
-      "Something went wrong. Please try again.": "{{ _('Something went wrong. Please try again.') }}"
+      "Something went wrong. Please try again.": "{{ _('Something went wrong. Please try again.') }}",
+      "Initiating USSD push...": "{{ _('Initiating USSD push...') }}",
+      "Could not initiate payment.": "{{ _('Could not initiate payment.') }}",
+      "Payment not completed.": "{{ _('Payment not completed.') }}",
+      "Paid, but could not grant access.": "{{ _('Paid, but could not grant access.') }}",
+      "Payment flow failed. Please try again.": "{{ _('Payment flow failed. Please try again.') }}",
+      "Setting up your free access...": "{{ _('Setting up your free access...') }}",
+      "Could not claim free access.": "{{ _('Could not claim free access.') }}"
     };
     function __(str, args=[]) {
       let out = window.HOTSPOT_TRANSLATIONS[str] || str;
@@ -276,7 +283,7 @@
         buyPhone.value = "";
         hideBuyFeedback();
         buyConfirm.disabled = false;
-        buyConfirm.textContent = "Confirm";
+        buyConfirm.textContent = __("Confirm");
       }
 
       function openBuyModal(plan) {
@@ -286,7 +293,7 @@
         hideBuyFeedback();
         buyPhone.value = "";
         buyConfirm.disabled = false;
-        buyConfirm.textContent = "Confirm";
+        buyConfirm.textContent = __("Confirm");
         buyModal.classList.remove("hidden");
         buyModal.classList.add("flex");
         setTimeout(() => buyPhone.focus(), 50);
@@ -408,8 +415,8 @@
         }
 
         buyConfirm.disabled = true;
-        buyConfirm.textContent = "Sending...";
-        showBuyFeedback("info", "Initiating USSD push...");
+        buyConfirm.textContent = __("Sending...");
+        showBuyFeedback("info", __("Initiating USSD push..."));
 
         const created = await callApi("hotspot_ms.api.snippe.create_snippe_payment", {
           plan: selectedPlan.plan,
@@ -417,9 +424,9 @@
           phone_number: normalizedPhone,
         });
         if (!created.ok || !created.payment_ref) {
-          showBuyFeedback("err", created.message || "Could not initiate payment.");
+          showBuyFeedback("err", created.message || __("Could not initiate payment."));
           buyConfirm.disabled = false;
-          buyConfirm.textContent = "Confirm";
+          buyConfirm.textContent = __("Confirm");
           return;
         }
 
@@ -427,9 +434,9 @@
         const paymentRef = created.payment_ref;
         const waited = await waitForPaymentSuccess(paymentRef);
         if (!waited.ok) {
-          showBuyFeedback("err", waited.message || "Payment not completed.");
+          showBuyFeedback("err", waited.message || __("Payment not completed."));
           buyConfirm.disabled = false;
-          buyConfirm.textContent = "Confirm";
+          buyConfirm.textContent = __("Confirm");
           return;
         }
 
@@ -450,9 +457,9 @@
         });
 
         if (!access.ok || !access.redirect_url) {
-          showBuyFeedback("err", access.message || "Paid, but could not grant access.");
+          showBuyFeedback("err", access.message || __("Paid, but could not grant access."));
           buyConfirm.disabled = false;
-          buyConfirm.textContent = "Confirm";
+          buyConfirm.textContent = __("Confirm");
           return;
         }
 
@@ -548,9 +555,9 @@
         try {
           await confirmBuyFlow();
         } catch (error) {
-          showBuyFeedback("err", "Payment flow failed. Please try again.");
+          showBuyFeedback("err", __("Payment flow failed. Please try again."));
           buyConfirm.disabled = false;
-          buyConfirm.textContent = "Confirm";
+          buyConfirm.textContent = __("Confirm");
         }
       });
 
@@ -582,8 +589,8 @@
           }
 
           btnClaimFree.disabled = true;
-          btnClaimFree.textContent = "Claiming...";
-          showFreeFeedback("info", "Setting up your free access...");
+          btnClaimFree.textContent = __("Claiming...");
+          showFreeFeedback("info", __("Setting up your free access..."));
 
           try {
             const claimed = await callApi("hotspot_ms.api.portal.claim_free_voucher", {
@@ -593,9 +600,9 @@
             });
 
             if (!claimed.ok) {
-              showFreeFeedback("err", claimed.message || "Could not claim free access.");
+              showFreeFeedback("err", claimed.message || __("Could not claim free access."));
               btnClaimFree.disabled = false;
-              btnClaimFree.textContent = "🚀 Get Free Access";
+              btnClaimFree.textContent = "🚀 " + __("Get Free Access");
               return;
             }
 
