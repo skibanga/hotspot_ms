@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ title or "Session Expired" }}</title>
+  <title>{{ title or _("Session Expired") }}</title>
   <link rel="stylesheet" href="/assets/hotspot_ms/css/hotspot_portal.css" />
 </head>
 <body class="bg-background-light font-display min-h-screen flex flex-col">
@@ -59,18 +59,18 @@
       <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-lg text-center text-white">
           <span class="mb-1 font-black">●</span>
-          <p class="text-xs font-bold uppercase tracking-wider opacity-80">High Speed</p>
-          <p class="text-sm font-semibold">Up to 50 Mbps</p>
+          <p class="text-xs font-bold uppercase tracking-wider opacity-80">{{ _("High Speed") }}</p>
+          <p class="text-sm font-semibold">{{ _("Up to 50 Mbps") }}</p>
         </div>
         <div class="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-lg text-center text-white">
           <span class="mb-1 font-black">●</span>
-          <p class="text-xs font-bold uppercase tracking-wider opacity-80">Daily Plans</p>
-          <p class="text-sm font-semibold">From 500 TZS</p>
+          <p class="text-xs font-bold uppercase tracking-wider opacity-80">{{ _("Daily Plans") }}</p>
+          <p class="text-sm font-semibold">{{ _("From 500 TZS") }}</p>
         </div>
         <div class="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-lg text-center text-white">
           <span class="mb-1 font-black">●</span>
-          <p class="text-xs font-bold uppercase tracking-wider opacity-80">Wide Coverage</p>
-          <p class="text-sm font-semibold">Across Tanzania</p>
+          <p class="text-xs font-bold uppercase tracking-wider opacity-80">{{ _("Wide Coverage") }}</p>
+          <p class="text-sm font-semibold">{{ _("Across Tanzania") }}</p>
         </div>
       </div>
     </div>
