@@ -43,7 +43,45 @@
       "Payment is successful": "{{ _('Payment is successful') }}",
       "Payment is failed": "{{ _('Payment is failed') }}",
       "Payment is cancelled": "{{ _('Payment is cancelled') }}",
-      "Payment is still pending": "{{ _('Payment is still pending') }}"
+      "Voucher plan is currently unavailable": "{{ _('Voucher plan is currently unavailable') }}",
+      "Voucher is already active on another device": "{{ _('Voucher is already active on another device') }}",
+      "Voucher is locked to another device": "{{ _('Voucher is locked to another device') }}",
+      "Client MAC is required for this voucher": "{{ _('Client MAC is required for this voucher') }}",
+      "Voucher is already bound to another client": "{{ _('Voucher is already bound to another client') }}",
+      "Unknown NAS device": "{{ _('Unknown NAS device') }}",
+      "Missing NAS shared secret": "{{ _('Missing NAS shared secret') }}",
+      "Invalid NAS shared secret": "{{ _('Invalid NAS shared secret') }}",
+      "NAS device is disabled": "{{ _('NAS device is disabled') }}",
+      "Voucher code is required": "{{ _('Voucher code is required') }}",
+      "Voucher already active": "{{ _('Voucher already active') }}",
+      "voucher_code is required": "{{ _('voucher_code is required') }}",
+      "session_id is required": "{{ _('session_id is required') }}",
+      "No active session": "{{ _('No active session') }}",
+      "mac_address is required": "{{ _('mac_address is required') }}",
+      "Voucher already expired": "{{ _('Voucher already expired') }}",
+      "Session not found": "{{ _('Session not found') }}",
+      "Session already closed": "{{ _('Session already closed') }}",
+      "Session closed": "{{ _('Session closed') }}",
+      "Deauth already queued": "{{ _('Deauth already queued') }}",
+      "Payment confirmation timed out. If you already approved USSD, wait a bit and try again.": "{{ _('Payment confirmation timed out. If you already approved USSD, wait a bit and try again.') }}",
+      "Payment confirmed. Granting internet access...": "{{ _('Payment confirmed. Granting internet access...') }}",
+      "USSD push sent. Approve on your phone, then waiting for confirmation...": "{{ _('USSD push sent. Approve on your phone, then waiting for confirmation...') }}",
+      "Invalid or expired voucher code. Please try again.": "{{ _('Invalid or expired voucher code. Please try again.') }}",
+      "Validation failed. Try again.": "{{ _('Validation failed. Try again.') }}",
+      "Connection request failed.": "{{ _('Connection request failed.') }}",
+      "Could not activate voucher.": "{{ _('Could not activate voucher.') }}",
+      "Could not complete captive login redirect.": "{{ _('Could not complete captive login redirect.') }}",
+      "Enter a valid Tanzania number, e.g. 712345678.": "{{ _('Enter a valid Tanzania number, e.g. 712345678.') }}",
+      "No package selected.": "{{ _('No package selected.') }}",
+      "Enter voucher code first": "{{ _('Enter voucher code first') }}",
+      "Voucher not found": "{{ _('Voucher not found') }}",
+      "Voucher is valid": "{{ _('Voucher is valid') }}",
+      "Voucher valid for plan": "{{ _('Voucher valid for plan') }}",
+      "Voucher activated": "{{ _('Voucher activated') }}",
+      "Payment is {0}": "{{ _('Payment is {0}') }}",
+      "failed": "{{ _('failed') }}",
+      "cancelled": "{{ _('cancelled') }}",
+      "Enter voucher code first.": "{{ _('Enter voucher code first.') }}"
     };
     function __(str, args=[]) {
       let out = window.HOTSPOT_TRANSLATIONS[str] || str;
@@ -406,23 +444,24 @@
           const status = (statusResult.payment?.status || "").trim();
           if (status === "Successful") return { ok: true, status };
           if (status === "Failed" || status === "Cancelled") {
-            return { ok: false, status, message: `Payment ${status.toLowerCase()}` };
+            const translatedStatus = status === "Failed" ? __("failed") : __("cancelled");
+            return { ok: false, status, message: __("Payment is {0}", [translatedStatus]) };
           }
 
           await new Promise((resolve) => setTimeout(resolve, 3000));
         }
-        return { ok: false, status: "Pending", message: "Payment confirmation timed out. If you already approved USSD, wait a bit and try again." };
+        return { ok: false, status: "Pending", message: __("Payment confirmation timed out. If you already approved USSD, wait a bit and try again.") };
       }
 
       async function confirmBuyFlow() {
         if (!selectedPlan || !selectedPlan.plan) {
-          showBuyFeedback("err", "No package selected.");
+          showBuyFeedback("err", __("No package selected."));
           return;
         }
 
         const normalizedPhone = normalizePhone(buyPhone.value);
         if (!/^255\d{9}$/.test(normalizedPhone)) {
-          showBuyFeedback("err", "Enter a valid Tanzania number, e.g. 712345678.");
+          showBuyFeedback("err", __("Enter a valid Tanzania number, e.g. 712345678."));
           return;
         }
 
@@ -442,7 +481,7 @@
           return;
         }
 
-        showBuyFeedback("info", "USSD push sent. Approve on your phone, then waiting for confirmation...");
+        showBuyFeedback("info", __("USSD push sent. Approve on your phone, then waiting for confirmation..."));
         const paymentRef = created.payment_ref;
         const waited = await waitForPaymentSuccess(paymentRef);
         if (!waited.ok) {
@@ -452,7 +491,7 @@
           return;
         }
 
-        showBuyFeedback("ok", "Payment confirmed. Granting internet access...");
+        showBuyFeedback("ok", __("Payment confirmed. Granting internet access..."));
         const access = await callApi("hotspot_ms.api.portal.activate_paid_access", {
           payment_ref: paymentRef,
           mac_address: captive.clientmac,
@@ -481,7 +520,7 @@
       async function verifyVoucher() {
         const code = (voucherInput.value || "").trim();
         if (!code) {
-          showFeedback("err", "Enter voucher code first.");
+          showFeedback("err", __("Enter voucher code first."));
           return null;
         }
         const result = await callApi("hotspot_ms.api.portal.verify_voucher", {
@@ -490,10 +529,10 @@
           ip_address: captive.clientip,
         });
         if (!result.ok) {
-          showFeedback("err", result.message || "Invalid or expired voucher code. Please try again.");
+          showFeedback("err", __(result.message) || __("Invalid or expired voucher code. Please try again."));
           return null;
         }
-        showFeedback("ok", `Voucher valid for plan ${result.voucher?.plan || ""}.`);
+        showFeedback("ok", `${__("Voucher valid for plan")} ${result.voucher?.plan || ""}.`);
         return result;
       }
 
@@ -501,7 +540,7 @@
         try {
           await verifyVoucher();
         } catch (e) {
-          showFeedback("err", "Validation failed. Try again.");
+          showFeedback("err", __("Validation failed. Try again."));
         }
       });
 
@@ -612,13 +651,13 @@
             });
 
             if (!claimed.ok) {
-              showFreeFeedback("err", claimed.message || __("Could not claim free access."));
+              showFreeFeedback("err", __(claimed.message) || __("Could not claim free access."));
               btnClaimFree.disabled = false;
               btnClaimFree.textContent = "🚀 " + __("Get Free Access");
               return;
             }
 
-            showFreeFeedback("ok", claimed.message || __("Free access granted!"));
+            showFreeFeedback("ok", __(claimed.message) || __("Free access granted!"));
 
             // Build captive redirect
             const redirectResult = await callApi("hotspot_ms.api.portal.build_opennds_redirect", {
