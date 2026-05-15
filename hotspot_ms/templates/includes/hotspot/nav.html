@@ -9,8 +9,8 @@
   <div class="flex items-center gap-3 md:gap-6">
     <!-- Language Toggle -->
     <div class="flex items-center bg-slate-100 p-1 rounded-full border border-slate-200">
-      <button onclick="setLanguage('en')" class="px-3 py-1 text-[10px] font-black rounded-full transition-all {% if (frappe.local.lang or 'sw') == 'en' %}bg-white text-primary shadow-sm{% else %}text-slate-400 hover:text-slate-600{% endif %}">ENG</button>
-      <button onclick="setLanguage('sw')" class="px-3 py-1 text-[10px] font-black rounded-full transition-all {% if (frappe.local.lang or 'sw') == 'sw' %}bg-white text-primary shadow-sm{% else %}text-slate-400 hover:text-slate-600{% endif %}">SWA</button>
+      <button onclick="setLanguage('en')" class="px-3 py-1 text-[10px] font-black rounded-full transition-all {% if lang == 'en' %}bg-white text-primary shadow-sm{% else %}text-slate-400 hover:text-slate-600{% endif %}">ENG</button>
+      <button onclick="setLanguage('sw')" class="px-3 py-1 text-[10px] font-black rounded-full transition-all {% if lang == 'sw' or not lang %}bg-white text-primary shadow-sm{% else %}text-slate-400 hover:text-slate-600{% endif %}">SWA</button>
     </div>
 
     {% if customer_support_tel %}
