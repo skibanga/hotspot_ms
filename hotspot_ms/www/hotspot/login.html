@@ -31,6 +31,10 @@
       "Paid, but could not grant access.": "{{ _('Paid, but could not grant access.') }}",
       "Payment flow failed. Please try again.": "{{ _('Payment flow failed. Please try again.') }}",
       "Setting up your free access...": "{{ _('Setting up your free access...') }}",
+      "Free access granted!": "{{ _('Free access granted!') }}",
+      "Free access active! You can now browse the internet.": "{{ _('Free access active! You can now browse the internet.') }}",
+      "Access Granted": "{{ _('Access Granted') }}",
+      "Cannot detect your device. Please connect via the hotspot WiFi.": "{{ _('Cannot detect your device. Please connect via the hotspot WiFi.') }}",
       "Could not claim free access.": "{{ _('Could not claim free access.') }}"
     };
     function __(str, args=[]) {
@@ -606,7 +610,7 @@
               return;
             }
 
-            showFreeFeedback("ok", claimed.message || "Free access granted!");
+            showFreeFeedback("ok", claimed.message || __("Free access granted!"));
 
             // Build captive redirect
             const redirectResult = await callApi("hotspot_ms.api.portal.build_opennds_redirect", {
@@ -626,13 +630,13 @@
             if (redirectResult.ok && redirectResult.redirect_url) {
               window.location.href = redirectResult.redirect_url;
             } else {
-              showFreeFeedback("ok", "Free access active! You can now browse the internet.");
-              btnClaimFree.textContent = "✓ Access Granted";
+              showFreeFeedback("ok", __("Free access active! You can now browse the internet."));
+              btnClaimFree.textContent = "✓ " + __("Access Granted");
             }
           } catch (error) {
-            showFreeFeedback("err", "Something went wrong. Please try again.");
+            showFreeFeedback("err", __("Something went wrong. Please try again."));
             btnClaimFree.disabled = false;
-            btnClaimFree.textContent = "🚀 Get Free Access";
+            btnClaimFree.textContent = "🚀 " + __("Get Free Access");
           }
         });
       }

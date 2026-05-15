@@ -25,7 +25,7 @@
               <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 24px 24px;"></div>
               <div class="relative h-full flex items-center px-8 gap-6">
                 <div class="size-20 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 text-white">
-                  <span class="text-xl font-black">LIVE</span>
+                  <span class="text-xl font-black">{{ _("LIVE") }}</span>
                 </div>
                 <div class="flex flex-col">
                   <span id="status-pill" class="px-2 py-0.5 bg-green-500 text-white text-[10px] font-bold uppercase rounded-full w-fit mb-2 flex items-center gap-1">
@@ -42,33 +42,33 @@
               <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
                 <div class="space-y-4">
                   <div class="flex flex-col">
-                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Session ID</span>
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">{{ _("Session ID") }}</span>
                     <div class="flex items-center gap-2">
                       <span id="session-id" class="text-slate-900 font-mono font-bold text-lg">-</span>
                     </div>
                   </div>
                   <div class="flex flex-col">
-                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Voucher Code</span>
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">{{ _("Voucher Code") }}</span>
                     <span id="voucher-code" class="text-slate-900 font-mono font-bold text-lg">-</span>
                   </div>
                   <div class="flex flex-col">
-                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Device MAC</span>
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">{{ _("Device MAC") }}</span>
                     <span id="device-mac" class="text-slate-900 font-mono font-bold text-lg">-</span>
                   </div>
                   <div class="flex flex-col">
-                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Device IP</span>
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">{{ _("Device IP") }}</span>
                     <span id="device-ip" class="text-slate-900 font-mono font-bold text-lg">-</span>
                   </div>
                 </div>
                 <div class="space-y-4">
                   <div class="flex flex-col">
-                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Start Time</span>
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">{{ _("Start Time") }}</span>
                     <div class="flex items-center gap-2 text-slate-900 font-semibold">
                       <span id="start-time">-</span>
                     </div>
                   </div>
                   <div class="flex flex-col">
-                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Expiry Time</span>
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">{{ _("Expiry Time") }}</span>
                     <div class="flex items-center gap-2 text-amber-600 font-semibold">
                       <span id="expiry-time">-</span>
                     </div>
@@ -114,13 +114,13 @@
           </div>
 
           <div class="mt-8 flex flex-col items-center gap-2">
-            <p class="text-slate-400 text-sm">Need help with your session?</p>
+            <p class="text-slate-400 text-sm">{{ _("Need help with your session?") }}</p>
             <div class="flex gap-4">
-              <a class="text-primary text-sm font-bold hover:underline" href="#">Customer Support</a>
+              <a class="text-primary text-sm font-bold hover:underline" href="#">{{ _("Customer Support") }}</a>
               <span class="text-slate-300">•</span>
-              <a class="text-primary text-sm font-bold hover:underline" href="#">Usage Tips</a>
+              <a class="text-primary text-sm font-bold hover:underline" href="#">{{ _("Usage Tips") }}</a>
               <span class="text-slate-300">•</span>
-              <a class="text-primary text-sm font-bold hover:underline" href="/hotspot/login">Buy Data</a>
+              <a class="text-primary text-sm font-bold hover:underline" href="/hotspot/login">{{ _("Buy Data") }}</a>
             </div>
           </div>
         </div>
@@ -131,6 +131,27 @@
   </div>
 
   <script>
+    window.HOTSPOT_TRANSLATIONS = {
+      "Connected": "{{ _('Connected') }}",
+      "Offline": "{{ _('Offline') }}",
+      "Session is active.": "{{ _('Session is active.') }}",
+      "No active session.": "{{ _('No active session.') }}",
+      "Failed to load session status.": "{{ _('Failed to load session status.') }}",
+      "Unlimited": "{{ _('Unlimited') }}",
+      "Unlimited plan usage": "{{ _('Unlimited plan usage') }}",
+      "Unlimited plan.": "{{ _('Unlimited plan.') }}",
+      "{0}% of your total data consumed": "{{ _('{0}% of your total data consumed') }}",
+      "{0}% data remaining": "{{ _('{0}% data remaining') }}"
+    };
+
+    function __(str, args=[]) {
+      let out = window.HOTSPOT_TRANSLATIONS[str] || str;
+      args.forEach((arg, i) => {
+        out = out.replace(`{${i}}`, arg);
+      });
+      return out;
+    }
+
     (function () {
       const query = new URLSearchParams(window.location.search);
       const urlSessionId = query.get("session_id") || "";
@@ -183,19 +204,19 @@
 
           usageTextEl.textContent = `${total.toFixed(2)}MB / ${limit.toFixed(2)}MB`;
           usageBarEl.style.width = `${usedPct}%`;
-          usageNoteEl.textContent = `${usedPct.toFixed(0)}% of your total data consumed`;
+          usageNoteEl.textContent = __("{0}% of your total data consumed", [usedPct.toFixed(0)]);
 
           remainingTextEl.textContent = `${Number(remainingMb || 0).toFixed(2)}MB`;
           remainingBarEl.style.width = `${remainingPct}%`;
-          remainingNoteEl.textContent = `${remainingPct.toFixed(0)}% data remaining`;
+          remainingNoteEl.textContent = __("{0}% data remaining", [remainingPct.toFixed(0)]);
         } else {
           usageTextEl.textContent = `${total.toFixed(2)}MB`;
           usageBarEl.style.width = "100%";
-          usageNoteEl.textContent = "Unlimited plan usage";
+          usageNoteEl.textContent = __("Unlimited plan usage");
 
-          remainingTextEl.textContent = "Unlimited";
+          remainingTextEl.textContent = __("Unlimited");
           remainingBarEl.style.width = "100%";
-          remainingNoteEl.textContent = "Unlimited plan.";
+          remainingNoteEl.textContent = __("Unlimited plan.");
         }
       }
 
@@ -216,9 +237,9 @@
         const result = await callApi("hotspot_ms.api.portal.session_status", params);
 
         if (!result.ok) {
-          showMessage(false, result.message || "No active session.");
+          showMessage(false, result.message || __("No active session."));
           statusPill.className = "px-2 py-0.5 bg-red-500 text-white text-[10px] font-bold uppercase rounded-full w-fit mb-2 flex items-center gap-1";
-          statusPill.innerHTML = '<span class="size-1.5 bg-white rounded-full"></span> Offline';
+          statusPill.innerHTML = `<span class="size-1.5 bg-white rounded-full"></span> ${__("Offline")}`;
           if ((result.code || "") === "NO_ACTIVE_SESSION") {
             window.location.href = "/hotspot/expired";
           }
@@ -238,8 +259,8 @@
         updateBars(session.total_mb, voucher.data_limit_mb, voucher.remaining_mb);
 
         statusPill.className = "px-2 py-0.5 bg-green-500 text-white text-[10px] font-bold uppercase rounded-full w-fit mb-2 flex items-center gap-1";
-        statusPill.innerHTML = '<span class="size-1.5 bg-white rounded-full animate-pulse"></span> Connected';
-        showMessage(true, "Session is active.");
+        statusPill.innerHTML = `<span class="size-1.5 bg-white rounded-full animate-pulse"></span> ${__("Connected")}`;
+        showMessage(true, __("Session is active."));
         closeSessionPage();
       }
 
@@ -247,7 +268,7 @@
         try {
           await refreshStatus();
         } catch (e) {
-          showMessage(false, "Failed to load session status.");
+          showMessage(false, __("Failed to load session status."));
         }
       });
     })();
