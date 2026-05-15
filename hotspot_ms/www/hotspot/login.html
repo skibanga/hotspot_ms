@@ -3,10 +3,36 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ portal_login_title or "Hapa Kitonga WiFi Login" }}</title>
+  <title>{{ _(portal_login_title) or _("Hapa Kitonga WiFi Login") }}</title>
   <link rel="stylesheet" href="/assets/hotspot_ms/css/hotspot_portal.css" />
   <script>
     window.HOTSPOT_CAPTIVE = {{ captive_json | safe }};
+    window.HOTSPOT_TRANSLATIONS = {
+      "No packages available": "{{ _('No packages available.') }}",
+      "Failed to load packages": "{{ _('Failed to load packages.') }}",
+      "No paid packages available": "{{ _('No paid packages available.') }}",
+      "POPULAR": "{{ _('POPULAR') }}",
+      "PACKAGE": "{{ _('PACKAGE') }}",
+      "Buy": "{{ _('Buy') }}",
+      "TSh / {0}": "{{ _('TSh / {0}') }}",
+      "Up to {0}Mbps Speed": "{{ _('Up to {0}Mbps Speed') }}",
+      "High Speed Access": "{{ _('High Speed Access') }}",
+      "Unlimited data": "{{ _('Unlimited data') }}",
+      "Approved": "{{ _('Approved') }}",
+      "Confirm": "{{ _('Confirm') }}",
+      "Sending...": "{{ _('Sending...') }}",
+      "Claiming...": "{{ _('Claiming...') }}",
+      "Get Free Access": "{{ _('Get Free Access') }}",
+      "Enter voucher code first": "{{ _('Enter voucher code first.') }}",
+      "Something went wrong. Please try again.": "{{ _('Something went wrong. Please try again.') }}"
+    };
+    function __(str, args=[]) {
+      let out = window.HOTSPOT_TRANSLATIONS[str] || str;
+      if (args.length) {
+        args.forEach((a, i) => { out = out.replace(`{${i}}`, a); });
+      }
+      return out;
+    }
   </script>
 </head>
 <body class="bg-background-light min-h-screen font-display">
@@ -35,24 +61,24 @@
       <div class="flex flex-col lg:flex-row gap-8 lg:gap-16">
         <div class="w-full lg:w-5/12 flex flex-col gap-6">
 
-        <div id="free-banner" class="hidden rounded-2xl border-2 border-green-400 bg-gradient-to-br from-green-50 to-emerald-50 p-6 shadow-lg relative overflow-hidden">
-          <div class="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-black px-8 py-1 rotate-45 translate-x-6 translate-y-2">FREE</div>
+          <div id="free-banner" class="hidden rounded-2xl border-2 border-green-400 bg-gradient-to-br from-green-50 to-emerald-50 p-6 shadow-lg relative overflow-hidden">
+          <div class="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-black px-8 py-1 rotate-45 translate-x-6 translate-y-2">{{ _("FREE") }}</div>
           <div class="flex flex-col gap-3">
             <div class="flex items-center gap-2">
               <span class="text-3xl">🎁</span>
-              <h3 class="text-green-900 text-xl font-black">Free Internet Access</h3>
+              <h3 class="text-green-900 text-xl font-black">{{ _("Free Internet Access") }}</h3>
             </div>
-            <p class="text-green-800 text-sm leading-relaxed">Get <strong>1 hour</strong> of free high-speed internet — no payment needed. One free session per device per day.</p>
+            <p class="text-green-800 text-sm leading-relaxed">{{ _("Get 1 hour of free high-speed internet — no payment needed. One free session per device per day.") }}</p>
             <button id="btn-claim-free" type="button" class="w-full h-12 bg-green-500 hover:bg-green-600 text-white font-black text-base rounded-xl shadow-lg shadow-green-500/25 transition-all flex items-center justify-center gap-2">
-              🚀 Get Free Access
+              🚀 {{ _("Get Free Access") }}
             </button>
             <div id="free-feedback" class="hidden items-center gap-2 p-3 rounded-lg border text-sm font-medium"></div>
           </div>
         </div>
 
         <div class="space-y-2">
-          <h1 class="text-slate-900 text-3xl font-black tracking-tight">Available Packages</h1>
-          <p class="text-slate-600 text-lg">Purchase a voucher at our local kiosks to enjoy premium high-speed access.</p>
+          <h1 class="text-slate-900 text-3xl font-black tracking-tight">{{ _("Available Packages") }}</h1>
+          <p class="text-slate-600 text-lg">{{ _("Purchase a voucher at our local kiosks to enjoy premium high-speed access.") }}</p>
         </div>
         <div id="package-list" class="grid gap-4"></div>
       </div>
@@ -60,14 +86,14 @@
         <div class="w-full lg:w-7/12 flex items-start">
           <div class="w-full bg-white rounded-2xl shadow-2xl border border-slate-200 p-8 md:p-12">
           <div class="mb-8 text-center">
-            <h2 class="text-slate-900 text-3xl font-black mb-3">Welcome Back</h2>
-            <p class="text-slate-500">Enter your voucher code to start your session.</p>
+            <h2 class="text-slate-900 text-3xl font-black mb-3">{{ _("Welcome Back") }}</h2>
+            <p class="text-slate-500">{{ _("Enter your voucher code to start your session.") }}</p>
             <div id="captive-info" class="captive-hint" style="display:none;"></div>
           </div>
 
           <form id="voucher-form" class="space-y-6">
             <div class="space-y-2">
-              <label class="block text-sm font-bold text-slate-700 uppercase tracking-wider" for="voucher-code">Voucher Code</label>
+              <label class="block text-sm font-bold text-slate-700 uppercase tracking-wider" for="voucher-code">{{ _("Voucher Code") }}</label>
               <div class="relative">
                 <input id="voucher-code" class="w-full h-16 px-6 bg-slate-50 border-2 border-slate-200 rounded-xl text-2xl font-mono tracking-[0.2em] text-center focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-slate-300" maxlength="24" placeholder="XXXX-XXXX-XXXX" type="text" autocomplete="off" />
                 <div class="absolute inset-y-0 right-4 flex items-center pointer-events-none text-slate-400">
@@ -83,10 +109,10 @@
 
             <div class="flex flex-col gap-4 pt-4">
               <button id="btn-connect" class="w-full h-14 bg-primary hover:bg-primary/90 text-white font-black text-lg rounded-xl shadow-lg shadow-primary/25 transition-all flex items-center justify-center gap-2" type="submit">
-                Connect Now
+                {{ _("Connect Now") }}
               </button>
               <button id="btn-validate" class="w-full h-14 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-all flex items-center justify-center gap-2" type="button">
-                Validate Only
+                {{ _("Validate Only") }}
               </button>
             </div>
           </form>
@@ -94,13 +120,13 @@
           <div class="mt-12 flex flex-col items-center gap-6">
             <div class="flex items-center gap-2">
               <span class="w-8 h-[1px] bg-slate-200"></span>
-              <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Network Status</span>
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">{{ _("Network Status") }}</span>
               <span class="w-8 h-[1px] bg-slate-200"></span>
             </div>
             <div class="flex gap-8">
               <div class="flex flex-col items-center gap-1">
                 <span class="text-green-500 font-black">●</span>
-                <span class="text-[10px] font-bold text-slate-500">Active</span>
+                <span class="text-[10px] font-bold text-slate-500">{{ _("Active") }}</span>
               </div>
               <div class="flex flex-col items-center gap-1">
                 <span class="text-green-500 font-black">●</span>
@@ -123,13 +149,13 @@
   <div id="buy-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" style="background: rgba(15, 23, 42, 0.45);">
     <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl p-6" style="width:min(560px, 100%);">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-slate-900 text-xl font-black">Buy Package</h3>
+        <h3 class="text-slate-900 text-xl font-black">{{ _("Buy Package") }}</h3>
         <button id="buy-close" type="button" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
       </div>
       <p id="buy-plan-label" class="text-slate-700 text-sm font-semibold mb-1"></p>
       <p id="buy-plan-amount" class="text-slate-900 text-2xl font-black mb-4"></p>
 
-      <label class="block text-sm font-bold text-slate-700 uppercase tracking-wider mb-2" for="buy-phone">Phone Number</label>
+      <label class="block text-sm font-bold text-slate-700 uppercase tracking-wider mb-2" for="buy-phone">{{ _("Phone Number") }}</label>
       <div class="flex items-center gap-2 mb-4">
         <span class="h-12 px-3 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 font-bold inline-flex items-center">+255</span>
         <input id="buy-phone" type="tel" inputmode="numeric" placeholder="7XXXXXXXX" class="w-full h-12 px-4 rounded-lg border border-slate-200 bg-white text-slate-900 focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none" />
@@ -141,8 +167,8 @@
       </div>
 
       <div class="flex gap-3">
-        <button id="buy-cancel" type="button" class="flex-1 h-11 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50">Cancel</button>
-        <button id="buy-confirm" type="button" class="flex-1 h-11 rounded-lg bg-primary text-white font-black hover:bg-primary/90">Confirm</button>
+        <button id="buy-cancel" type="button" class="flex-1 h-11 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50">{{ _("Cancel") }}</button>
+        <button id="buy-confirm" type="button" class="flex-1 h-11 rounded-lg bg-primary text-white font-black hover:bg-primary/90">{{ _("Confirm") }}</button>
       </div>
     </div>
   </div>
@@ -202,7 +228,7 @@
         const bits = [];
         if (captive.clientip) bits.push(`IP: ${captive.clientip}`);
         if (captive.clientmac) bits.push(`MAC: ${captive.clientmac}`);
-        captiveInfo.textContent = `Captive session detected${bits.length ? ` (${bits.join(", ")})` : ""}.`;
+        captiveInfo.textContent = `${__("Captive session detected")}${bits.length ? ` (${bits.join(", ")})` : ""}.`;
       }
 
       function showFeedback(type, text) {
@@ -283,18 +309,20 @@
         const url = `/api/method/${method}` + (query ? `?${query}` : "");
         const res = await fetch(url, { credentials: "same-origin" });
         const data = await res.json();
-        return data.message || {};
+        const message = data.message || {};
+        if (message.message) message.message = __(message.message);
+        return message;
       }
 
       function packageCard(p, idx) {
         const featured = idx === 1;
         const amount = Number(p.price || 0).toLocaleString();
         const validity = `${p.validity_value} ${p.validity_unit}`;
-        const speed = p.download_kbps ? `Up to ${Math.max(1, Math.round(p.download_kbps / 1000))}Mbps Speed` : "High Speed Access";
-        const label = featured ? "POPULAR" : "PACKAGE";
+        const speed = p.download_kbps ? __("Up to {0}Mbps Speed", [Math.max(1, Math.round(p.download_kbps / 1000))]) : __("High Speed Access");
+        const label = featured ? __("POPULAR") : __("PACKAGE");
         return `
           <div class="flex flex-col gap-4 rounded-xl ${featured ? "border-2 border-primary shadow-lg" : "border border-slate-200 shadow-sm"} bg-white p-6 relative overflow-hidden">
-            ${featured ? '<div class="absolute top-0 right-0"><div class="bg-primary text-white text-[10px] font-black px-8 py-1 rotate-45 translate-x-6 translate-y-2">POPULAR</div></div>' : ""}
+            ${featured ? '<div class="absolute top-0 right-0"><div class="bg-primary text-white text-[10px] font-black px-8 py-1 rotate-45 translate-x-6 translate-y-2">' + label + '</div></div>' : ""}
             <div class="flex flex-col gap-1">
               <div class="flex items-center justify-between">
                 <h3 class="text-slate-900 text-lg font-bold">${p.plan_name}</h3>
@@ -302,12 +330,12 @@
               </div>
               <div class="flex items-baseline gap-2 mt-2">
                 <span class="text-slate-900 text-3xl font-black">${amount}</span>
-                <span class="text-slate-500 text-sm font-bold uppercase">TSh / ${validity}</span>
+                <span class="text-slate-500 text-sm font-bold uppercase">${__("TSh / {0}", [validity])}</span>
               </div>
             </div>
             <div class="space-y-2">
               <div class="flex items-center gap-2 text-sm text-slate-600"><span class="text-primary font-bold">•</span>${speed}</div>
-              <div class="flex items-center gap-2 text-sm text-slate-600"><span class="text-primary font-bold">•</span>${p.data_limit_mb ? `${p.data_limit_mb} MB data` : "Unlimited data"}</div>
+              <div class="flex items-center gap-2 text-sm text-slate-600"><span class="text-primary font-bold">•</span>${p.data_limit_mb ? __("{0} MB data", [p.data_limit_mb]) : __("Unlimited data")}</div>
             </div>
             <button
               type="button"
@@ -315,7 +343,7 @@
               data-plan="${p.name}"
               data-plan-name="${(p.plan_name || "").replace(/"/g, "&quot;")}"
               data-price="${p.price || 0}"
-            >Buy</button>
+            >${__("Buy")}</button>
           </div>
         `;
       }
@@ -325,7 +353,7 @@
           const result = await callApi("hotspot_ms.api.portal.get_packages");
           const items = result.packages || [];
           if (!items.length) {
-            packageList.innerHTML = '<p class="text-sm text-slate-500">No packages available.</p>';
+            packageList.innerHTML = `<p class="text-sm text-slate-500">${__("No packages available")}</p>`;
             return;
           }
 
@@ -341,12 +369,12 @@
           }
 
           if (!paidItems.length) {
-            packageList.innerHTML = '<p class="text-sm text-slate-500">No paid packages available.</p>';
+            packageList.innerHTML = `<p class="text-sm text-slate-500">${__("No paid packages available")}</p>`;
           } else {
             packageList.innerHTML = paidItems.map((p, idx) => packageCard(p, idx)).join("");
           }
         } catch (e) {
-          packageList.innerHTML = '<p class="text-sm text-red-500">Failed to load packages.</p>';
+          packageList.innerHTML = `<p class="text-sm text-red-500">${__("Failed to load packages")}</p>`;
         }
       }
 

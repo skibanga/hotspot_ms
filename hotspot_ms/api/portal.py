@@ -18,11 +18,11 @@ DEAUTH_PENDING_PREFIX = "DEAUTH_PENDING|"
 
 
 def _error(message: str, code: str = "ERROR") -> dict[str, Any]:
-	return {"ok": False, "code": code, "message": message}
+	return {"ok": False, "code": code, "message": frappe._(message)}
 
 
 def _success(message: str, **data: Any) -> dict[str, Any]:
-	res = {"ok": True, "message": message}
+	res = {"ok": True, "message": frappe._(message)}
 	res.update(data)
 	return res
 
@@ -419,6 +419,13 @@ def get_packages() -> dict[str, Any]:
 		],
 		order_by="price asc",
 	)
+
+	for p in plans:
+		p.plan_name = frappe._(p.plan_name)
+		p.description = frappe._(p.description)
+		if p.validity_unit:
+			p.validity_unit = frappe._(p.validity_unit)
+
 	return _success("Packages fetched", packages=plans)
 
 
@@ -503,7 +510,7 @@ def claim_free_voucher(
 		return result
 
 	result["voucher_code"] = voucher.voucher_code
-	result["message"] = "Free access granted! Enjoy your 1 hour of internet."
+	result["message"] = frappe._("Free access granted! Enjoy your 1 hour of internet.")
 	return result
 
 

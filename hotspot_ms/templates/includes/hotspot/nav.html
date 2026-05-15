@@ -1,37 +1,50 @@
 <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 bg-white/80 backdrop-blur-md px-4 md:px-10 py-4 sticky top-0 z-50">
   <div class="flex items-center gap-3 text-slate-900">
     <div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white">
-      <span class="font-black text-xs">W</span>
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
     </div>
     <h2 class="text-base md:text-xl font-bold leading-tight tracking-tight">{{ portal_brand or "Hapa Kitonga WiFi" }}</h2>
   </div>
 
   <div class="flex items-center gap-3 md:gap-6">
+    <!-- Language Toggle -->
+    <div class="flex items-center bg-slate-100 p-1 rounded-full border border-slate-200">
+      <button onclick="setLanguage('en')" class="px-3 py-1 text-[10px] font-black rounded-full transition-all {% if (frappe.local.lang or 'sw') == 'en' %}bg-white text-primary shadow-sm{% else %}text-slate-400 hover:text-slate-600{% endif %}">ENG</button>
+      <button onclick="setLanguage('sw')" class="px-3 py-1 text-[10px] font-black rounded-full transition-all {% if (frappe.local.lang or 'sw') == 'sw' %}bg-white text-primary shadow-sm{% else %}text-slate-400 hover:text-slate-600{% endif %}">SWA</button>
+    </div>
+
     {% if customer_support_tel %}
       <a href="tel:{{ customer_support_tel | e }}" class="hidden md:inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-primary transition-colors">
-        <span class="text-slate-400">Support:</span>
+        <span class="text-slate-400">{{ _("Support") }}:</span>
         <span class="font-bold text-slate-700">{{ customer_support_number | e }}</span>
       </a>
     {% else %}
-      <a href="#" class="text-sm font-semibold text-slate-600 hover:text-primary transition-colors">Support</a>
+      <a href="#" class="text-sm font-semibold text-slate-600 hover:text-primary transition-colors">{{ _("Support") }}</a>
     {% endif %}
 
-	    <details class="relative md:hidden">
-	      <summary class="list-none cursor-pointer text-slate-700 border border-slate-300 rounded-md px-2 py-1 font-semibold select-none">☰</summary>
-	      <nav class="absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-lg shadow-xl p-2 flex flex-col gap-1">
-	        {% if customer_support_tel %}
-	          <a href="tel:{{ customer_support_tel | e }}" class="px-3 py-3 rounded-lg text-sm font-bold text-slate-700 hover:text-primary hover:bg-slate-50 transition-colors whitespace-normal leading-normal">
-              Support: {{ customer_support_number | e }}
-            </a>
-	        {% endif %}
-	        <a href="/hotspot/login" class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors {% if active_page == 'login' %}text-primary bg-blue-50{% else %}text-slate-600 hover:text-primary hover:bg-slate-50{% endif %}">Login</a>
-	        <a href="/hotspot/status" class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors {% if active_page == 'status' %}text-primary bg-blue-50{% else %}text-slate-600 hover:text-primary hover:bg-slate-50{% endif %}">Status</a>
-	      </nav>
-	    </details>
+    <details class="relative md:hidden">
+      <summary class="list-none cursor-pointer text-slate-700 border border-slate-300 rounded-md px-2 py-1 font-semibold select-none">☰</summary>
+      <nav class="absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-lg shadow-xl p-2 flex flex-col gap-1">
+        {% if customer_support_tel %}
+          <a href="tel:{{ customer_support_tel | e }}" class="px-3 py-3 rounded-lg text-sm font-bold text-slate-700 hover:text-primary hover:bg-slate-50 transition-colors whitespace-normal leading-normal">
+            {{ _("Support") }}: {{ customer_support_number | e }}
+          </a>
+        {% endif %}
+        <a href="/hotspot/login" class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors {% if active_page == 'login' %}text-primary bg-blue-50{% else %}text-slate-600 hover:text-primary hover:bg-slate-50{% endif %}">{{ _("Login") }}</a>
+        <a href="/hotspot/status" class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors {% if active_page == 'status' %}text-primary bg-blue-50{% else %}text-slate-600 hover:text-primary hover:bg-slate-50{% endif %}">{{ _("Status") }}</a>
+      </nav>
+    </details>
 
     <nav class="hidden md:flex items-center gap-6">
-      <a href="/hotspot/login" class="text-sm font-semibold transition-colors {% if active_page == 'login' %}text-primary{% else %}text-slate-600 hover:text-primary{% endif %}">Login</a>
-      <a href="/hotspot/status" class="text-sm font-semibold transition-colors {% if active_page == 'status' %}text-primary{% else %}text-slate-600 hover:text-primary{% endif %}">Status</a>
+      <a href="/hotspot/login" class="text-sm font-semibold transition-colors {% if active_page == 'login' %}text-primary{% else %}text-slate-600 hover:text-primary{% endif %}">{{ _("Login") }}</a>
+      <a href="/hotspot/status" class="text-sm font-semibold transition-colors {% if active_page == 'status' %}text-primary{% else %}text-slate-600 hover:text-primary{% endif %}">{{ _("Status") }}</a>
     </nav>
   </div>
 </header>
+
+<script>
+function setLanguage(lang) {
+  document.cookie = "lang=" + lang + "; path=/; max-age=" + (60 * 60 * 24 * 365);
+  window.location.reload();
+}
+</script>

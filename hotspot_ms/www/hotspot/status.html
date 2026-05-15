@@ -15,8 +15,8 @@
       <main class="flex flex-1 justify-center py-10 px-4">
         <div class="layout-content-container flex flex-col max-w-[800px] flex-1">
           <div class="flex flex-col gap-2 mb-8 text-center md:text-left">
-            <h1 class="text-slate-900 text-4xl font-black leading-tight tracking-tight">Session Status</h1>
-            <p class="text-slate-500 text-lg font-normal">Manage your active Wi-Fi connection in real-time</p>
+            <h1 class="text-slate-900 text-4xl font-black leading-tight tracking-tight">{{ _("Session Status") }}</h1>
+            <p class="text-slate-500 text-lg font-normal">{{ _("Manage your active Wi-Fi connection in real-time") }}</p>
           </div>
 
           <div class="bg-white rounded-xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
@@ -30,10 +30,10 @@
                 <div class="flex flex-col">
                   <span id="status-pill" class="px-2 py-0.5 bg-green-500 text-white text-[10px] font-bold uppercase rounded-full w-fit mb-2 flex items-center gap-1">
                     <span class="size-1.5 bg-white rounded-full animate-pulse"></span>
-                    Connected
+                    {{ _("Connected") }}
                   </span>
-                  <h2 class="text-white text-2xl font-bold">Active Session Details</h2>
-                  <p class="text-white/80 text-sm">Connected via hotspot portal</p>
+                  <h2 class="text-white text-2xl font-bold">{{ _("Active Session Details") }}</h2>
+                  <p class="text-white/80 text-sm">{{ _("Connected via hotspot portal") }}</p>
                 </div>
               </div>
             </div>
@@ -80,7 +80,7 @@
                 <div class="flex flex-col gap-3">
                   <div class="flex justify-between items-end">
                     <div class="flex items-center gap-2">
-                      <p class="text-slate-900 text-base font-semibold leading-normal">Usage (MB)</p>
+                      <p class="text-slate-900 text-base font-semibold leading-normal">{{ _("Usage (MB)") }}</p>
                     </div>
                     <p class="text-slate-900 text-sm font-bold leading-normal"><span id="usage-text">0MB</span></p>
                   </div>
@@ -88,23 +88,23 @@
                     <div id="usage-bar" class="h-full rounded-full bg-primary" style="width: 0%;"></div>
                   </div>
                   <div class="flex justify-between items-center">
-                    <p id="usage-note" class="text-slate-500 text-xs font-medium">Usage data will appear after session accounting updates.</p>
-                    <span id="usage-badge" class="text-xs font-bold text-primary px-2 py-0.5 bg-primary/10 rounded">Live</span>
+                    <p id="usage-note" class="text-slate-500 text-xs font-medium">{{ _("Usage data will appear after session accounting updates.") }}</p>
+                    <span id="usage-badge" class="text-xs font-bold text-primary px-2 py-0.5 bg-primary/10 rounded">{{ _("Live") }}</span>
                   </div>
                 </div>
 
                 <div class="flex flex-col gap-3">
                   <div class="flex justify-between items-end">
                     <div class="flex items-center gap-2">
-                      <p class="text-slate-900 text-base font-semibold leading-normal">Remaining (MB)</p>
+                      <p class="text-slate-900 text-base font-semibold leading-normal">{{ _("Remaining (MB)") }}</p>
                     </div>
-                    <p class="text-slate-900 text-sm font-bold leading-normal"><span id="remaining-text">Unlimited</span></p>
+                    <p class="text-slate-900 text-sm font-bold leading-normal"><span id="remaining-text">{{ _("Unlimited") }}</span></p>
                   </div>
                   <div class="h-3 w-full rounded-full bg-slate-100 overflow-hidden">
                     <div id="remaining-bar" class="h-full rounded-full bg-primary/40" style="width: 100%;"></div>
                   </div>
                   <div class="flex justify-between items-center">
-                    <p id="remaining-note" class="text-slate-500 text-xs font-medium">Unlimited plan.</p>
+                    <p id="remaining-note" class="text-slate-500 text-xs font-medium">{{ _("Unlimited plan.") }}</p>
                   </div>
                 </div>
               </div>
