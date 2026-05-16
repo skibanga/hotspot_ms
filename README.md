@@ -343,9 +343,40 @@ HOTSPOT_IFACE=br-lan CONN_LIMIT=150 TTL_VALUE=64 \
 /etc/init.d/firewall restart
 ```
 
-If your hotspot bridge is not `br-lan`, set `HOTSPOT_IFACE` to the actual bridge name before running the bundle.
-The generated file is a fragment that firewall4 includes inside `table inet fw4`, so `nft -c -f` on the file by itself will fail.
-The current hardening bundle uses a per-client new-connection meter rather than a simultaneous-connection counter, because the counter form is not accepted by this router build.
+## 13) Advanced Anti-Tethering & TTL Blocking
+
+To prevent users from sharing their internet connection via mobile hotspots (Tethering), use the `trian_professional` logic. This drops packets that have been routed once (TTL 63).
+
+### TTL Blocking (Mangle)
+Add these rules to your `inet fw4` table to drop tethered traffic:
+
+```sh
+# Drop packets coming from LAN with TTL 63 (detected tethering)
+nft add rule inet fw4 trian_professional iifname "eth1" ip ttl 63 counter drop
+nft add rule inet fw4 trian_professional iifname "eth1" ip6 hoplimit 63 counter drop
+```
+
+### Proxy & VPN Port Blocking
+Block common ports used by "NetShare" or "PDANet" apps to bypass captive portals:
+
+```sh
+# Block common proxy/VPN ports
+nft add rule inet fw4 trian_professional tcp dport { 1080, 3128, 7777, 8080, 8243, 10808 } counter drop
+nft add rule inet fw4 trian_professional udp dport { 1080, 3128, 7777, 8080, 8243, 10808 } counter drop
+```
+
+## 14) Troubleshooting & Verification
+
+### Router Side (OpenWrt)
+- **Check active clients**: `ndsctl status | grep "Current clients"`
+- **Verify TTL drops**: `nft list chain inet fw4 trian_professional`
+- **Monitor NDS logs**: `logread -f | grep -i "nds"`
+- **Test server reachability**: `wget -qO- http://hotspot.uniquemindpro.xyz/hotspot/login | head -n 5`
+- **ARP check**: `cat /proc/net/arp` (Look for `0x2` flags for truly active devices)
+
+### Frappe Side
+- **NAS Matching**: Ensure `Nas Device` name matches the router's `Gateway Name` (e.g., `openNDS Node:00e04c670303`).
+- **FAS Key**: Ensure `opennds_fas_key` in Frappe matches `faskey` in `/etc/config/opennds`.
 
 ## License
 
