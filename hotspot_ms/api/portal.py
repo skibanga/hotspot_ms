@@ -450,112 +450,14 @@ def _has_claimed_free_today(mac_address: str, plan_name: str) -> bool:
 
 
 @frappe.whitelist(allow_guest=True)
-def check_free_eligibility(mac_address: str | None = None) -> dict[str, Any]:
-	"""
-	Check if a device MAC address is eligible for the free daily plan,
-	and return any linked advertisement details.
-	"""
-	mac_address = _normalize_mac(mac_address)
-	if not mac_address:
-		return _error("Device MAC address is required", "MISSING_MAC")
-
-	# Find active free plan
-	free_plans = frappe.get_all(
-		"Hotspot Plan",
-		filters={"enabled": 1, "is_free": 1},
-		fields=["name", "plan_name", "session_chunk_minutes", "ad_countdown_seconds", "linked_ad", "validity_value", "validity_unit"],
-		ignore_permissions=True,
-		limit=1,
-	)
-	if not free_plans:
-		return _error("No free plan is currently available", "NO_FREE_PLAN")
-
-	plan = free_plans[0]
-	plan_name = plan["name"]
-
-	# Check once-per-day limit
-	today_start = now_datetime().replace(hour=0, minute=0, second=0, microsecond=0)
-	existing = frappe.get_all(
-		"Hotspot Voucher",
-		filters={
-			"plan": plan_name,
-			"device_mac": mac_address,
-			"generated_on": (">=", today_start),
-		},
-		fields=["name", "voucher_code", "status"],
-		ignore_permissions=True,
-		limit=1,
-	)
-
-	# Fetch linked advertisement details if any
-	ad_details = {}
-	if plan.get("linked_ad"):
-		ad_doc = frappe.get_all(
-			"Hotspot Ad",
-			filters={"name": plan["linked_ad"], "enabled": 1},
-			fields=["name", "ad_type", "cta_url", "bg_color", "text_color", "ad_image", "ad_video", "ad_html"],
-			ignore_permissions=True,
-			limit=1,
-		)
-		if ad_doc:
-			ad_details = ad_doc[0]
-
-	chunk_minutes = flt(plan.get("session_chunk_minutes") or 0)
-	val = flt(plan.get("validity_value") or 1)
-	unit = plan.get("validity_unit") or "Hours"
-	if unit == "Hours":
-		total_minutes = val * 60
-	elif unit == "Days":
-		total_minutes = val * 1440
-	else:
-		total_minutes = val
-
-	if chunk_minutes <= 0:
-		chunk_minutes = total_minutes
-
-	if not existing:
-		# Eligible for first chunk!
-		return _success(
-			"Eligible for free access",
-			eligible=True,
-			chunk=1,
-			voucher_code="",
-			ad=ad_details,
-			ad_countdown_seconds=cint(plan.get("ad_countdown_seconds") or 15),
-			session_chunk_minutes=cint(chunk_minutes),
-		)
-
-	# Existing daily voucher exists, check session chunks count
-	voucher = existing[0]
-	sessions_count = frappe.db.count("Hotspot Session", {"voucher": voucher["name"]})
-	max_chunks = max(1, int(total_minutes / chunk_minutes))
-
-	if sessions_count >= max_chunks:
-		return _error(
-			"You have already fully exhausted your free access for today. Come back tomorrow!",
-			"FREE_ALREADY_EXHAUSTED",
-		)
-
-	# Eligible for next chunk!
-	return _success(
-		"Eligible to resume free access",
-		eligible=True,
-		chunk=sessions_count + 1,
-		voucher_code=voucher["voucher_code"],
-		ad=ad_details,
-		ad_countdown_seconds=cint(plan.get("ad_countdown_seconds") or 15),
-		session_chunk_minutes=cint(chunk_minutes),
-	)
-
-
-@frappe.whitelist(allow_guest=True)
 def claim_free_voucher(
 	mac_address: str | None = None,
 	ip_address: str | None = None,
 	nas_device: str | None = None,
 ) -> dict[str, Any]:
 	"""
-	Claim a free 1-hour voucher or resume a free daily voucher (extending the active chunk).
+	Claim a free 1-hour voucher. One claim per MAC address per calendar day.
+	Issues a new voucher from the free plan, activates it, and returns the session.
 	"""
 	mac_address = _normalize_mac(mac_address)
 	ip_address = _normalize_ip(ip_address)
@@ -567,122 +469,49 @@ def claim_free_voucher(
 	free_plans = frappe.get_all(
 		"Hotspot Plan",
 		filters={"enabled": 1, "is_free": 1},
-		fields=["name", "plan_name", "session_chunk_minutes", "validity_value", "validity_unit"],
+		fields=["name", "plan_name"],
 		ignore_permissions=True,
 		limit=1,
 	)
 	if not free_plans:
 		return _error("No free plan is currently available", "NO_FREE_PLAN")
 
-	plan_doc = frappe.get_doc("Hotspot Plan", free_plans[0]["name"])
-	
-	# Determine session chunk in minutes
-	chunk_minutes = flt(plan_doc.session_chunk_minutes)
-	if chunk_minutes <= 0:
-		val = flt(plan_doc.validity_value) or 1
-		unit = plan_doc.validity_unit or "Hours"
-		if unit == "Hours":
-			chunk_minutes = val * 60
-		elif unit == "Days":
-			chunk_minutes = val * 1440
-		else:
-			chunk_minutes = val
+	plan_name = free_plans[0]["name"]
 
 	# Check once-per-day limit
-	today_start = now_datetime().replace(hour=0, minute=0, second=0, microsecond=0)
-	existing = frappe.get_all(
-		"Hotspot Voucher",
-		filters={
-			"plan": plan_doc.name,
-			"device_mac": mac_address,
-			"generated_on": (">=", today_start),
-		},
-		fields=["name", "voucher_code", "status"],
-		ignore_permissions=True,
-		limit=1,
+	if _has_claimed_free_today(mac_address, plan_name):
+		return _error(
+			"You have already used your free access today. Come back tomorrow!",
+			"FREE_ALREADY_CLAIMED",
+		)
+
+	# Issue a free voucher
+	plan_doc = frappe.get_doc("Hotspot Plan", plan_name)
+	voucher = frappe.new_doc("Hotspot Voucher")
+	voucher.voucher_code = f"FREE-{secrets.token_hex(5).upper()}"
+	voucher.status = "New"
+	voucher.plan = plan_doc.name
+	voucher.device_mac = mac_address
+	if ip_address:
+		voucher.ip_address = ip_address
+	if flt(plan_doc.data_limit_mb) > 0:
+		voucher.data_limit_mb = flt(plan_doc.data_limit_mb)
+	voucher.insert(ignore_permissions=True)
+	frappe.db.commit()
+
+	# Activate through the standard flow
+	result = activate_voucher(
+		voucher_code=voucher.voucher_code,
+		mac_address=mac_address,
+		ip_address=ip_address,
+		nas_device=nas_device,
 	)
-
-	now = now_datetime()
-	expires_at = add_to_date(now, minutes=chunk_minutes)
-
-	if existing:
-		# Existing daily voucher found! This is a resume / extension chunk.
-		voucher = frappe.get_doc("Hotspot Voucher", existing[0]["name"])
-		
-		# Check how many sessions have been created for this voucher
-		sessions_count = frappe.db.count("Hotspot Session", {"voucher": voucher.name})
-		
-		# Calculate total allowed minutes
-		val = flt(plan_doc.validity_value) or 1
-		unit = plan_doc.validity_unit or "Hours"
-		if unit == "Hours":
-			total_minutes = val * 60
-		elif unit == "Days":
-			total_minutes = val * 1440
-		else:
-			total_minutes = val
-		
-		max_chunks = max(1, int(total_minutes / chunk_minutes))
-		
-		if sessions_count >= max_chunks:
-			return _error(
-				"You have already fully exhausted your free access for today. Come back tomorrow!",
-				"FREE_ALREADY_EXHAUSTED",
-			)
-		
-		# Extend the voucher: update status, expires_on
-		voucher.status = "Active"
-		voucher.expires_on = expires_at
-		if ip_address:
-			voucher.ip_address = ip_address
-		resolved_nas = _resolve_nas_device(nas_device)
-		if resolved_nas:
-			voucher.last_nas = resolved_nas
-		voucher.save(ignore_permissions=True)
-		frappe.db.commit()
-		
-		# Activate through standard flow
-		result = activate_voucher(
-			voucher_code=voucher.voucher_code,
-			mac_address=mac_address,
-			ip_address=ip_address,
-			nas_device=nas_device,
-		)
-		if not result.get("ok"):
-			return result
-		
-		result["voucher_code"] = voucher.voucher_code
-		result["message"] = frappe._("Free access extended! Welcome back.")
+	if not result.get("ok"):
 		return result
 
-	else:
-		# No existing voucher: this is the 1st chunk of the day!
-		voucher = frappe.new_doc("Hotspot Voucher")
-		voucher.voucher_code = f"FREE-{secrets.token_hex(5).upper()}"
-		voucher.status = "New"
-		voucher.plan = plan_doc.name
-		voucher.device_mac = mac_address
-		voucher.expires_on = expires_at
-		if ip_address:
-			voucher.ip_address = ip_address
-		if flt(plan_doc.data_limit_mb) > 0:
-			voucher.data_limit_mb = flt(plan_doc.data_limit_mb)
-		voucher.insert(ignore_permissions=True)
-		frappe.db.commit()
-
-		# Activate through the standard flow
-		result = activate_voucher(
-			voucher_code=voucher.voucher_code,
-			mac_address=mac_address,
-			ip_address=ip_address,
-			nas_device=nas_device,
-		)
-		if not result.get("ok"):
-			return result
-
-		result["voucher_code"] = voucher.voucher_code
-		result["message"] = frappe._("Free access granted! Enjoy your first session.")
-		return result
+	result["voucher_code"] = voucher.voucher_code
+	result["message"] = frappe._("Free access granted! Enjoy your 1 hour of internet.")
+	return result
 
 
 @frappe.whitelist(allow_guest=True)
