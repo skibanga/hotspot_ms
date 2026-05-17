@@ -1230,14 +1230,25 @@ def sync_session_usage(
 		session = frappe.get_doc("Hotspot Session", session_name)
 		
 		# Auto-populate NAS device link if it was missing/unset
-		if not session.nas_device:
-			session.nas_device = nas_doc.name
+		nas_device = session.nas_device or nas_doc.name
 		
-		# Update session traffic fields
-		session.input_octets = flt(rec.get("input_octets") or 0)
-		session.output_octets = flt(rec.get("output_octets") or 0)
-		session.total_mb = _to_mb(session.input_octets + session.output_octets)
-		session.save(ignore_permissions=True)
+		# Calculate session traffic fields
+		input_octets = flt(rec.get("input_octets") or 0)
+		output_octets = flt(rec.get("output_octets") or 0)
+		total_mb = _to_mb(input_octets + output_octets)
+
+		# Update session traffic fields directly without changing the 'modified' timestamp
+		frappe.db.set_value(
+			"Hotspot Session",
+			session_name,
+			{
+				"nas_device": nas_device,
+				"input_octets": input_octets,
+				"output_octets": output_octets,
+				"total_mb": total_mb
+			},
+			update_modified=False
+		)
 		
 		# Also update the parent Hotspot Voucher immediately in real-time
 		if session.voucher:
@@ -1251,7 +1262,7 @@ def sync_session_usage(
 			total_voucher_mb = 0.0
 			for vs in voucher_sessions:
 				if vs["name"] == session_name:
-					total_voucher_mb += flt(session.total_mb)
+					total_voucher_mb += flt(total_mb)
 				else:
 					total_voucher_mb += flt(vs.get("total_mb") or 0)
 			
@@ -1260,7 +1271,7 @@ def sync_session_usage(
 				session.voucher,
 				"data_used_mb",
 				round(total_voucher_mb, 2),
-				update_modified=True
+				update_modified=False
 			)
 		
 		updated_count += 1
