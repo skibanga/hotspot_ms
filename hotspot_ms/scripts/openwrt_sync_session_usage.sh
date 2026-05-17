@@ -119,7 +119,7 @@ sync_usage() {
   response="$(wget -qO- --post-data="nas_identifier=$(urlencode "$NAS_IDENTIFIER")&secret=$(urlencode "$NAS_SECRET")&usage_data=$(urlencode "$payload")" --timeout=15 "$url" 2>/dev/null || true)"
   
   if [ -n "$response" ]; then
-    ok="$(printf '%s' "$response" | jsonfilter -e '@.ok' 2>/dev/null || true)"
+    ok="$(printf '%s' "$response" | jsonfilter -e '@.message.ok' 2>/dev/null || true)"
     if [ "$ok" = "true" ]; then
       log "synchronized usage data successfully"
       return 0
