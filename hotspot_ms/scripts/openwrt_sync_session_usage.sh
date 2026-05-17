@@ -72,7 +72,7 @@ scan_active_clients_usage() {
       first = 1
       printf "["
     }
-    /^Client [0-9]+$/ {
+    /Client [0-9]+/ || /Client [0-9]+$/ {
       ip=""
       mac=""
       token=""
@@ -81,29 +81,19 @@ scan_active_clients_usage() {
       dataout=0
       next
     }
-    /IP:/ {
+    /MAC:/ {
       for (i = 1; i <= NF; i++) {
-        if ($i == "IP:") ip = $(i + 1)
         if ($i == "MAC:") mac = $(i + 1)
       }
       next
     }
-    /Token:/ { token = $2; next }
     /State:/ { state = $2; next }
-    /Data In:/ || /Upload:/ || /Data_in:/ {
-      for (i = 1; i <= NF; i++) {
-        if ($i == "In:" || $i == "Upload:" || $i == "Data_in:") {
-          datain = $(i + 1)
-        }
-      }
+    /Download this session:/ {
+      dataout = $4 * 1024
       next
     }
-    /Data Out:/ || /Download:/ || /Data_out:/ {
-      for (i = 1; i <= NF; i++) {
-        if ($i == "Out:" || $i == "Download:" || $i == "Data_out:") {
-          dataout = $(i + 1)
-        }
-      }
+    /Upload this session:/ {
+      datain = $4 * 1024
       if (state == "Authenticated" && mac != "") {
         if (first == 0) {
           printf ","
