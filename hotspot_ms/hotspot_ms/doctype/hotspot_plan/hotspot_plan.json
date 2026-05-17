@@ -2,6 +2,7 @@
  "actions": [],
  "allow_rename": 1,
  "autoname": "field:plan_name",
+ "creation": "2026-05-17 18:06:14.066197",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -20,6 +21,11 @@
   "section_break_2",
   "download_kbps",
   "upload_kbps",
+  "section_break_3",
+  "linked_ad",
+  "ad_countdown_seconds",
+  "column_break_3",
+  "session_chunk_minutes",
   "description"
  ],
  "fields": [
@@ -118,6 +124,34 @@
    "label": "Upload (Kbps)"
   },
   {
+   "fieldname": "section_break_3",
+   "fieldtype": "Section Break",
+   "label": "Advertising Engine"
+  },
+  {
+   "fieldname": "linked_ad",
+   "fieldtype": "Link",
+   "label": "Linked Advertisement",
+   "options": "Hotspot Ad"
+  },
+  {
+   "default": "15",
+   "fieldname": "ad_countdown_seconds",
+   "fieldtype": "Int",
+   "label": "Ad Countdown (Seconds)"
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Divide plan duration into chunks (e.g. 20 mins) requiring re-authentication via ad watch. Set to 0 to disable.",
+   "fieldname": "session_chunk_minutes",
+   "fieldtype": "Int",
+   "label": "Session Chunk (Minutes)"
+  },
+  {
    "fieldname": "description",
    "fieldtype": "Small Text",
    "label": "Description"
@@ -126,8 +160,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
+ "modified": "2026-05-17 18:06:38.518838",
+ "modified_by": "Administrator",
  "module": "Hotspot MS",
  "name": "Hotspot Plan",
+ "owner": "Administrator",
  "permissions": [
   {
    "create": 1,

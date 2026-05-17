@@ -635,51 +635,203 @@
       if (btnClaimFree) {
         btnClaimFree.addEventListener("click", async function () {
           if (!captive.clientmac) {
-            showFreeFeedback("err", "Cannot detect your device. Please connect via the hotspot WiFi.");
+            showFreeFeedback("err", __("Cannot detect your device. Please connect via the hotspot WiFi."));
             return;
           }
 
           btnClaimFree.disabled = true;
-          btnClaimFree.textContent = __("Claiming...");
-          showFreeFeedback("info", __("Setting up your free access..."));
+          btnClaimFree.textContent = __("Checking eligibility...");
+          showFreeFeedback("info", __("Checking eligibility..."));
 
           try {
-            const claimed = await callApi("hotspot_ms.api.portal.claim_free_voucher", {
-              mac_address: captive.clientmac,
-              ip_address: captive.clientip,
-              nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
+            // Step 1: Check eligibility & get active advertisement config
+            const eligibility = await callApi("hotspot_ms.api.portal.check_free_eligibility", {
+              mac_address: captive.clientmac
             });
 
-            if (!claimed.ok) {
-              showFreeFeedback("err", __(claimed.message) || __("Could not claim free access."));
+            if (!eligibility.ok) {
+              showFreeFeedback("err", __(eligibility.message) || __("Could not check eligibility."));
               btnClaimFree.disabled = false;
               btnClaimFree.textContent = "🚀 " + __("Get Free Access");
               return;
             }
 
-            showFreeFeedback("ok", __(claimed.message) || __("Free access granted!"));
+            const ad = eligibility.ad || {};
 
-            // Build captive redirect
-            const redirectResult = await callApi("hotspot_ms.api.portal.build_opennds_redirect", {
-              session_id: claimed.session_id,
-              voucher_code: claimed.voucher_code,
-              tok: captive.tok,
-              redir: captive.redir,
-              authaction: captive.authaction,
-              fas: captive.fas,
-              gatewayaddress: captive.gatewayaddress,
-              gatewayport: captive.gatewayport,
-              authdir: captive.authdir,
-              hid: captive.hid,
-              nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
-            });
+            // Step 2: Skip modal if advertisement is not defined or is disabled
+            if (!ad.name) {
+              showFreeFeedback("info", __("Setting up your free access..."));
+              try {
+                // Claim/Extend Voucher immediately
+                const claimed = await callApi("hotspot_ms.api.portal.claim_free_voucher", {
+                  mac_address: captive.clientmac,
+                  ip_address: captive.clientip,
+                  nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
+                });
 
-            if (redirectResult.ok && redirectResult.redirect_url) {
-              window.location.href = redirectResult.redirect_url;
-            } else {
-              showFreeFeedback("ok", __("Free access active! You can now browse the internet."));
-              btnClaimFree.textContent = "✓ " + __("Access Granted");
+                if (!claimed.ok) {
+                  showFreeFeedback("err", __(claimed.message) || __("Could not claim free access."));
+                  btnClaimFree.disabled = false;
+                  btnClaimFree.textContent = "🚀 " + __("Get Free Access");
+                  return;
+                }
+
+                // Redirect to openNDS
+                const redirectResult = await callApi("hotspot_ms.api.portal.build_opennds_redirect", {
+                  session_id: claimed.session_id,
+                  voucher_code: claimed.voucher_code,
+                  tok: captive.tok,
+                  redir: captive.redir,
+                  authaction: captive.authaction,
+                  fas: captive.fas,
+                  gatewayaddress: captive.gatewayaddress,
+                  gatewayport: captive.gatewayport,
+                  authdir: captive.authdir,
+                  hid: captive.hid,
+                  nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
+                });
+
+                if (redirectResult.ok && redirectResult.redirect_url) {
+                  window.location.href = redirectResult.redirect_url;
+                } else {
+                  showFreeFeedback("ok", __("Free access active! You can now browse the internet."));
+                  btnClaimFree.textContent = "✓ " + __("Access Granted");
+                }
+              } catch (err) {
+                showFreeFeedback("err", __("Connection failed. Please try again."));
+                btnClaimFree.disabled = false;
+                btnClaimFree.textContent = "🚀 " + __("Get Free Access");
+              }
+              return;
             }
+
+            // Show dynamic ad and countdown
+            showFreeFeedback("info", __("Please watch this quick ad to unlock your free session..."));
+            
+            const adModal = document.getElementById("ad-modal");
+            const adModalCard = document.getElementById("ad-modal-card");
+            const adModalBody = document.getElementById("ad-modal-body");
+            const adProgressBar = document.getElementById("ad-progress-bar");
+            const adCountdownText = document.getElementById("ad-countdown-text");
+            const adActionBtn = document.getElementById("ad-action-btn");
+
+            // Setup Custom Styling if HTML announcement
+            if (ad.ad_type === "HTML/Text") {
+              adModalCard.style.background = ad.bg_color || "#1f2937";
+              adModalCard.style.color = ad.text_color || "#f9fafb";
+              adModalBody.innerHTML = ad.ad_html || `<div style="padding:20px; text-align:center;"><h3>Welcome to Hotspot</h3></div>`;
+            } else if (ad.ad_type === "Image" && ad.ad_image) {
+              adModalCard.style.background = "#111827";
+              adModalCard.style.color = "#f9fafb";
+              adModalBody.innerHTML = `
+                <div class="ad-image-container" onclick="if('${ad.cta_url}') window.open('${ad.cta_url}', '_blank')">
+                  <img src="${ad.ad_image}" alt="Advertisement"/>
+                </div>
+              `;
+            } else if (ad.ad_type === "Video" && ad.ad_video) {
+              adModalCard.style.background = "#000000";
+              adModalCard.style.color = "#f9fafb";
+              adModalBody.innerHTML = `
+                <div class="ad-video-container">
+                  <video autoplay muted playsinline style="width:100%; height:auto;">
+                    <source src="${ad.ad_video}" type="video/mp4">
+                  </video>
+                </div>
+              `;
+            } else {
+              // Fallback default message
+              adModalCard.style.background = "#1f2937";
+              adModalCard.style.color = "#f9fafb";
+              adModalBody.innerHTML = `
+                <div style="padding: 25px; text-align: center;">
+                  <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">UniqueMind Hotspot</h3>
+                  <p style="font-size: 14px; color: #9ca3af;">Enjoy high-speed daily internet access.</p>
+                </div>
+              `;
+            }
+
+            // Display Ad Modal
+            adModal.classList.remove("hidden");
+            setTimeout(() => adModal.classList.add("active"), 50);
+
+            // Countdown timer setup
+            let duration = parseFloat(eligibility.ad_countdown_seconds) || 15;
+            let secondsLeft = duration;
+            adProgressBar.style.transform = "scaleX(1)";
+            adActionBtn.disabled = true;
+            adActionBtn.textContent = __("Please wait...");
+
+            const countdownInterval = setInterval(() => {
+              secondsLeft -= 0.1;
+              const pct = Math.max(0, secondsLeft / duration);
+              adProgressBar.style.transform = `scaleX(${pct})`;
+              
+              adCountdownText.textContent = __("Unlocking in {0}s...").replace("{0}", Math.max(0, Math.ceil(secondsLeft)));
+              
+              if (secondsLeft <= 0) {
+                clearInterval(countdownInterval);
+                adProgressBar.style.transform = "scaleX(0)";
+                adCountdownText.textContent = __("Unlocked!");
+                adActionBtn.disabled = false;
+                adActionBtn.textContent = eligibility.chunk > 1 ? __("🚀 Continue Free Internet") : __("🚀 Activate Internet");
+              }
+            }, 100);
+
+            // Action Button Click: Claim voucher & redirect
+            adActionBtn.onclick = async function () {
+              adActionBtn.disabled = true;
+              adActionBtn.textContent = __("Connecting...");
+              
+              try {
+                // Claim/Extend Voucher
+                const claimed = await callApi("hotspot_ms.api.portal.claim_free_voucher", {
+                  mac_address: captive.clientmac,
+                  ip_address: captive.clientip,
+                  nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
+                });
+
+                if (!claimed.ok) {
+                  showFreeFeedback("err", __(claimed.message) || __("Could not claim free access."));
+                  btnClaimFree.disabled = false;
+                  btnClaimFree.textContent = "🚀 " + __("Get Free Access");
+                  adModal.classList.remove("active");
+                  setTimeout(() => adModal.classList.add("hidden"), 300);
+                  return;
+                }
+
+                // Redirect to openNDS
+                const redirectResult = await callApi("hotspot_ms.api.portal.build_opennds_redirect", {
+                  session_id: claimed.session_id,
+                  voucher_code: claimed.voucher_code,
+                  tok: captive.tok,
+                  redir: captive.redir,
+                  authaction: captive.authaction,
+                  fas: captive.fas,
+                  gatewayaddress: captive.gatewayaddress,
+                  gatewayport: captive.gatewayport,
+                  authdir: captive.authdir,
+                  hid: captive.hid,
+                  nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
+                });
+
+                adModal.classList.remove("active");
+                setTimeout(() => adModal.classList.add("hidden"), 300);
+
+                if (redirectResult.ok && redirectResult.redirect_url) {
+                  window.location.href = redirectResult.redirect_url;
+                } else {
+                  showFreeFeedback("ok", __("Free access active! You can now browse the internet."));
+                  btnClaimFree.textContent = "✓ " + __("Access Granted");
+                }
+              } catch (err) {
+                showFreeFeedback("err", __("Connection failed. Please try again."));
+                btnClaimFree.disabled = false;
+                btnClaimFree.textContent = "🚀 " + __("Get Free Access");
+                adModal.classList.remove("active");
+                setTimeout(() => adModal.classList.add("hidden"), 300);
+              }
+            };
+
           } catch (error) {
             showFreeFeedback("err", __("Something went wrong. Please try again."));
             btnClaimFree.disabled = false;
@@ -689,5 +841,140 @@
       }
     })();
   </script>
+
+  <!-- ==================== DYNAMIC AD MODAL MARKUP & STYLING ==================== -->
+  <div id="ad-modal" class="ad-modal-overlay hidden">
+    <div class="ad-modal-content" id="ad-modal-card">
+      <div id="ad-modal-body"></div>
+      <div class="ad-modal-footer">
+        <div class="ad-progress-container">
+          <div class="ad-progress-bar" id="ad-progress-bar"></div>
+        </div>
+        <div class="ad-action-row">
+          <span id="ad-countdown-text">Unlocking...</span>
+          <button id="ad-action-btn" class="ad-btn" disabled>Please wait...</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .ad-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+      pointer-events: none;
+      padding: 20px;
+    }
+    .ad-modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .ad-modal-content {
+      background: #1f2937;
+      color: #f9fafb;
+      width: 100%;
+      max-width: 460px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transform: scale(0.9);
+      transition: transform 0.3s ease-in-out;
+    }
+    .ad-modal-overlay.active .ad-modal-content {
+      transform: scale(1);
+    }
+    #ad-modal-body {
+      min-height: 220px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .ad-modal-footer {
+      padding: 16px 20px;
+      background: rgba(0, 0, 0, 0.25);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .ad-progress-container {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .ad-progress-bar {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #6366f1, #a855f7);
+      transform-origin: left;
+      transition: transform 0.1s linear;
+    }
+    .ad-action-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #ad-countdown-text {
+      font-size: 14px;
+      color: #9ca3af;
+      font-weight: 500;
+    }
+    .ad-btn {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: #ffffff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4);
+    }
+    .ad-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 12px -2px rgba(99, 102, 241, 0.5);
+    }
+    .ad-btn:disabled {
+      background: #4b5563 !important;
+      color: #9ca3af !important;
+      cursor: not-allowed;
+      box-shadow: none !important;
+    }
+    .hidden {
+      display: none !important;
+    }
+    .ad-image-container {
+      width: 100%;
+      height: auto;
+      max-height: 280px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .ad-image-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .ad-video-container {
+      width: 100%;
+      background: #000;
+    }
+  </style>
 </body>
 </html>
