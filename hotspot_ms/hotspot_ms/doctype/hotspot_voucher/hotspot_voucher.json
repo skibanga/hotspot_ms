@@ -21,6 +21,7 @@
   "section_break_3",
   "data_limit_mb",
   "data_used_mb",
+  "data_used_gb",
   "last_nas"
  ],
  "fields": [
@@ -122,6 +123,14 @@
    "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Data Used (MB)",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "data_used_gb",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Data Used (GB)",
    "read_only": 1
   },
   {

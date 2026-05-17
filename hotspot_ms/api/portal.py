@@ -1269,8 +1269,10 @@ def sync_session_usage(
 			frappe.db.set_value(
 				"Hotspot Voucher",
 				session.voucher,
-				"data_used_mb",
-				round(total_voucher_mb, 2),
+				{
+					"data_used_mb": round(total_voucher_mb, 2),
+					"data_used_gb": round(total_voucher_mb / 1024.0, 3)
+				},
 				update_modified=False
 			)
 		

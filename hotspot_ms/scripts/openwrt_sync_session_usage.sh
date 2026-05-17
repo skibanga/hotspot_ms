@@ -68,6 +68,13 @@ urlencode() {
 
 scan_active_clients_usage() {
   ndsctl status | awk '
+    function to_bytes(num, unit) {
+      u = tolower(unit)
+      if (u ~ /g/) return num * 1073741824
+      if (u ~ /m/) return num * 1048576
+      if (u ~ /k/) return num * 1024
+      return num
+    }
     BEGIN {
       first = 1
       printf "["
@@ -89,11 +96,11 @@ scan_active_clients_usage() {
     }
     /State:/ { state = $2; next }
     /Download this session:/ {
-      dataout = $4 * 1024
+      dataout = to_bytes($4, $5)
       next
     }
     /Upload this session:/ {
-      datain = $4 * 1024
+      datain = to_bytes($4, $5)
       if (state == "Authenticated" && mac != "") {
         if (first == 0) {
           printf ","
