@@ -1174,3 +1174,91 @@ def seed_dummy_packages() -> dict[str, Any]:
 	"""Create or update starter packages for quick portal testing."""
 	result = ensure_default_hotspot_plans()
 	return _success("Dummy packages seeded", **result)
+
+
+@frappe.whitelist(allow_guest=True)
+def sync_session_usage(
+	nas_identifier: str,
+	secret: str,
+	usage_data: str,
+) -> dict[str, Any]:
+	"""
+	Sync data usage (upload/download octets) for active clients from the router.
+	`usage_data` must be a JSON array of objects:
+	[
+		{"mac_address": "aa:bb:cc:dd:ee:ff", "input_octets": 12345, "output_octets": 67890},
+		...
+	]
+	"""
+	nas_doc, error = _validate_nas_access(nas_identifier, secret)
+	if error:
+		return error
+
+	if not usage_data:
+		return _error("usage_data is required", "MISSING_USAGE_DATA")
+
+	try:
+		records = frappe.parse_json(usage_data)
+	except Exception as e:
+		return _error(f"Invalid usage_data JSON: {e}", "INVALID_JSON")
+
+	if not isinstance(records, list):
+		return _error("usage_data must be a JSON array", "INVALID_FORMAT")
+
+	updated_count = 0
+	for rec in records:
+		mac = _normalize_mac(rec.get("mac_address"))
+		if not mac:
+			continue
+
+		# Find open session for this MAC
+		sessions = frappe.get_all(
+			"Hotspot Session",
+			filters={"mac_address": mac, "session_status": "Open", "nas_device": nas_doc.name},
+			fields=["name", "voucher"],
+			limit=1,
+			ignore_permissions=True,
+		)
+		if not sessions:
+			continue
+
+		session_name = sessions[0]["name"]
+		session = frappe.get_doc("Hotspot Session", session_name)
+		
+		# Update session traffic fields
+		session.input_octets = flt(rec.get("input_octets") or 0)
+		session.output_octets = flt(rec.get("output_octets") or 0)
+		session.total_mb = _to_mb(session.input_octets + session.output_octets)
+		session.save(ignore_permissions=True)
+		
+		# Also update the parent Hotspot Voucher immediately in real-time
+		if session.voucher:
+			# Sum data used across all sessions of this voucher
+			voucher_sessions = frappe.get_all(
+				"Hotspot Session",
+				filters={"voucher": session.voucher},
+				fields=["name", "total_mb"],
+				ignore_permissions=True,
+			)
+			total_voucher_mb = 0.0
+			for vs in voucher_sessions:
+				if vs["name"] == session_name:
+					total_voucher_mb += flt(session.total_mb)
+				else:
+					total_voucher_mb += flt(vs.get("total_mb") or 0)
+			
+			frappe.db.set_value(
+				"Hotspot Voucher",
+				session.voucher,
+				"data_used_mb",
+				round(total_voucher_mb, 2),
+				update_modified=True
+			)
+		
+		updated_count += 1
+
+	if updated_count > 0:
+		frappe.db.commit()
+
+	return _success("Session usage synchronized", updated_sessions=updated_count)
+

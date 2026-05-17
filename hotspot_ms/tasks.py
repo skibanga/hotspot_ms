@@ -38,6 +38,12 @@ def close_expired_or_used_sessions() -> dict[str, int]:
 		data_used_mb = max(flt(voucher.data_used_mb), session_total_mb)
 		is_used = bool(limit_mb > 0 and data_used_mb >= limit_mb)
 
+		# Always update voucher data_used_mb in real-time when it increases
+		if flt(voucher.data_used_mb) < data_used_mb:
+			voucher.data_used_mb = data_used_mb
+			voucher.save(ignore_permissions=True)
+			voucher_updates += 1
+
 		if not (is_expired or is_used):
 			continue
 
@@ -53,15 +59,10 @@ def close_expired_or_used_sessions() -> dict[str, int]:
 		session.save(ignore_permissions=True)
 		closed += 1
 
-		if is_used and flt(voucher.data_used_mb) < data_used_mb:
-			voucher.data_used_mb = data_used_mb
-
 		new_status = "Expired" if is_expired else "Used"
 		if voucher.status != new_status:
 			voucher.status = new_status
-			voucher_updates += 1
-
-		voucher.save(ignore_permissions=True)
+			voucher.save(ignore_permissions=True)
 
 	if closed or voucher_updates:
 		frappe.db.commit()
