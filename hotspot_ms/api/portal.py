@@ -1211,11 +1211,15 @@ def sync_session_usage(
 		if not mac:
 			continue
 
-		# Find open session for this MAC
+		# Find open session for this MAC (matching this NAS or unset)
 		sessions = frappe.get_all(
 			"Hotspot Session",
-			filters={"mac_address": mac, "session_status": "Open", "nas_device": nas_doc.name},
-			fields=["name", "voucher"],
+			filters=[
+				["mac_address", "=", mac],
+				["session_status", "=", "Open"],
+				["nas_device", "in", [nas_doc.name, "", None]]
+			],
+			fields=["name", "voucher", "nas_device"],
 			limit=1,
 			ignore_permissions=True,
 		)
@@ -1224,6 +1228,10 @@ def sync_session_usage(
 
 		session_name = sessions[0]["name"]
 		session = frappe.get_doc("Hotspot Session", session_name)
+		
+		# Auto-populate NAS device link if it was missing/unset
+		if not session.nas_device:
+			session.nas_device = nas_doc.name
 		
 		# Update session traffic fields
 		session.input_octets = flt(rec.get("input_octets") or 0)
