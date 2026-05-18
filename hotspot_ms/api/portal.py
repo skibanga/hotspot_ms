@@ -1219,7 +1219,7 @@ def sync_session_usage(
 				["session_status", "=", "Open"],
 				["nas_device", "in", [nas_doc.name, "", None]]
 			],
-			fields=["name", "voucher", "nas_device"],
+			fields=["name", "voucher", "nas_device", "input_octets", "output_octets", "ip_address", "customer"],
 			limit=1,
 			ignore_permissions=True,
 		)
@@ -1227,48 +1227,78 @@ def sync_session_usage(
 			continue
 
 		session_name = sessions[0]["name"]
-		session = frappe.get_doc("Hotspot Session", session_name)
+		session_doc = sessions[0]
 		
 		# Auto-populate NAS device link if it was missing/unset
-		nas_device = session.nas_device or nas_doc.name
+		nas_device = session_doc.get("nas_device") or nas_doc.name
 		
 		# Calculate session traffic fields
 		input_octets = flt(rec.get("input_octets") or 0)
 		output_octets = flt(rec.get("output_octets") or 0)
-		total_mb = _to_mb(input_octets + output_octets)
-
-		# Update session traffic fields directly without changing the 'modified' timestamp
-		frappe.db.set_value(
-			"Hotspot Session",
-			session_name,
-			{
-				"nas_device": nas_device,
-				"input_octets": input_octets,
-				"output_octets": output_octets,
-				"total_mb": total_mb
-			},
-			update_modified=False
-		)
+		
+		# Check if router counters have reset or overflowed (shrunk below database level)
+		if input_octets < flt(session_doc.get("input_octets") or 0) or output_octets < flt(session_doc.get("output_octets") or 0):
+			# Counters have shrunk! This is a reset/overflow.
+			# Close the old session
+			old_session = frappe.get_doc("Hotspot Session", session_name)
+			old_session.session_status = "Closed"
+			old_session.stop_time = now_datetime()
+			old_session.save(ignore_permissions=True)
+			
+			# Create a brand new session for the fresh counters
+			new_session = frappe.new_doc("Hotspot Session")
+			new_session.session_id = f"HS-{secrets.token_hex(6).upper()}"
+			new_session.session_status = "Open"
+			new_session.voucher = session_doc.get("voucher")
+			new_session.customer = session_doc.get("customer")
+			new_session.nas_device = nas_device
+			new_session.mac_address = mac
+			new_session.ip_address = session_doc.get("ip_address")
+			new_session.start_time = now_datetime()
+			new_session.input_octets = input_octets
+			new_session.output_octets = output_octets
+			new_session.total_mb = _to_mb(input_octets + output_octets)
+			new_session.insert(ignore_permissions=True)
+			
+			target_session_name = new_session.name
+			target_total_mb = new_session.total_mb
+		else:
+			# Normal case: update existing session
+			total_mb = _to_mb(input_octets + output_octets)
+			frappe.db.set_value(
+				"Hotspot Session",
+				session_name,
+				{
+					"nas_device": nas_device,
+					"input_octets": input_octets,
+					"output_octets": output_octets,
+					"total_mb": total_mb
+				},
+				update_modified=False
+			)
+			target_session_name = session_name
+			target_total_mb = total_mb
 		
 		# Also update the parent Hotspot Voucher immediately in real-time
-		if session.voucher:
+		voucher_name = session_doc.get("voucher")
+		if voucher_name:
 			# Sum data used across all sessions of this voucher
 			voucher_sessions = frappe.get_all(
 				"Hotspot Session",
-				filters={"voucher": session.voucher},
+				filters={"voucher": voucher_name},
 				fields=["name", "total_mb"],
 				ignore_permissions=True,
 			)
 			total_voucher_mb = 0.0
 			for vs in voucher_sessions:
-				if vs["name"] == session_name:
-					total_voucher_mb += flt(total_mb)
+				if vs["name"] == target_session_name:
+					total_voucher_mb += flt(target_total_mb)
 				else:
 					total_voucher_mb += flt(vs.get("total_mb") or 0)
 			
 			frappe.db.set_value(
 				"Hotspot Voucher",
-				session.voucher,
+				voucher_name,
 				{
 					"data_used_mb": round(total_voucher_mb, 2),
 					"data_used_gb": round(total_voucher_mb / 1024.0, 3)
