@@ -1694,3 +1694,58 @@ def upload_ad_media(file_name: str, file_data: str) -> dict[str, Any]:
 	}
 
 
+@frappe.whitelist(allow_guest=True)
+def register_advertiser(email: str, password: str) -> dict[str, Any]:
+	"""
+	Registers a new advertiser as a secure Frappe User.
+	"""
+	email = (email or "").strip().lower()
+	password = (password or "").strip()
+	
+	if not (email and password):
+		return {"ok": False, "message": frappe._("Email and password are required")}
+		
+	if frappe.db.exists("User", email):
+		return {"ok": False, "message": frappe._("This email address is already registered. Please sign in.")}
+		
+	try:
+		user = frappe.new_doc("User")
+		user.email = email
+		user.first_name = email.split("@")[0]
+		user.send_welcome_email = 0
+		user.new_password = password
+		user.insert(ignore_permissions=True)
+		frappe.db.commit()
+		return {"ok": True, "message": frappe._("Registration successful!")}
+	except Exception as e:
+		frappe.log_error(frappe.get_traceback(), "Register Advertiser Failed")
+		return {"ok": False, "message": str(e)}
+
+
+@frappe.whitelist(allow_guest=True)
+def login_advertiser(email: str, password: str) -> dict[str, Any]:
+	"""
+	Secures advertiser dashboard login by verifying passwords natively.
+	"""
+	email = (email or "").strip().lower()
+	password = (password or "").strip()
+	
+	if not (email and password):
+		return {"ok": False, "message": frappe._("Email and password are required")}
+		
+	try:
+		user = frappe.get_doc("User", email)
+		if not user.enabled:
+			return {"ok": False, "message": frappe._("This account is currently disabled.")}
+			
+		if user.check_password(password):
+			return {"ok": True, "message": frappe._("Login successful!")}
+		else:
+			return {"ok": False, "message": frappe._("Invalid email or password.")}
+	except frappe.DoesNotExistError:
+		return {"ok": False, "message": frappe._("Email not found. Please register first.")}
+	except Exception as e:
+		frappe.log_error(frappe.get_traceback(), "Login Advertiser Failed")
+		return {"ok": False, "message": frappe._("An error occurred during authentication.")}
+
+

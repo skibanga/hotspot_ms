@@ -3,621 +3,407 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ portal_brand or "Hapa Kitonga WiFi" }} - Ad Portal</title>
-  
-  <!-- Active Captive Portal Stylesheet -->
+  <title>{{ portal_brand or "Hapa Kitonga WiFi" }} — Ad Portal</title>
   <link rel="stylesheet" href="/assets/hotspot_ms/css/hotspot_portal.css" />
-  
-  <!-- Sleek Custom Stylings for Chart, Modal & Tables -->
   <style>
-    .progress-bar-bg {
-      background: #e2e8f0;
-      height: 8px;
-      border-radius: 999px;
-      overflow: hidden;
-      margin-top: 0.35rem;
-      width: 120px;
-    }
-    .progress-bar-fill {
-      background: var(--primary, #2563eb);
-      height: 100%;
-      border-radius: 999px;
-    }
-    .upload-zone {
-      border: 2px dashed #cbd5e1;
-      border-radius: 1rem;
-      padding: 2.5rem;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      background: #f8fafc;
-      position: relative;
-    }
-    .upload-zone:hover {
-      border-color: var(--primary, #2563eb);
-      background: #eff6ff;
-    }
-    .file-input {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      cursor: pointer;
-    }
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      background: rgba(15, 23, 42, 0.4);
-      backdrop-filter: blur(4px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 1.5rem;
-    }
-    .toast {
-      position: fixed;
-      bottom: 2rem;
-      right: 2rem;
-      z-index: 1000;
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-left: 4px solid var(--primary, #2563eb);
-      padding: 1rem 1.5rem;
-      border-radius: 0.75rem;
-      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-      display: none;
-      align-items: center;
-      gap: 0.75rem;
-    }
-    /* Premium professional auth styling */
-    .auth-container {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem 0;
-    }
-    .auth-card {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 1rem;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-      width: 100%;
-      max-width: 400px;
-      padding: 2.25rem;
-    }
-    .tab-switcher {
-      display: flex;
-      background: #f1f5f9;
-      padding: 0.25rem;
-      border-radius: 0.75rem;
-      margin-bottom: 2rem;
-      border: none !important;
-      outline: none !important;
-    }
-    .tab-btn {
-      flex: 1;
-      text-align: center;
-      padding: 0.75rem 1rem;
-      font-size: 0.875rem;
-      font-weight: 700;
-      border-radius: 0.5rem;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      border: none !important;
-      background: transparent;
-      color: #64748b;
-      outline: none !important;
-      box-shadow: none !important;
-    }
-    .tab-btn.active {
-      background: #ffffff !important;
-      color: var(--primary, #2563eb) !important;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-    }
-    .form-group {
-      margin-bottom: 1.25rem;
-      display: flex;
-      flex-direction: column;
-    }
-    .form-label {
-      display: block;
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #64748b;
-      margin-bottom: 0.5rem;
-    }
-    .form-input {
-      width: 100%;
-      height: 2.75rem;
-      padding: 0 1rem;
-      border-radius: 0.5rem;
-      border: 1px solid #cbd5e1;
-      background: #ffffff;
-      font-size: 0.875rem;
-      color: #0f172a;
-      transition: all 0.2s ease;
-      outline: none !important;
-      box-shadow: none !important;
-    }
-    .form-input:focus {
-      border-color: var(--primary, #2563eb) !important;
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
-    }
-    .submit-btn {
-      width: 100%;
-      height: 2.75rem;
-      border-radius: 0.5rem;
-      background: var(--primary, #2563eb);
-      color: #ffffff;
-      font-weight: 700;
-      font-size: 0.875rem;
-      border: none !important;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
-      outline: none !important;
-    }
-    .submit-btn:hover {
-      background: #1d4ed8;
-      box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
-    }
-    .submit-btn:active {
-      transform: scale(0.98);
-    }
+    [data-view]{display:none}
+    [data-view].is-active{display:block}
+    .ad-input{width:100%;height:2.75rem;padding:0 1rem;border-radius:.5rem;border:1px solid #cbd5e1;background:#fff;font-size:.875rem;color:#0f172a;outline:none;transition:border .15s}
+    .ad-input:focus{border-color:#135bec;box-shadow:0 0 0 3px rgba(19,91,236,.12)}
+    .ad-select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .75rem center}
+    .ad-btn{height:2.75rem;border-radius:.5rem;font-weight:700;font-size:.875rem;border:none;cursor:pointer;transition:all .15s;outline:none;padding:0 1.5rem}
+    .ad-btn-primary{background:#135bec;color:#fff;box-shadow:0 2px 8px rgba(19,91,236,.18)}
+    .ad-btn-primary:hover{background:#0f4fd4}
+    .ad-btn-primary:disabled{opacity:.6;cursor:not-allowed}
+    .ad-btn-ghost{background:transparent;color:#64748b;border:1px solid #e2e8f0}
+    .ad-btn-ghost:hover{background:#f8fafc}
+    .ad-tab{flex:1;text-align:center;padding:.625rem 1rem;font-size:.875rem;font-weight:600;border-radius:.375rem;cursor:pointer;border:none;outline:none;background:transparent;color:#94a3b8;transition:all .15s}
+    .ad-tab.is-active{background:#fff;color:#135bec;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+    .ad-label{display:block;font-size:.75rem;font-weight:600;color:#64748b;margin-bottom:.375rem;text-transform:uppercase;letter-spacing:.04em}
+    .ad-card{background:#fff;border:1px solid #e2e8f0;border-radius:.75rem;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .ad-overlay{position:fixed;inset:0;z-index:100;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:1rem}
+    .ad-overlay.is-open{display:flex}
+    .ad-toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:200;background:#fff;border:1px solid #e2e8f0;padding:.75rem 1.25rem;border-radius:.5rem;box-shadow:0 8px 24px rgba(0,0,0,.12);display:none;align-items:center;gap:.5rem;font-size:.875rem;font-weight:600;color:#0f172a;max-width:400px}
+    .ad-toast.is-visible{display:flex}
+    .ad-progress{height:6px;background:#e2e8f0;border-radius:999px;overflow:hidden;width:100%}
+    .ad-progress-fill{height:100%;background:#135bec;border-radius:999px;transition:width .3s}
+    .ad-upload{border:2px dashed #cbd5e1;border-radius:.75rem;padding:2rem;text-align:center;cursor:pointer;transition:all .15s;background:#f8fafc;position:relative}
+    .ad-upload:hover{border-color:#135bec;background:#eff6ff}
+    .ad-upload input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+    .ad-badge{display:inline-block;padding:.125rem .5rem;font-size:.625rem;font-weight:800;border-radius:999px;text-transform:uppercase;letter-spacing:.03em}
+    .ad-badge-green{background:#dcfce7;color:#166534}
+    .ad-badge-amber{background:#fef3c7;color:#92400e}
+    .ad-badge-slate{background:#f1f5f9;color:#64748b}
+    .chart-bar{border-radius:.25rem .25rem 0 0;background:#135bec;min-height:4px;transition:height .4s}
+    @media(max-width:640px){.sm-hide{display:none!important}}
   </style>
 </head>
 <body class="bg-background-light min-h-screen font-display">
 
-  <!-- Toast Alerts -->
-  <div id="toast" class="toast">
-    <span id="toast-icon">ℹ️</span>
-    <p id="toast-text" class="text-sm font-semibold text-slate-800"></p>
+<!-- Toast -->
+<div id="toast" class="ad-toast"><span id="toast-icon"></span><span id="toast-msg"></span></div>
+
+<!-- Header -->
+<header class="flex items-center justify-between border-b border-slate-200 bg-white/80 backdrop-blur-md px-4 md:px-10 py-4 sticky top-0 z-50">
+  <div class="flex items-center gap-3 text-slate-900">
+    <div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+    </div>
+    <span class="text-base md:text-xl font-bold tracking-tight">{{ portal_brand or "Hapa Kitonga WiFi" }}</span>
+    <span class="text-xs font-semibold text-slate-400 hidden md:block">Ad Portal</span>
   </div>
+  <div id="hdr-user" class="flex items-center gap-3" style="display:none">
+    <span id="hdr-email" class="text-xs font-semibold text-slate-500 hidden md:block"></span>
+    <button onclick="doLogout()" class="ad-btn ad-btn-ghost" style="height:2.25rem;font-size:.75rem">Log Out</button>
+  </div>
+</header>
 
-  <!-- Branded Advertiser Header -->
-  <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 bg-white/80 backdrop-blur-md px-4 md:px-10 py-4 sticky top-0 z-50">
-    <div class="flex items-center gap-3 text-slate-900">
-      <div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+<!-- ==================== AUTH VIEW ==================== -->
+<div data-view="auth" class="is-active">
+  <div class="flex items-center justify-center" style="min-height:calc(100vh - 73px)">
+    <div style="width:100%;max-width:380px;padding:1.5rem">
+      <div class="ad-card" style="padding:2rem">
+        <!-- Logo block -->
+        <div class="flex flex-col items-center gap-2 mb-8">
+          <div class="size-14 bg-primary rounded-xl flex items-center justify-center text-white" style="box-shadow:0 4px 12px rgba(19,91,236,.25)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+          </div>
+          <h1 class="text-lg font-black text-slate-900">Advertiser Portal</h1>
+          <p class="text-xs text-slate-400">Manage your WiFi ad campaigns</p>
+        </div>
+        <!-- Tabs -->
+        <div class="flex" style="background:#f1f5f9;padding:3px;border-radius:.5rem;margin-bottom:1.5rem">
+          <button type="button" class="ad-tab is-active" data-tab="login" onclick="switchTab('login')">Sign In</button>
+          <button type="button" class="ad-tab" data-tab="register" onclick="switchTab('register')">Register</button>
+        </div>
+        <!-- Form -->
+        <form id="auth-form" onsubmit="return doAuth(event)">
+          <div style="margin-bottom:1rem">
+            <label class="ad-label">Email</label>
+            <input id="f-email" type="email" required placeholder="you@company.com" class="ad-input">
+          </div>
+          <div style="margin-bottom:1.5rem">
+            <label class="ad-label">Password</label>
+            <input id="f-pass" type="password" required placeholder="Enter your password" class="ad-input">
+          </div>
+          <button type="submit" id="btn-auth" class="ad-btn ad-btn-primary" style="width:100%">Sign In</button>
+          <p id="auth-error" class="text-xs text-red-500" style="margin-top:.75rem;text-align:center;display:none"></p>
+        </form>
       </div>
-      <h2 class="text-base md:text-xl font-bold leading-tight tracking-tight">{{ portal_brand or "Hapa Kitonga WiFi" }} - Ad Portal</h2>
-    </div>
-  </header>
-
-  <!-- Core Page Wrapper -->
-  <main class="relative min-h-[calc(100vh-73px)] w-full flex flex-col">
-    <div class="absolute inset-0 gradient-bg opacity-10 pointer-events-none"></div>
-    <div class="relative w-full max-w-7xl mx-auto p-6 md:p-12 flex flex-col gap-6 md:gap-8">
-      
-      <!-- 1. AUTHENTICATION VIEW -->
-      <div id="auth-view" class="auth-container">
-        <section class="auth-card">
-          <!-- Pill switcher tabs -->
-          <div class="tab-switcher">
-            <button type="button" id="tab-login" class="tab-btn active">Sign In</button>
-            <button type="button" id="tab-signup" class="tab-btn">Register</button>
-          </div>
-
-          <form id="auth-form" onsubmit="handleAuth(event)" style="display: flex; flex-direction: column;">
-            <div class="form-group">
-              <label class="form-label">Email Address</label>
-              <input id="auth-email" type="email" required placeholder="name@company.com" class="form-input">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Password</label>
-              <input id="auth-password" type="password" required placeholder="••••••••" class="form-input">
-            </div>
-            <button type="submit" id="btn-auth-submit" class="submit-btn" style="margin-top: 1rem;">Sign In</button>
-          </form>
-        </section>
-      </div>
-
-      <!-- 2. DASHBOARD VIEW (Shown once logged in) -->
-      <section id="dashboard-view" class="hidden flex flex-col gap-8">
-        
-        <!-- Header Bar -->
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h2 class="text-3xl font-black text-slate-900 leading-tight">Campaign Dashboard</h2>
-            <p class="text-sm text-slate-500" id="user-email-display"></p>
-          </div>
-          <button id="btn-logout" class="h-11 px-5 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50 transition-all">Log Out</button>
-        </div>
-
-        <!-- Stat Cards Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col gap-2">
-            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Ad Views</span>
-            <h3 id="stat-views" class="text-4xl font-black text-slate-900">0</h3>
-            <p class="text-xs text-slate-500">Accumulated impressions count</p>
-          </div>
-          <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col gap-2">
-            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">My Campaigns</span>
-            <h3 id="stat-campaigns" class="text-4xl font-black text-slate-900">0</h3>
-            <p class="text-xs text-slate-500">Submitted ad materials</p>
-          </div>
-          <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col gap-2">
-            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Network Reach</span>
-            <h3 class="text-4xl font-black text-green-600">Active</h3>
-            <p class="text-xs text-slate-500">Ad impressions rotating live</p>
-          </div>
-        </div>
-
-        <!-- 7-Day Chart -->
-        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 class="font-bold text-slate-800 text-lg mb-6">Views History (Last 7 Days)</h3>
-          <div style="height: 180px; width: 100%; display: flex; align-items: flex-end; justify-content: space-between; padding-top: 1rem;" id="chart-bars">
-            <!-- Bars rendered via JS -->
-          </div>
-        </div>
-
-        <!-- Table Card -->
-        <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col">
-          <div class="px-6 py-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-            <h3 class="font-bold text-slate-800 text-lg">My Ad Campaigns</h3>
-            <button onclick="showUploadModal(true)" class="h-11 px-5 rounded-lg bg-primary text-white font-black hover:bg-primary/90 transition-all">＋ Create Ad Campaign</button>
-          </div>
-
-          <div class="overflow-x-auto w-full">
-            <table class="w-full text-left border-collapse">
-              <thead>
-                <tr class="border-b border-slate-200 bg-slate-100/50">
-                  <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Campaign Name</th>
-                  <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Format</th>
-                  <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                  <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Views Progress</th>
-                  <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Destination URL</th>
-                </tr>
-              </thead>
-              <tbody id="campaign-rows" class="divide-y divide-slate-100">
-                <!-- Rows populated via JS -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-      </section>
-    </div>
-  </main>
-
-  <!-- 3. Campaign Creator Modal -->
-  <div id="upload-modal" class="modal-overlay">
-    <div class="max-w-lg w-full rounded-2xl border border-slate-200 bg-white p-8 shadow-2xl relative flex flex-col gap-6">
-      <div class="flex justify-between items-center">
-        <h3 class="text-2xl font-black text-slate-900">New Ad Campaign</h3>
-        <button onclick="showUploadModal(false)" class="text-slate-400 hover:text-slate-600 font-black p-2 text-xl">✕</button>
-      </div>
-
-      <form id="upload-form" onsubmit="handleUpload(event)" class="flex flex-col gap-4">
-        <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Campaign Title</label>
-          <input id="ad-title-input" type="text" required placeholder="e.g. Summer Promo 2026" class="w-full h-12 px-4 rounded-lg border border-slate-200 bg-white text-slate-900 focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none">
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ad Type Format</label>
-          <select id="ad-format-select" class="w-full h-12 px-4 rounded-lg border border-slate-200 bg-white text-slate-900 outline-none" onchange="toggleUploadZone()">
-            <option value="Video">Locked Video (Max 2 Mins)</option>
-            <option value="Image Carousel">Vibrant Image Banner</option>
-            <option value="Text">Premium Text Fallback</option>
-          </select>
-        </div>
-
-        <div id="file-uploader-group">
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Upload Asset File</label>
-          <div class="upload-zone">
-            <span class="text-3xl block mb-2">📂</span>
-            <p class="font-bold text-slate-700 text-sm">Drag and drop file or click to browse</p>
-            <p class="text-xs text-slate-400 mt-1" id="file-helper-text">Supports .mp4 videos up to 50MB</p>
-            <input type="file" id="asset-file" class="file-input" onchange="processFileSelected()">
-          </div>
-          <p id="file-status" class="text-xs font-bold text-green-600 text-center mt-2"></p>
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">WhatsApp or Website CTA Link</label>
-          <input id="ad-cta-input" type="url" placeholder="https://wa.me/255789968024" class="w-full h-12 px-4 rounded-lg border border-slate-200 bg-white text-slate-900 focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none">
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Purchased Views Quota</label>
-          <input id="ad-quota-input" type="number" value="1000" min="100" class="w-full h-12 px-4 rounded-lg border border-slate-200 bg-white text-slate-900 focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none">
-        </div>
-
-        <div class="flex gap-4 mt-4">
-          <button type="button" onclick="showUploadModal(false)" class="flex-1 h-12 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50 transition-all">Cancel</button>
-          <button type="submit" id="btn-upload-submit" class="flex-1 h-12 rounded-lg bg-primary text-white font-black hover:bg-primary/90 transition-all">Submit Campaign</button>
-        </div>
-      </form>
     </div>
   </div>
+</div>
 
-  <!-- Dynamic Active Captive Footer -->
-  {% include "templates/includes/hotspot/footer.html" %}
+<!-- ==================== DASHBOARD VIEW ==================== -->
+<div data-view="dashboard">
+  <div class="relative w-full max-w-7xl mx-auto p-6 md:p-12 flex flex-col gap-6">
 
-  <script>
-    const API_BASE = "hotspot_ms.api.portal";
-    let loggedInEmail = localStorage.getItem("advertiser_email") || null;
-    let selectedFileBase64 = null;
-    let selectedFileName = "";
+    <!-- Page Title -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div>
+        <h2 class="text-2xl font-black text-slate-900">Campaign Dashboard</h2>
+        <p class="text-sm text-slate-400 mt-1" id="dash-email"></p>
+      </div>
+      <button onclick="openModal()" class="ad-btn ad-btn-primary">+ New Campaign</button>
+    </div>
 
-    document.addEventListener("DOMContentLoaded", () => {
-      if (loggedInEmail) {
-        showDashboard();
+    <!-- Stats Row -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="ad-card p-6 flex flex-col gap-1">
+        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Impressions</span>
+        <span id="s-views" class="text-3xl font-black text-slate-900">0</span>
+      </div>
+      <div class="ad-card p-6 flex flex-col gap-1">
+        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Campaigns</span>
+        <span id="s-camps" class="text-3xl font-black text-slate-900">0</span>
+      </div>
+      <div class="ad-card p-6 flex flex-col gap-1">
+        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Network Status</span>
+        <span class="text-3xl font-black text-green-600">Live</span>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="ad-card p-6">
+      <h3 class="text-sm font-bold text-slate-700 mb-4">Views — Last 7 Days</h3>
+      <div id="chart" style="height:140px;display:flex;align-items:flex-end;gap:6px"></div>
+    </div>
+
+    <!-- Table -->
+    <div class="ad-card overflow-hidden">
+      <div class="flex justify-between items-center px-6 py-4 border-b border-slate-200" style="background:#f8fafc">
+        <h3 class="text-sm font-bold text-slate-700">My Campaigns</h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="border-bottom:1px solid #e2e8f0">
+              <th class="ad-label" style="padding:.75rem 1.5rem;text-align:left">Name</th>
+              <th class="ad-label sm-hide" style="padding:.75rem 1.5rem;text-align:left">Type</th>
+              <th class="ad-label" style="padding:.75rem 1.5rem;text-align:left">Status</th>
+              <th class="ad-label" style="padding:.75rem 1.5rem;text-align:left">Progress</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== CREATE CAMPAIGN MODAL ==================== -->
+<div id="modal" class="ad-overlay">
+  <div class="ad-card" style="width:100%;max-width:480px;padding:2rem;max-height:90vh;overflow-y:auto">
+    <div class="flex justify-between items-center mb-6">
+      <h3 class="text-lg font-black text-slate-900">New Campaign</h3>
+      <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:1.25rem;color:#94a3b8">&times;</button>
+    </div>
+    <form id="campaign-form" onsubmit="return doCreateCampaign(event)">
+      <div style="margin-bottom:1rem">
+        <label class="ad-label">Campaign Title</label>
+        <input id="c-title" type="text" required placeholder="Summer Promo 2026" class="ad-input">
+      </div>
+      <div style="margin-bottom:1rem">
+        <label class="ad-label">Ad Format</label>
+        <select id="c-format" class="ad-input ad-select" onchange="onFormatChange()">
+          <option value="Video">Video (Max 2 min)</option>
+          <option value="Image Carousel">Image Banner</option>
+          <option value="Text">Text Only</option>
+        </select>
+      </div>
+      <div id="c-file-group" style="margin-bottom:1rem">
+        <label class="ad-label">Upload Asset</label>
+        <div class="ad-upload">
+          <p class="text-sm font-semibold text-slate-600">Click to browse or drag file here</p>
+          <p id="c-file-hint" class="text-xs text-slate-400" style="margin-top:.25rem">.mp4 video up to 50 MB</p>
+          <input type="file" id="c-file" onchange="onFileSelect()">
+        </div>
+        <p id="c-file-name" class="text-xs font-semibold text-green-600" style="margin-top:.5rem"></p>
+      </div>
+      <div style="margin-bottom:1rem">
+        <label class="ad-label">CTA Link (optional)</label>
+        <input id="c-cta" type="url" placeholder="https://wa.me/255789968024" class="ad-input">
+      </div>
+      <div style="margin-bottom:1.5rem">
+        <label class="ad-label">Views Quota</label>
+        <input id="c-quota" type="number" value="1000" min="100" class="ad-input">
+      </div>
+      <div class="flex gap-3">
+        <button type="button" onclick="closeModal()" class="ad-btn ad-btn-ghost" style="flex:1">Cancel</button>
+        <button type="submit" id="btn-create" class="ad-btn ad-btn-primary" style="flex:1">Submit</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const API = "hotspot_ms.api.portal";
+let email = localStorage.getItem("adv_email") || null;
+let fileB64 = null, fileName = "";
+let currentTab = "login";
+
+/* ---- init ---- */
+document.addEventListener("DOMContentLoaded", () => email ? showView("dashboard") : showView("auth"));
+
+/* ---- views ---- */
+function showView(name) {
+  document.querySelectorAll("[data-view]").forEach(el => el.classList.remove("is-active"));
+  const target = document.querySelector(`[data-view="${name}"]`);
+  if (target) target.classList.add("is-active");
+  const hdr = document.getElementById("hdr-user");
+  if (name === "dashboard") {
+    hdr.style.display = "flex";
+    document.getElementById("hdr-email").textContent = email;
+    document.getElementById("dash-email").textContent = email;
+    loadDashboard();
+  } else {
+    hdr.style.display = "none";
+  }
+}
+
+/* ---- tabs ---- */
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll(".ad-tab").forEach(t => t.classList.remove("is-active"));
+  document.querySelector(`.ad-tab[data-tab="${tab}"]`).classList.add("is-active");
+  document.getElementById("btn-auth").textContent = tab === "register" ? "Create Account" : "Sign In";
+  document.getElementById("auth-error").style.display = "none";
+}
+
+/* ---- api helper ---- */
+async function api(method, args = {}) {
+  const isWrite = /create_|upload_|register_|login_/.test(method);
+  let url = `/api/method/${method}`;
+  const opts = { credentials: "same-origin" };
+  if (isWrite) {
+    opts.method = "POST";
+    const fd = new URLSearchParams();
+    for (const k in args) if (args[k] != null) fd.append(k, args[k]);
+    opts.body = fd;
+    opts.headers = { "Content-Type": "application/x-www-form-urlencoded" };
+  } else {
+    const q = new URLSearchParams();
+    for (const k in args) if (args[k] != null) q.append(k, args[k]);
+    const qs = q.toString();
+    if (qs) url += "?" + qs;
+  }
+  const r = await fetch(url, opts);
+  const d = await r.json();
+  return d.message || d;
+}
+
+/* ---- toast ---- */
+function toast(msg, icon = "ℹ️") {
+  const el = document.getElementById("toast");
+  document.getElementById("toast-msg").textContent = msg;
+  document.getElementById("toast-icon").textContent = icon;
+  el.classList.add("is-visible");
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove("is-visible"), 4000);
+}
+
+/* ---- auth ---- */
+async function doAuth(e) {
+  e.preventDefault();
+  const em = document.getElementById("f-email").value.trim();
+  const pw = document.getElementById("f-pass").value;
+  const btn = document.getElementById("btn-auth");
+  const errEl = document.getElementById("auth-error");
+  errEl.style.display = "none";
+  btn.disabled = true;
+  btn.textContent = currentTab === "register" ? "Creating…" : "Signing in…";
+  try {
+    const endpoint = currentTab === "register" ? "register_advertiser" : "login_advertiser";
+    const res = await api(`${API}.${endpoint}`, { email: em, password: pw });
+    if (res.ok) {
+      if (currentTab === "register") {
+        toast("Account created! Please sign in.", "✅");
+        switchTab("login");
+        document.getElementById("f-pass").value = "";
       } else {
-        showAuth();
+        email = em.toLowerCase();
+        localStorage.setItem("adv_email", email);
+        toast("Welcome back!", "👋");
+        showView("dashboard");
       }
-
-      // Configure Tab switching
-      document.getElementById("tab-login").addEventListener("click", () => toggleAuthMode(false));
-      document.getElementById("tab-signup").addEventListener("click", () => toggleAuthMode(true));
-      document.getElementById("btn-logout").addEventListener("click", handleLogout);
-    });
-
-    async function callApi(method, args = {}) {
-      try {
-        const response = await fetch(`/api/method/${method}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(args)
-        });
-        const data = await response.json();
-        return data.message || data;
-      } catch (err) {
-        console.error("API Error:", err);
-        return { ok: false, message: "Network connection error." };
-      }
+    } else {
+      errEl.textContent = res.message || "Authentication failed.";
+      errEl.style.display = "block";
     }
+  } catch (err) {
+    errEl.textContent = "Network error. Please try again.";
+    errEl.style.display = "block";
+  }
+  btn.disabled = false;
+  btn.textContent = currentTab === "register" ? "Create Account" : "Sign In";
+  return false;
+}
 
-    function showToast(text, icon = "ℹ️") {
-      const toast = document.getElementById("toast");
-      document.getElementById("toast-text").textContent = text;
-      document.getElementById("toast-icon").textContent = icon;
-      toast.style.display = "flex";
-      setTimeout(() => {
-        toast.style.display = "none";
-      }, 4000);
-    }
+function doLogout() {
+  localStorage.removeItem("adv_email");
+  email = null;
+  showView("auth");
+  toast("Logged out.", "👋");
+}
 
-    function toggleAuthMode(signup) {
-      const tabLogin = document.getElementById("tab-login");
-      const tabSignup = document.getElementById("tab-signup");
-      const btnSubmit = document.getElementById("btn-auth-submit");
-
-      if (signup) {
-        tabLogin.className = "tab-btn";
-        tabSignup.className = "tab-btn active";
-        btnSubmit.textContent = "Create Account";
-      } else {
-        tabSignup.className = "tab-btn";
-        tabLogin.className = "tab-btn active";
-        btnSubmit.textContent = "Sign In";
-      }
-    }
-
-    function showAuth() {
-      document.getElementById("auth-view").classList.remove("hidden");
-      document.getElementById("dashboard-view").classList.add("hidden");
-    }
-
-    function showDashboard() {
-      document.getElementById("auth-view").classList.add("hidden");
-      document.getElementById("dashboard-view").classList.remove("hidden");
-      document.getElementById("user-email-display").textContent = loggedInEmail;
-      loadDashboardData();
-    }
-
-    function handleAuth(event) {
-      event.preventDefault();
-      const email = document.getElementById("auth-email").value.trim();
-      localStorage.setItem("advertiser_email", email.toLowerCase());
-      loggedInEmail = email.toLowerCase();
-      showToast("Signed in successfully!", "🔑");
-      showDashboard();
-    }
-
-    function handleLogout() {
-      localStorage.removeItem("advertiser_email");
-      loggedInEmail = null;
-      showToast("Logged out successfully.", "👋");
-      showAuth();
-    }
-
-    async function loadDashboardData() {
-      if (!loggedInEmail) return;
-
-      const res = await callApi(`${API_BASE}.get_advertiser_dashboard`, {
-        advertiser_email: loggedInEmail
+/* ---- dashboard ---- */
+async function loadDashboard() {
+  if (!email) return;
+  try {
+    const r = await api(`${API}.get_advertiser_dashboard`, { advertiser_email: email });
+    if (!r.ok) { toast(r.message || "Failed to load data", "❌"); return; }
+    document.getElementById("s-views").textContent = (r.total_views || 0).toLocaleString();
+    document.getElementById("s-camps").textContent = r.total_ads || 0;
+    // chart
+    const chart = document.getElementById("chart");
+    chart.innerHTML = "";
+    if (r.chart_data && r.chart_data.length) {
+      const mx = Math.max(...r.chart_data.map(d => d.views), 1);
+      r.chart_data.forEach(d => {
+        const pct = Math.max(Math.round((d.views / mx) * 100), 6);
+        const day = new Date(d.date).toLocaleDateString("en", { weekday: "short" });
+        const col = document.createElement("div");
+        col.style.cssText = "flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%";
+        col.innerHTML = `<span style="font-size:10px;font-weight:800;color:#135bec;margin-bottom:4px">${d.views}</span><div class="chart-bar" style="width:100%;height:${pct}%"></div><span style="font-size:10px;font-weight:600;color:#94a3b8;margin-top:6px">${day}</span>`;
+        chart.appendChild(col);
       });
-
-      if (!res.ok) {
-        showToast(res.message || "Failed to load campaign data.", "❌");
-        return;
-      }
-
-      document.getElementById("stat-views").textContent = res.total_views.toLocaleString();
-      document.getElementById("stat-campaigns").textContent = res.total_ads;
-
-      const rowsContainer = document.getElementById("campaign-rows");
-      rowsContainer.innerHTML = "";
-
-      if (res.ads.length === 0) {
-        rowsContainer.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-sm text-slate-400">No campaigns added yet. Click "Create Ad Campaign" to get started!</td></tr>`;
-      } else {
-        res.ads.forEach(ad => {
-          const limit = ad.views_limit || 1000;
-          const count = ad.views_count || 0;
-          const pct = Math.min(Math.round((count / limit) * 100), 100);
-          
-          let statusBadge = `<span class="px-2.5 py-1 text-[10px] font-black rounded-full bg-slate-100 text-slate-500 uppercase">${ad.status}</span>`;
-          if (ad.status === "Active") {
-            statusBadge = `<span class="px-2.5 py-1 text-[10px] font-black rounded-full bg-green-100 text-green-700 uppercase">Active</span>`;
-          } else if (ad.status === "Pending Approval" || ad.status === "Pending Payment") {
-            statusBadge = `<span class="px-2.5 py-1 text-[10px] font-black rounded-full bg-amber-100 text-amber-700 uppercase">Pending</span>`;
-          }
-
-          const row = document.createElement("tr");
-          row.className = "hover:bg-slate-50/50 transition-colors";
-          row.innerHTML = `
-            <td class="px-6 py-4 font-bold text-slate-800">${ad.title}</td>
-            <td class="px-6 py-4 text-sm text-slate-500">${ad.ad_type}</td>
-            <td class="px-6 py-4">${statusBadge}</td>
-            <td class="px-6 py-4">
-              <div class="flex flex-col gap-1">
-                <span class="text-xs font-bold text-slate-600">${count.toLocaleString()} / ${limit.toLocaleString()}</span>
-                <div class="progress-bar-bg">
-                  <div class="progress-bar-fill" style="width: ${pct}%"></div>
-                </div>
-              </div>
-            </td>
-            <td class="px-6 py-4">
-              ${ad.cta_url ? `<a href="${ad.cta_url}" target="_blank" class="text-sm font-bold text-primary hover:underline">Link ↗</a>` : '<span class="text-xs text-slate-400">None</span>'}
-            </td>
-          `;
-          rowsContainer.appendChild(row);
-        });
-      }
-
-      // Render Last 7 Days chart
-      const barsContainer = document.getElementById("chart-bars");
-      barsContainer.innerHTML = "";
-
-      if (res.chart_data && res.chart_data.length > 0) {
-        const maxViews = Math.max(...res.chart_data.map(d => d.views), 10);
-        res.chart_data.forEach(d => {
-          const pct = Math.max(Math.round((d.views / maxViews) * 100), 8);
-          const dateObj = new Date(d.date);
-          const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
-
-          const barWrapper = document.createElement("div");
-          barWrapper.style.display = "flex";
-          barWrapper.style.flexDirection = "column";
-          barWrapper.style.alignItems = "center";
-          barWrapper.style.width = "10%";
-          barWrapper.style.height = "100%";
-          barWrapper.style.justifyContent = "flex-end";
-          
-          barWrapper.innerHTML = `
-            <span class="text-[10px] font-black text-primary mb-1">${d.views}</span>
-            <div style="background: var(--primary, #2563eb); width: 100%; height: ${pct}%; border-radius: 0.25rem 0.25rem 0 0; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.1)"></div>
-            <span class="text-[10px] font-bold text-slate-400 mt-2 uppercase">${dayName}</span>
-          `;
-          barsContainer.appendChild(barWrapper);
-        });
-      }
     }
-
-    function showUploadModal(show) {
-      const modal = document.getElementById("upload-modal");
-      if (show) {
-        modal.style.display = "flex";
-        document.getElementById("upload-form").reset();
-        selectedFileBase64 = null;
-        selectedFileName = "";
-        document.getElementById("file-status").textContent = "";
-        toggleUploadZone();
-      } else {
-        modal.style.display = "none";
-      }
+    // table
+    const tb = document.getElementById("tbl-body");
+    tb.innerHTML = "";
+    if (!r.ads || r.ads.length === 0) {
+      tb.innerHTML = '<tr><td colspan="4" style="padding:2rem;text-align:center;color:#94a3b8;font-size:.875rem">No campaigns yet. Click "+ New Campaign" to start.</td></tr>';
+    } else {
+      r.ads.forEach(ad => {
+        const lim = ad.views_limit || 1000, cnt = ad.views_count || 0;
+        const pct = Math.min(Math.round((cnt / lim) * 100), 100);
+        let badge = "ad-badge-slate";
+        if (ad.status === "Active") badge = "ad-badge-green";
+        else if (ad.status.includes("Pending")) badge = "ad-badge-amber";
+        const tr = document.createElement("tr");
+        tr.style.borderBottom = "1px solid #f1f5f9";
+        tr.innerHTML = `
+          <td style="padding:.75rem 1.5rem;font-weight:600;font-size:.875rem;color:#1e293b">${ad.title}</td>
+          <td class="sm-hide" style="padding:.75rem 1.5rem;font-size:.8125rem;color:#64748b">${ad.ad_type}</td>
+          <td style="padding:.75rem 1.5rem"><span class="ad-badge ${badge}">${ad.status}</span></td>
+          <td style="padding:.75rem 1.5rem"><div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:.75rem;font-weight:600;color:#475569">${cnt.toLocaleString()} / ${lim.toLocaleString()}</span><div class="ad-progress"><div class="ad-progress-fill" style="width:${pct}%"></div></div></div></td>`;
+        tb.appendChild(tr);
+      });
     }
+  } catch (err) { toast("Failed to load dashboard", "❌"); }
+}
 
-    function toggleUploadZone() {
-      const format = document.getElementById("ad-format-select").value;
-      const group = document.getElementById("file-uploader-group");
-      const helper = document.getElementById("file-helper-text");
+/* ---- modal ---- */
+function openModal() {
+  document.getElementById("modal").classList.add("is-open");
+  document.getElementById("campaign-form").reset();
+  fileB64 = null; fileName = "";
+  document.getElementById("c-file-name").textContent = "";
+  onFormatChange();
+}
+function closeModal() { document.getElementById("modal").classList.remove("is-open"); }
 
-      if (format === "Text") {
-        group.style.display = "none";
-      } else {
-        group.style.display = "block";
-        if (format === "Video") {
-          helper.textContent = "Supports .mp4 videos up to 50MB (max 2 minutes)";
-        } else {
-          helper.textContent = "Supports high resolution JPG, PNG banners up to 10MB";
-        }
-      }
+function onFormatChange() {
+  const fmt = document.getElementById("c-format").value;
+  document.getElementById("c-file-group").style.display = fmt === "Text" ? "none" : "block";
+  document.getElementById("c-file-hint").textContent = fmt === "Video" ? ".mp4 video up to 50 MB" : "JPG / PNG up to 10 MB";
+}
+
+function onFileSelect() {
+  const f = document.getElementById("c-file").files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = e => { fileB64 = e.target.result; fileName = f.name; document.getElementById("c-file-name").textContent = "✓ " + f.name; };
+  reader.readAsDataURL(f);
+}
+
+async function doCreateCampaign(e) {
+  e.preventDefault();
+  const fmt = document.getElementById("c-format").value;
+  if (fmt !== "Text" && !fileB64) { toast("Please select a file first.", "⚠️"); return false; }
+  const btn = document.getElementById("btn-create");
+  btn.disabled = true; btn.textContent = "Uploading…";
+  try {
+    let fileUrl = "";
+    if (fmt !== "Text") {
+      const up = await api(`${API}.upload_ad_media`, { file_name: fileName, file_data: fileB64 });
+      if (!up.ok) { toast(up.message || "Upload failed", "❌"); btn.disabled = false; btn.textContent = "Submit"; return false; }
+      fileUrl = up.file_url;
     }
-
-    function processFileSelected() {
-      const input = document.getElementById("asset-file");
-      if (input.files && input.files[0]) {
-        const file = input.files[0];
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-          selectedFileBase64 = e.target.result;
-          selectedFileName = file.name;
-          document.getElementById("file-status").textContent = `✓ ${file.name} loaded`;
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-
-    async function handleUpload(event) {
-      event.preventDefault();
-
-      const title = document.getElementById("ad-title-input").value.trim();
-      const format = document.getElementById("ad-format-select").value;
-      const ctaUrl = document.getElementById("ad-cta-input").value.trim();
-      const quota = document.getElementById("ad-quota-input").value;
-      const btnSubmit = document.getElementById("btn-upload-submit");
-
-      if (format !== "Text" && !selectedFileBase64) {
-        showToast("Please choose a campaign asset file first.", "⚠️");
-        return;
-      }
-
-      btnSubmit.disabled = true;
-      btnSubmit.textContent = "Submitting...";
-
-      try {
-        let uploadedFileUrl = "";
-
-        if (format !== "Text") {
-          const uploadRes = await callApi(`${API_BASE}.upload_ad_media`, {
-            file_name: selectedFileName,
-            file_data: selectedFileBase64
-          });
-
-          if (!uploadRes.ok) {
-            showToast(uploadRes.message || "Failed to upload file.", "❌");
-            btnSubmit.disabled = false;
-            btnSubmit.textContent = "Submit Campaign";
-            return;
-          }
-          uploadedFileUrl = uploadRes.file_url;
-        }
-
-        const campaignRes = await callApi(`${API_BASE}.create_advertiser_ad`, {
-          advertiser_email: loggedInEmail,
-          title: title,
-          ad_type: format,
-          cta_url: ctaUrl || null,
-          video_file: uploadedFileUrl || null,
-          views_limit: parseInt(quota)
-        });
-
-        if (!campaignRes.ok) {
-          showToast(campaignRes.message || "Failed to create campaign.", "❌");
-          btnSubmit.disabled = false;
-          btnSubmit.textContent = "Submit Campaign";
-          return;
-        }
-
-        showToast("Campaign submitted successfully!", "🚀");
-        showUploadModal(false);
-        loadDashboardData();
-      } catch (err) {
-        showToast("An error occurred during submission.", "❌");
-      } finally {
-        btnSubmit.disabled = false;
-        btnSubmit.textContent = "Submit Campaign";
-      }
-    }
-  </script>
+    btn.textContent = "Creating…";
+    const res = await api(`${API}.create_advertiser_ad`, {
+      advertiser_email: email,
+      title: document.getElementById("c-title").value.trim(),
+      ad_type: fmt,
+      cta_url: document.getElementById("c-cta").value.trim() || null,
+      video_file: fileUrl || null,
+      views_limit: parseInt(document.getElementById("c-quota").value)
+    });
+    if (!res.ok) { toast(res.message || "Failed", "❌"); } else { toast("Campaign submitted!", "🚀"); closeModal(); loadDashboard(); }
+  } catch (err) { toast("An error occurred", "❌"); }
+  btn.disabled = false; btn.textContent = "Submit";
+  return false;
+}
+</script>
 </body>
 </html>
