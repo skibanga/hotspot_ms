@@ -18,6 +18,8 @@
   "generated_on",
   "activated_on",
   "expires_on",
+  "ad_slices_used",
+  "current_slice_expires_on",
   "section_break_3",
   "data_limit_mb",
   "data_used_mb",
@@ -106,6 +108,17 @@
    "fieldtype": "Datetime",
    "in_list_view": 1,
    "label": "Expires On"
+  },
+  {
+   "default": "0",
+   "fieldname": "ad_slices_used",
+   "fieldtype": "Int",
+   "label": "Ad Slices Used"
+  },
+  {
+   "fieldname": "current_slice_expires_on",
+   "fieldtype": "Datetime",
+   "label": "Current Slice Expires On"
   },
   {
    "fieldname": "section_break_3",

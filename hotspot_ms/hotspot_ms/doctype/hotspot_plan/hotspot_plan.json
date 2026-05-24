@@ -17,6 +17,7 @@
   "column_break_2",
   "data_limit_mb",
   "session_timeout_minutes",
+  "max_slices_per_day",
   "section_break_2",
   "download_kbps",
   "upload_kbps",
@@ -101,6 +102,12 @@
    "fieldname": "session_timeout_minutes",
    "fieldtype": "Int",
    "label": "Session Timeout (Minutes)"
+  },
+  {
+   "default": "4",
+   "fieldname": "max_slices_per_day",
+   "fieldtype": "Int",
+   "label": "Max Slices Per Day"
   },
   {
    "fieldname": "section_break_2",

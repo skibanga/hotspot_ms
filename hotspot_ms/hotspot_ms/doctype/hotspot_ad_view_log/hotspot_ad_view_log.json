@@ -1,0 +1,70 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "autoincrement",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "ad",
+  "viewer_mac",
+  "viewer_ip",
+  "viewed_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "ad",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Ad",
+   "options": "Hotspot Ad",
+   "reqd": 1
+  },
+  {
+   "fieldname": "viewer_mac",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Viewer MAC"
+  },
+  {
+   "fieldname": "viewer_ip",
+   "fieldtype": "Data",
+   "label": "Viewer IP"
+  },
+  {
+   "default": "Now",
+   "fieldname": "viewed_on",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Viewed On",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "module": "Hotspot MS",
+ "name": "Hotspot Ad View Log",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "quick_entry": 1,
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "ad",
+ "track_changes": 1
+}

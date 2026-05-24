@@ -207,6 +207,54 @@
         <button id="buy-confirm" type="button" class="flex-1 h-11 rounded-lg bg-primary text-white font-black hover:bg-primary/90">{{ _("Confirm") }}</button>
       </div>
     </div>
+  <!-- Ad-Wall Modal (Locked Overlay) -->
+  <div id="ad-modal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-w-lg w-full relative">
+      
+      <!-- Top header bar showing countdown/status -->
+      <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex justify-between items-center">
+        <h4 id="ad-title" class="font-bold text-slate-800 dark:text-slate-200 text-sm truncate max-w-[240px]">Watching Sponsor Ad</h4>
+        <div id="ad-timer" class="px-3 py-1 bg-primary/10 text-primary text-xs font-black rounded-full transition-all">
+          Unlock in 15s
+        </div>
+      </div>
+
+      <!-- Content area: Video player or Image Carousel -->
+      <div class="relative aspect-video w-full bg-black flex items-center justify-center overflow-hidden">
+        <!-- Video Player -->
+        <video id="ad-video" class="w-full h-full object-contain hidden" playsinline muted controls></video>
+        
+        <!-- Image Carousel Slide -->
+        <div id="ad-carousel" class="w-full h-full relative hidden flex flex-col justify-center items-center">
+          <img id="ad-image" class="w-full h-full object-cover" src="" alt="Ad Image">
+        </div>
+
+        <!-- Text / Fallback Ad -->
+        <div id="ad-text" class="w-full h-full flex flex-col justify-center items-center text-center p-8 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 hidden">
+          <svg class="w-12 h-12 text-primary mb-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          <h3 id="ad-text-title" class="text-xl font-black mb-2">Welcome to WiFi</h3>
+          <p class="text-sm text-slate-500 max-w-[320px]">Enjoy fast, high-speed and secure daily free internet access by Tanzania Hotspot.</p>
+        </div>
+      </div>
+
+      <!-- Bottom action bar -->
+      <div class="p-6 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-3">
+        <!-- CTA Link -->
+        <a id="ad-cta" href="#" target="_blank" class="w-full h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all text-sm hidden">
+          <span>Learn More</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+        </a>
+        
+        <!-- Locked Connect button -->
+        <button id="ad-connect" disabled class="w-full h-14 bg-primary text-white font-black rounded-xl text-lg shadow-lg shadow-primary/25 opacity-50 cursor-not-allowed transition-all flex items-center justify-center gap-2">
+          <span>Please watch full ad</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -620,46 +668,168 @@
           }
 
           btnClaimFree.disabled = true;
-          btnClaimFree.textContent = __("Claiming...");
-          showFreeFeedback("info", __("Setting up your free access..."));
+          btnClaimFree.textContent = __("Checking Status...");
+          showFreeFeedback("info", __("Checking your daily free status..."));
 
           try {
-            const claimed = await callApi("hotspot_ms.api.portal.claim_free_voucher", {
+            // 1. Check daily free limit status
+            const status = await callApi("hotspot_ms.api.portal.check_free_slice_status", {
               mac_address: captive.clientmac,
-              ip_address: captive.clientip,
-              nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
             });
 
-            if (!claimed.ok) {
-              showFreeFeedback("err", __(claimed.message) || __("Could not claim free access."));
+            if (!status.ok || !status.allowed) {
+              showFreeFeedback("err", status.message || __("You have reached your daily limit of free access today. Please buy a package to continue!"));
               btnClaimFree.disabled = false;
               btnClaimFree.textContent = "🚀 " + __("Get Free Access");
               return;
             }
 
-            showFreeFeedback("ok", __(claimed.message) || __("Free access granted!"));
-
-            // Build captive redirect
-            const redirectResult = await callApi("hotspot_ms.api.portal.build_opennds_redirect", {
-              session_id: claimed.session_id,
-              voucher_code: claimed.voucher_code,
-              tok: captive.tok,
-              redir: captive.redir,
-              authaction: captive.authaction,
-              fas: captive.fas,
-              gatewayaddress: captive.gatewayaddress,
-              gatewayport: captive.gatewayport,
-              authdir: captive.authdir,
-              hid: captive.hid,
-              nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
+            // 2. Fetch active ad
+            const adRes = await callApi("hotspot_ms.api.portal.get_random_active_ad", {
+              mac_address: captive.clientmac,
             });
 
-            if (redirectResult.ok && redirectResult.redirect_url) {
-              window.location.href = redirectResult.redirect_url;
-            } else {
-              showFreeFeedback("ok", __("Free access active! You can now browse the internet."));
-              btnClaimFree.textContent = "✓ " + __("Access Granted");
+            if (!adRes.ok) {
+              showFreeFeedback("err", adRes.message || __("Failed to load ad. Please try again."));
+              btnClaimFree.disabled = false;
+              btnClaimFree.textContent = "🚀 " + __("Get Free Access");
+              return;
             }
+
+            const ad = adRes.ad;
+
+            // 3. Populate and show Ad-Wall Modal
+            const adModal = document.getElementById("ad-modal");
+            const adTitle = document.getElementById("ad-title");
+            const adTimer = document.getElementById("ad-timer");
+            const adVideo = document.getElementById("ad-video");
+            const adCarousel = document.getElementById("ad-carousel");
+            const adImage = document.getElementById("ad-image");
+            const adText = document.getElementById("ad-text");
+            const adTextTitle = document.getElementById("ad-text-title");
+            const adCta = document.getElementById("ad-cta");
+            const adConnect = document.getElementById("ad-connect");
+
+            adTitle.textContent = ad.title || __("Sponsor Ad");
+            
+            // Setup CTA link
+            if (ad.cta_url) {
+              adCta.href = ad.cta_url;
+              adCta.classList.remove("hidden");
+            } else {
+              adCta.classList.add("hidden");
+            }
+
+            // Reset visibility
+            adVideo.classList.add("hidden");
+            adCarousel.classList.add("hidden");
+            adText.classList.add("hidden");
+            adConnect.disabled = true;
+            adConnect.className = "w-full h-14 bg-primary text-white font-black rounded-xl text-lg shadow-lg shadow-primary/25 opacity-50 cursor-not-allowed transition-all flex items-center justify-center gap-2";
+            adConnect.innerHTML = `<span>${__("Please watch full ad")}</span>`;
+
+            // Load media type
+            let duration = 15; // default 15s countdown
+            let activeTimer = null;
+
+            if (ad.ad_type === "Video" && ad.video_file) {
+              adVideo.src = ad.video_file;
+              adVideo.classList.remove("hidden");
+              adVideo.muted = false;
+              adVideo.play().catch(() => {
+                adVideo.muted = true;
+                adVideo.play();
+              });
+              
+              adVideo.onloadedmetadata = function() {
+                if (adVideo.duration && adVideo.duration > 0) {
+                  duration = Math.min(Math.round(adVideo.duration), 120);
+                }
+              };
+            } else if (ad.ad_type === "Image Carousel" && ad.video_file) {
+              adImage.src = ad.video_file;
+              adCarousel.classList.remove("hidden");
+              duration = 10;
+            } else {
+              adTextTitle.textContent = ad.title || __("Tanzania Hotspot");
+              adText.classList.remove("hidden");
+              duration = 8;
+            }
+
+            adModal.style.display = "flex";
+
+            // Start countdown timer
+            const updateTimer = () => {
+              if (duration > 0) {
+                adTimer.textContent = `${__("Unlock in")} ${duration}s`;
+                duration--;
+                activeTimer = setTimeout(updateTimer, 1000);
+              } else {
+                adTimer.textContent = __("Completed! ✓");
+                adTimer.className = "px-3 py-1 bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-black rounded-full transition-all animate-bounce";
+                
+                adConnect.disabled = false;
+                adConnect.className = "w-full h-14 bg-primary hover:bg-primary/90 text-white font-black rounded-xl text-lg shadow-lg shadow-primary/25 transition-all flex items-center justify-center gap-2 cursor-pointer";
+                adConnect.innerHTML = `<span>${__("Unlock Internet Now")} 🚀</span>`;
+              }
+            };
+
+            updateTimer();
+
+            // Connect button handler
+            adConnect.onclick = async function() {
+              if (activeTimer) clearTimeout(activeTimer);
+              adConnect.disabled = true;
+              adConnect.innerHTML = `<span>${__("Connecting...")}</span> <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+
+              try {
+                const claimed = await callApi("hotspot_ms.api.portal.log_ad_view_and_claim_slice", {
+                  mac_address: captive.clientmac,
+                  ad_id: ad.name,
+                  ip_address: captive.clientip,
+                  nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
+                });
+
+                if (!claimed.ok) {
+                  showFreeFeedback("err", __(claimed.message) || __("Could not claim free access."));
+                  adModal.style.display = "none";
+                  btnClaimFree.disabled = false;
+                  btnClaimFree.textContent = "🚀 " + __("Get Free Access");
+                  return;
+                }
+
+                showFreeFeedback("ok", __(claimed.message) || __("Free access granted!"));
+
+                const redirectResult = await callApi("hotspot_ms.api.portal.build_opennds_redirect", {
+                  session_id: claimed.session_id,
+                  voucher_code: claimed.voucher_code,
+                  tok: captive.tok,
+                  redir: captive.redir,
+                  authaction: captive.authaction,
+                  fas: captive.fas,
+                  gatewayaddress: captive.gatewayaddress,
+                  gatewayport: captive.gatewayport,
+                  authdir: captive.authdir,
+                  hid: captive.hid,
+                  nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
+                });
+
+                adModal.style.display = "none";
+                
+                if (redirectResult.ok && redirectResult.redirect_url) {
+                  window.location.href = redirectResult.redirect_url;
+                } else {
+                  showFreeFeedback("ok", __("Free access active! You can now browse the internet."));
+                  btnClaimFree.textContent = "✓ " + __("Access Granted");
+                }
+              } catch (err) {
+                showFreeFeedback("err", __("Something went wrong. Please try again."));
+                adModal.style.display = "none";
+                btnClaimFree.disabled = false;
+                btnClaimFree.textContent = "🚀 " + __("Get Free Access");
+              }
+            };
+
           } catch (error) {
             showFreeFeedback("err", __("Something went wrong. Please try again."));
             btnClaimFree.disabled = false;

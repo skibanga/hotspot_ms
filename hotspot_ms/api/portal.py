@@ -1313,3 +1313,384 @@ def sync_session_usage(
 
 	return _success("Session usage synchronized", updated_sessions=updated_count)
 
+
+@frappe.whitelist(allow_guest=True)
+def get_random_active_ad(mac_address: str | None = None) -> dict[str, Any]:
+	"""
+	Returns an active ad to display to the user.
+	Implements the Least-Shown-First equal exposure algorithm.
+	"""
+	mac_address = _normalize_mac(mac_address)
+	if mac_address:
+		free_plans = frappe.get_all(
+			"Hotspot Plan",
+			filters={"enabled": 1, "is_free": 1},
+			fields=["name", "max_slices_per_day"],
+			ignore_permissions=True,
+			limit=1,
+		)
+		if free_plans:
+			plan_name = free_plans[0]["name"]
+			max_slices = cint(free_plans[0].get("max_slices_per_day")) or 4
+			
+			today_start = now_datetime().replace(hour=0, minute=0, second=0, microsecond=0)
+			voucher = frappe.get_all(
+				"Hotspot Voucher",
+				filters={
+					"plan": plan_name,
+					"device_mac": mac_address,
+					"generated_on": (">=", today_start),
+				},
+				fields=["name", "ad_slices_used", "status"],
+				ignore_permissions=True,
+				limit=1,
+			)
+			if voucher and (cint(voucher[0].ad_slices_used) >= max_slices or voucher[0].status == "Expired"):
+				return _error(
+					frappe._("You have reached your daily limit of free access today. Please buy a package to continue!"),
+					"FREE_LIMIT_REACHED"
+				)
+
+	active_ads = frappe.get_all(
+		"Hotspot Ad",
+		filters={"status": "Active"},
+		fields=["name", "title", "ad_type", "video_file", "cta_url", "views_limit", "views_count"],
+		ignore_permissions=True,
+	)
+	
+	valid_ads = [ad for ad in active_ads if cint(ad.views_count) < cint(ad.views_limit)]
+	
+	if not valid_ads:
+		return {
+			"ok": True,
+			"ad": {
+				"name": "Fallback",
+				"title": "Welcome to Tanzania Hotspot",
+				"ad_type": "Text",
+				"cta_url": "",
+				"video_file": ""
+			}
+		}
+	
+	valid_ads.sort(key=lambda x: cint(x.views_count))
+	lowest_views = cint(valid_ads[0]["views_count"])
+	best_candidates = [ad for ad in valid_ads if cint(ad["views_count"]) == lowest_views]
+	
+	import random
+	selected_ad = random.choice(best_candidates)
+	
+	return {
+		"ok": True,
+		"ad": {
+			"name": selected_ad.name,
+			"title": selected_ad.title,
+			"ad_type": selected_ad.ad_type,
+			"cta_url": selected_ad.cta_url or "",
+			"video_file": selected_ad.video_file or ""
+		}
+	}
+
+
+@frappe.whitelist(allow_guest=True)
+def check_free_slice_status(mac_address: str) -> dict[str, Any]:
+	"""
+	Checks the current daily free tier progress for a MAC address.
+	"""
+	mac_address = _normalize_mac(mac_address)
+	if not mac_address:
+		return _error("MAC address is required", "MISSING_MAC")
+	
+	free_plans = frappe.get_all(
+		"Hotspot Plan",
+		filters={"enabled": 1, "is_free": 1},
+		fields=["name", "validity_value", "validity_unit", "max_slices_per_day"],
+		ignore_permissions=True,
+		limit=1,
+	)
+	if not free_plans:
+		return {
+			"ok": True,
+			"allowed": False,
+			"reason": "NO_FREE_PLAN",
+			"message": frappe._("No free plan is currently active.")
+		}
+		
+	plan_doc = free_plans[0]
+	plan_name = plan_doc["name"]
+	max_slices = cint(plan_doc.get("max_slices_per_day")) or 4
+	
+	today_start = now_datetime().replace(hour=0, minute=0, second=0, microsecond=0)
+	voucher = frappe.get_all(
+		"Hotspot Voucher",
+		filters={
+			"plan": plan_name,
+			"device_mac": mac_address,
+			"generated_on": (">=", today_start),
+		},
+		fields=["name", "ad_slices_used", "status"],
+		ignore_permissions=True,
+		limit=1,
+	)
+	
+	if not voucher:
+		return {
+			"ok": True,
+			"allowed": True,
+			"ad_slices_used": 0,
+			"max_slices_per_day": max_slices,
+			"slice_duration_val": cint(plan_doc.get("validity_value")) or 15,
+			"slice_duration_unit": plan_doc.get("validity_unit") or "Minutes"
+		}
+	
+	slices_used = cint(voucher[0].get("ad_slices_used") or 0)
+	is_expired = voucher[0].get("status") == "Expired"
+	allowed = bool(slices_used < max_slices and not is_expired)
+	
+	return {
+		"ok": True,
+		"allowed": allowed,
+		"ad_slices_used": slices_used,
+		"max_slices_per_day": max_slices,
+		"slice_duration_val": cint(plan_doc.get("validity_value")) or 15,
+		"slice_duration_unit": plan_doc.get("validity_unit") or "Minutes",
+		"reason": "LIMIT_REACHED" if not allowed else "PROGRESS"
+	}
+
+
+@frappe.whitelist(allow_guest=True)
+def log_ad_view_and_claim_slice(
+	mac_address: str,
+	ad_id: str,
+	ip_address: str | None = None,
+	nas_device: str | None = None
+) -> dict[str, Any]:
+	"""
+	Logs the ad view event and updates the daily free voucher with a new 15-minute slice.
+	"""
+	mac_address = _normalize_mac(mac_address)
+	ip_address = _normalize_ip(ip_address)
+	
+	if not mac_address:
+		return _error("Device MAC address is required", "MISSING_MAC")
+	
+	if ad_id and ad_id != "Fallback":
+		try:
+			ad = frappe.get_doc("Hotspot Ad", ad_id)
+			ad.views_count = cint(ad.views_count) + 1
+			if ad.views_count >= ad.views_limit:
+				ad.status = "Completed"
+			ad.save(ignore_permissions=True)
+			
+			log = frappe.new_doc("Hotspot Ad View Log")
+			log.ad = ad_id
+			log.viewer_mac = mac_address
+			log.viewer_ip = ip_address
+			log.insert(ignore_permissions=True)
+		except Exception as e:
+			frappe.log_error(f"Error logging ad view: {e}", "Ad Platform Error")
+
+	free_plans = frappe.get_all(
+		"Hotspot Plan",
+		filters={"enabled": 1, "is_free": 1},
+		fields=["name", "validity_value", "validity_unit", "max_slices_per_day", "data_limit_mb"],
+		ignore_permissions=True,
+		limit=1,
+	)
+	if not free_plans:
+		return _error("No free plan is currently available", "NO_FREE_PLAN")
+	
+	plan_doc = free_plans[0]
+	plan_name = plan_doc["name"]
+	slice_duration_val = cint(plan_doc.get("validity_value")) or 15
+	slice_duration_unit = (plan_doc.get("validity_unit") or "Minutes").lower()
+	max_slices = cint(plan_doc.get("max_slices_per_day")) or 4
+
+	now = now_datetime()
+	if slice_duration_unit.startswith("minute"):
+		slice_expiry = add_to_date(now, minutes=slice_duration_val)
+	elif slice_duration_unit.startswith("hour"):
+		slice_expiry = add_to_date(now, hours=slice_duration_val)
+	else:
+		slice_expiry = add_to_date(now, days=slice_duration_val)
+
+	today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+	existing_voucher = frappe.get_all(
+		"Hotspot Voucher",
+		filters={
+			"plan": plan_name,
+			"device_mac": mac_address,
+			"generated_on": (">=", today_start),
+		},
+		fields=["name", "ad_slices_used", "status"],
+		ignore_permissions=True,
+		limit=1,
+	)
+
+	if existing_voucher:
+		voucher_doc = frappe.get_doc("Hotspot Voucher", existing_voucher[0]["name"])
+		if cint(voucher_doc.ad_slices_used) >= max_slices or voucher_doc.status == "Expired":
+			return _error("You have reached your daily limit of free access.", "FREE_LIMIT_REACHED")
+		
+		voucher_doc.ad_slices_used = cint(voucher_doc.ad_slices_used) + 1
+		voucher_doc.current_slice_expires_on = slice_expiry
+		voucher_doc.status = "Active"
+		voucher_doc.save(ignore_permissions=True)
+		voucher_code = voucher_doc.voucher_code
+	else:
+		voucher_doc = frappe.new_doc("Hotspot Voucher")
+		voucher_doc.voucher_code = f"FREE-{secrets.token_hex(5).upper()}"
+		voucher_doc.status = "Active"
+		voucher_doc.plan = plan_name
+		voucher_doc.device_mac = mac_address
+		if ip_address:
+			voucher_doc.ip_address = ip_address
+		if flt(plan_doc.get("data_limit_mb")) > 0:
+			voucher_doc.data_limit_mb = flt(plan_doc.get("data_limit_mb"))
+		voucher_doc.ad_slices_used = 1
+		voucher_doc.current_slice_expires_on = slice_expiry
+		voucher_doc.insert(ignore_permissions=True)
+		voucher_code = voucher_doc.voucher_code
+
+	frappe.db.commit()
+
+	result = activate_voucher(
+		voucher_code=voucher_code,
+		mac_address=mac_address,
+		ip_address=ip_address,
+		nas_device=nas_device,
+	)
+	
+	if not result.get("ok"):
+		return result
+
+	result["voucher_code"] = voucher_code
+	result["ad_slices_used"] = voucher_doc.ad_slices_used
+	result["max_slices_per_day"] = max_slices
+	result["message"] = frappe._("Ad watched successfully! Internet unlocked for next {0} {1}.").format(
+		slice_duration_val,
+		frappe._(plan_doc.get("validity_unit") or "Minutes")
+	)
+	return result
+
+
+@frappe.whitelist(allow_guest=True)
+def get_advertiser_dashboard(advertiser_email: str) -> dict[str, Any]:
+	"""
+	Returns all ad assets and view log metrics for the advertiser's dashboard.
+	"""
+	advertiser_email = (advertiser_email or "").strip().lower()
+	if not advertiser_email:
+		return _error("Advertiser email is required", "MISSING_EMAIL")
+	
+	ads = frappe.get_all(
+		"Hotspot Ad",
+		filters={"advertiser_email": advertiser_email},
+		fields=["name", "title", "ad_type", "video_file", "cta_url", "status", "views_limit", "views_count"],
+		ignore_permissions=True,
+		order_by="creation desc"
+	)
+	
+	total_views = sum(cint(ad.get("views_count") or 0) for ad in ads)
+	
+	from frappe.utils import add_days, getdate
+	last_7_days = {}
+	for i in range(7):
+		day = getdate(add_days(now_datetime(), -i))
+		last_7_days[str(day)] = 0
+		
+	ad_names = [ad["name"] for ad in ads]
+	if ad_names:
+		logs = frappe.get_all(
+			"Hotspot Ad View Log",
+			filters={
+				"ad": ("in", ad_names),
+				"viewed_on": (">=", add_days(now_datetime(), -7))
+			},
+			fields=["viewed_on"],
+			ignore_permissions=True
+		)
+		for log in logs:
+			day_str = str(getdate(log["viewed_on"]))
+			if day_str in last_7_days:
+				last_7_days[day_str] += 1
+				
+	chart_data = [{"date": k, "views": v} for k, v in sorted(last_7_days.items())]
+	
+	return {
+		"ok": True,
+		"ads": ads,
+		"total_ads": len(ads),
+		"total_views": total_views,
+		"chart_data": chart_data
+	}
+
+
+@frappe.whitelist(allow_guest=True)
+def create_advertiser_ad(
+	advertiser_email: str,
+	title: str,
+	ad_type: str,
+	cta_url: str | None = None,
+	video_file: str | None = None,
+	views_limit: int = 1000
+) -> dict[str, Any]:
+	"""
+	Submit a new Ad asset for approval.
+	"""
+	advertiser_email = (advertiser_email or "").strip().lower()
+	title = (title or "").strip()
+	ad_type = (ad_type or "").strip()
+	
+	if not (advertiser_email and title and ad_type):
+		return _error("Email, Title, and Ad Type are required fields", "MISSING_FIELDS")
+	
+	exists = frappe.db.exists("Hotspot Ad", {"title": title})
+	if exists:
+		return _error("An ad with this title already exists. Please choose a different title.", "DUPLICATE_TITLE")
+	
+	ad = frappe.new_doc("Hotspot Ad")
+	ad.advertiser_email = advertiser_email
+	ad.title = title
+	ad.ad_type = ad_type
+	ad.cta_url = cta_url
+	ad.video_file = video_file
+	ad.status = "Pending Approval"
+	ad.views_limit = cint(views_limit) or 1000
+	ad.views_count = 0
+	ad.insert(ignore_permissions=True)
+	frappe.db.commit()
+	
+	return {
+		"ok": True,
+		"message": frappe._("Ad submitted successfully and is pending admin approval!"),
+		"ad": ad.name
+	}
+
+
+@frappe.whitelist(allow_guest=True)
+def upload_ad_media(file_name: str, file_data: str) -> dict[str, Any]:
+	"""
+	Saves base64 media file to the public files folder and returns its URL.
+	"""
+	import base64
+	from frappe.utils.file_manager import save_file
+	
+	if "," in file_data:
+		file_data = file_data.split(",")[1]
+		
+	decoded_data = base64.b64decode(file_data)
+	
+	file_doc = save_file(
+		fname=file_name,
+		content=decoded_data,
+		dt="Hotspot Ad",
+		dn="Temp",
+		is_private=0
+	)
+	
+	return {
+		"ok": True,
+		"file_url": file_doc.file_url
+	}
+
+

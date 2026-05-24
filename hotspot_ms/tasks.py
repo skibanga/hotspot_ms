@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import frappe
-from frappe.utils import flt, get_datetime, now_datetime
+from frappe.utils import cint, flt, get_datetime, now_datetime
 
 DEAUTH_PENDING_PREFIX = "DEAUTH_PENDING|"
 
@@ -33,7 +33,11 @@ def close_expired_or_used_sessions() -> dict[str, int]:
 		voucher = frappe.get_doc("Hotspot Voucher", row.voucher)
 		session_total_mb = flt(row.total_mb) or _to_mb(flt(row.input_octets) + flt(row.output_octets))
 
-		is_expired = bool(voucher.expires_on and get_datetime(voucher.expires_on) <= now)
+		is_slice_expired = False
+		if voucher.current_slice_expires_on and get_datetime(voucher.current_slice_expires_on) <= now:
+			is_slice_expired = True
+
+		is_expired = bool(voucher.expires_on and get_datetime(voucher.expires_on) <= now) or is_slice_expired
 		limit_mb = flt(voucher.data_limit_mb)
 		data_used_mb = max(flt(voucher.data_used_mb), session_total_mb)
 		is_used = bool(limit_mb > 0 and data_used_mb >= limit_mb)
@@ -51,7 +55,7 @@ def close_expired_or_used_sessions() -> dict[str, int]:
 		session.session_status = "Expired" if is_expired else "Closed"
 		session.stop_time = now
 		session.total_mb = session_total_mb
-		base_cause = "Session Expired" if is_expired else "Data Limit Reached"
+		base_cause = "Free Slice Expired" if is_slice_expired else ("Session Expired" if is_expired else "Data Limit Reached")
 		if session.ip_address or session.mac_address:
 			session.terminate_cause = f"{DEAUTH_PENDING_PREFIX}{base_cause}"
 		else:
@@ -59,7 +63,14 @@ def close_expired_or_used_sessions() -> dict[str, int]:
 		session.save(ignore_permissions=True)
 		closed += 1
 
-		new_status = "Expired" if is_expired else "Used"
+		# Determine if the voucher itself should be expired
+		should_expire_voucher = is_expired
+		if is_slice_expired and voucher.plan:
+			max_slices = cint(frappe.db.get_value("Hotspot Plan", voucher.plan, "max_slices_per_day")) or 4
+			if cint(voucher.ad_slices_used) < max_slices:
+				should_expire_voucher = False
+
+		new_status = "Expired" if should_expire_voucher else ("Used" if is_used else voucher.status)
 		if voucher.status != new_status:
 			voucher.status = new_status
 			voucher.save(ignore_permissions=True)
