@@ -69,6 +69,103 @@
       align-items: center;
       gap: 0.75rem;
     }
+    /* Premium professional auth styling */
+    .auth-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 0;
+    }
+    .auth-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 1rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+      width: 100%;
+      max-width: 400px;
+      padding: 2.25rem;
+    }
+    .tab-switcher {
+      display: flex;
+      background: #f1f5f9;
+      padding: 0.25rem;
+      border-radius: 0.75rem;
+      margin-bottom: 2rem;
+      border: none !important;
+      outline: none !important;
+    }
+    .tab-btn {
+      flex: 1;
+      text-align: center;
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 700;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none !important;
+      background: transparent;
+      color: #64748b;
+      outline: none !important;
+      box-shadow: none !important;
+    }
+    .tab-btn.active {
+      background: #ffffff !important;
+      color: var(--primary, #2563eb) !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    }
+    .form-group {
+      margin-bottom: 1.25rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      margin-bottom: 0.5rem;
+    }
+    .form-input {
+      width: 100%;
+      height: 2.75rem;
+      padding: 0 1rem;
+      border-radius: 0.5rem;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      font-size: 0.875rem;
+      color: #0f172a;
+      transition: all 0.2s ease;
+      outline: none !important;
+      box-shadow: none !important;
+    }
+    .form-input:focus {
+      border-color: var(--primary, #2563eb) !important;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+    }
+    .submit-btn {
+      width: 100%;
+      height: 2.75rem;
+      border-radius: 0.5rem;
+      background: var(--primary, #2563eb);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 0.875rem;
+      border: none !important;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+      outline: none !important;
+    }
+    .submit-btn:hover {
+      background: #1d4ed8;
+      box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+    }
+    .submit-btn:active {
+      transform: scale(0.98);
+    }
   </style>
 </head>
 <body class="bg-background-light min-h-screen font-display">
@@ -95,24 +192,27 @@
     <div class="relative w-full max-w-7xl mx-auto p-6 md:p-12 flex flex-col gap-6 md:gap-8">
       
       <!-- 1. AUTHENTICATION VIEW -->
-      <section id="auth-view" class="max-w-md mx-auto w-full rounded-2xl border border-slate-200 bg-white p-8 shadow-lg my-12">
-        <div class="flex border-b border-slate-200 mb-6">
-          <div id="tab-login" class="flex-1 text-center pb-3 font-bold text-slate-400 cursor-pointer border-b-2 border-transparent transition-all active text-primary border-primary">Sign In</div>
-          <div id="tab-signup" class="flex-1 text-center pb-3 font-bold text-slate-400 cursor-pointer border-b-2 border-transparent transition-all">Register</div>
-        </div>
+      <div id="auth-view" class="auth-container">
+        <section class="auth-card">
+          <!-- Pill switcher tabs -->
+          <div class="tab-switcher">
+            <button type="button" id="tab-login" class="tab-btn active">Sign In</button>
+            <button type="button" id="tab-signup" class="tab-btn">Register</button>
+          </div>
 
-        <form id="auth-form" onsubmit="handleAuth(event)" class="flex flex-col gap-4">
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
-            <input id="auth-email" type="email" required placeholder="name@company.com" class="w-full h-12 px-4 rounded-lg border border-slate-200 bg-white text-slate-900 focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Password</label>
-            <input id="auth-password" type="password" required placeholder="••••••••" class="w-full h-12 px-4 rounded-lg border border-slate-200 bg-white text-slate-900 focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none">
-          </div>
-          <button type="submit" id="btn-auth-submit" class="w-full h-12 rounded-lg bg-primary text-white font-black hover:bg-primary/90 mt-2 transition-all">Sign In</button>
-        </form>
-      </section>
+          <form id="auth-form" onsubmit="handleAuth(event)" style="display: flex; flex-direction: column;">
+            <div class="form-group">
+              <label class="form-label">Email Address</label>
+              <input id="auth-email" type="email" required placeholder="name@company.com" class="form-input">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <input id="auth-password" type="password" required placeholder="••••••••" class="form-input">
+            </div>
+            <button type="submit" id="btn-auth-submit" class="submit-btn" style="margin-top: 1rem;">Sign In</button>
+          </form>
+        </section>
+      </div>
 
       <!-- 2. DASHBOARD VIEW (Shown once logged in) -->
       <section id="dashboard-view" class="hidden flex flex-col gap-8">
@@ -289,12 +389,12 @@
       const btnSubmit = document.getElementById("btn-auth-submit");
 
       if (signup) {
-        tabLogin.classList.remove("active", "text-primary", "border-primary");
-        tabSignup.classList.add("active", "text-primary", "border-primary");
+        tabLogin.className = "tab-btn";
+        tabSignup.className = "tab-btn active";
         btnSubmit.textContent = "Create Account";
       } else {
-        tabSignup.classList.remove("active", "text-primary", "border-primary");
-        tabLogin.classList.add("active", "text-primary", "border-primary");
+        tabSignup.className = "tab-btn";
+        tabLogin.className = "tab-btn active";
         btnSubmit.textContent = "Sign In";
       }
     }
