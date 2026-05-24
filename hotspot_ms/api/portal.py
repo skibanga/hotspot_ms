@@ -1727,24 +1727,23 @@ def login_advertiser(email: str, password: str) -> dict[str, Any]:
 	"""
 	Secures advertiser dashboard login by verifying passwords natively.
 	"""
+	from frappe.utils.password import check_password as verify_pw
+	
 	email = (email or "").strip().lower()
 	password = (password or "").strip()
 	
 	if not (email and password):
 		return {"ok": False, "message": frappe._("Email and password are required")}
 		
-	try:
-		user = frappe.get_doc("User", email)
-		if not user.enabled:
-			return {"ok": False, "message": frappe._("This account is currently disabled.")}
-			
-		if user.check_password(password):
-			return {"ok": True, "message": frappe._("Login successful!")}
-		else:
-			return {"ok": False, "message": frappe._("Invalid email or password.")}
-	except frappe.DoesNotExistError:
+	if not frappe.db.exists("User", email):
 		return {"ok": False, "message": frappe._("Email not found. Please register first.")}
-	except Exception as e:
+	
+	try:
+		verify_pw(email, password)
+		return {"ok": True, "message": frappe._("Login successful!")}
+	except frappe.AuthenticationError:
+		return {"ok": False, "message": frappe._("Invalid email or password.")}
+	except Exception:
 		frappe.log_error(frappe.get_traceback(), "Login Advertiser Failed")
 		return {"ok": False, "message": frappe._("An error occurred during authentication.")}
 
