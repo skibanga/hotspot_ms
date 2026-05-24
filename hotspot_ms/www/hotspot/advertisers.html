@@ -231,6 +231,8 @@ function switchTab(tab) {
 }
 
 /* ---- api helper ---- */
+const CSRF_TOKEN = "{{ frappe.session.csrf_token }}";
+
 async function api(method, args = {}) {
   const isWrite = /create_|upload_|register_|login_/.test(method);
   let url = `/api/method/${method}`;
@@ -240,7 +242,10 @@ async function api(method, args = {}) {
     const fd = new URLSearchParams();
     for (const k in args) if (args[k] != null) fd.append(k, args[k]);
     opts.body = fd;
-    opts.headers = { "Content-Type": "application/x-www-form-urlencoded" };
+    opts.headers = {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "X-Frappe-CSRF-Token": CSRF_TOKEN
+    };
   } else {
     const q = new URLSearchParams();
     for (const k in args) if (args[k] != null) q.append(k, args[k]);
