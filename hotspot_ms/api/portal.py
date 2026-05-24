@@ -542,6 +542,59 @@ def payment_transaction_status(payment_ref: str) -> dict[str, Any]:
 
 
 @frappe.whitelist(allow_guest=True)
+def check_pending_paid_voucher(mac_address: str) -> dict[str, Any]:
+	"""
+	Checks if this MAC address has a paid-but-unused voucher from a successful
+	Payment Transaction. This handles the case where the user paid, closed
+	the browser, and the webhook auto-activate failed or was skipped.
+	Returns the payment_ref so the frontend can call activate_paid_access.
+	"""
+	mac_address = _normalize_mac(mac_address)
+	if not mac_address:
+		return {"ok": False, "found": False}
+
+	# Find successful payments whose metadata contains this MAC
+	# and whose voucher is still "New" (not yet activated)
+	transactions = frappe.get_all(
+		"Payment Transaction",
+		filters={"status": "Successful"},
+		fields=["name", "payment_ref", "voucher", "webhook_payload", "plan"],
+		order_by="completed_on desc",
+		limit=20,
+		ignore_permissions=True,
+	)
+
+	for tx in transactions:
+		voucher_name = (tx.get("voucher") or "").strip()
+		if not voucher_name:
+			continue
+
+		# Only match vouchers that are still "New" (unused)
+		voucher_status = frappe.db.get_value("Hotspot Voucher", voucher_name, "status")
+		if voucher_status != "New":
+			continue
+
+		# Check if metadata contains this MAC address
+		import json as _json
+		try:
+			payload = _json.loads(tx.get("webhook_payload") or "{}")
+			meta = (payload.get("data") or {}).get("metadata") or {}
+			stored_mac = _normalize_mac(meta.get("mac_address") or "")
+			if stored_mac == mac_address:
+				return {
+					"ok": True,
+					"found": True,
+					"payment_ref": tx.get("payment_ref"),
+					"voucher": voucher_name,
+					"plan": tx.get("plan") or "",
+				}
+		except Exception:
+			continue
+
+	return {"ok": True, "found": False}
+
+
+@frappe.whitelist(allow_guest=True)
 def activate_paid_access(
 	payment_ref: str,
 	mac_address: str | None = None,

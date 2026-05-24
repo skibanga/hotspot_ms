@@ -516,6 +516,19 @@
           plan: selectedPlan.plan,
           payment_type: "mobile",
           phone_number: normalizedPhone,
+          metadata_json: JSON.stringify({
+            mac_address: captive.clientmac || "",
+            ip_address: captive.clientip || "",
+            nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid || "",
+            tok: captive.tok || "",
+            redir: captive.redir || "",
+            authaction: captive.authaction || "",
+            fas: captive.fas || "",
+            gatewayaddress: captive.gatewayaddress || "",
+            gatewayport: captive.gatewayport || "",
+            authdir: captive.authdir || "",
+            hid: captive.hid || "",
+          }),
         });
         if (!created.ok || !created.payment_ref) {
           showBuyFeedback("err", created.message || __("Could not initiate payment."));
@@ -656,6 +669,40 @@
       });
 
       loadPackages();
+
+      // ── Auto-recover: check for paid-but-unused vouchers on page load ──
+      if (captive.clientmac) {
+        (async function checkPendingPaidAccess() {
+          try {
+            const pending = await callApi("hotspot_ms.api.portal.check_pending_paid_voucher", {
+              mac_address: captive.clientmac,
+            });
+            if (pending.found && pending.payment_ref) {
+              // Found a paid voucher that was never activated — auto-connect now
+              const access = await callApi("hotspot_ms.api.portal.activate_paid_access", {
+                payment_ref: pending.payment_ref,
+                mac_address: captive.clientmac,
+                ip_address: captive.clientip,
+                nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
+                tok: captive.tok,
+                redir: captive.redir,
+                authaction: captive.authaction,
+                fas: captive.fas,
+                gatewayaddress: captive.gatewayaddress,
+                gatewayport: captive.gatewayport,
+                authdir: captive.authdir,
+                hid: captive.hid,
+              });
+              if (access.ok && access.redirect_url) {
+                window.location.href = access.redirect_url;
+                return;
+              }
+            }
+          } catch (e) {
+            console.log("Auto-recovery check skipped:", e);
+          }
+        })();
+      }
 
       // ── Free access claim flow ──
       const freeBanner = document.getElementById("free-banner");

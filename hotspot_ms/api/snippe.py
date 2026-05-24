@@ -337,9 +337,34 @@ def _process_snippe_event_payload(payload: dict[str, Any], raw_body: str, settin
 			voucher = _issue_voucher(plan_name, customer=tx.customer)
 			tx.voucher = voucher.name
 
+	# ── Auto-activate: connect the device even if the user closed the browser ──
+	auto_activated = False
+	if tx.status == "Successful" and tx.voucher:
+		mac_addr = (metadata.get("mac_address") or "").strip()
+		if mac_addr:
+			try:
+				from hotspot_ms.api.portal import activate_paid_access
+				activate_result = activate_paid_access(
+					payment_ref=tx.payment_ref,
+					mac_address=mac_addr,
+					ip_address=(metadata.get("ip_address") or "").strip() or None,
+					nas_device=(metadata.get("nas_device") or "").strip() or None,
+					tok=(metadata.get("tok") or "").strip() or None,
+					redir=(metadata.get("redir") or "").strip() or None,
+					authaction=(metadata.get("authaction") or "").strip() or None,
+					fas=(metadata.get("fas") or "").strip() or None,
+					gatewayaddress=(metadata.get("gatewayaddress") or "").strip() or None,
+					gatewayport=(metadata.get("gatewayport") or "").strip() or None,
+					authdir=(metadata.get("authdir") or "").strip() or None,
+					hid=(metadata.get("hid") or "").strip() or None,
+				)
+				auto_activated = activate_result.get("ok", False)
+			except Exception:
+				frappe.log_error(frappe.get_traceback(), "Auto-activate after webhook failed")
+
 	tx.save(ignore_permissions=True)
 	frappe.db.commit()
-	return _ok("Webhook processed", payment_ref=tx.payment_ref, status=tx.status, voucher=tx.voucher)
+	return _ok("Webhook processed", payment_ref=tx.payment_ref, status=tx.status, voucher=tx.voucher, auto_activated=auto_activated)
 
 
 @frappe.whitelist()
