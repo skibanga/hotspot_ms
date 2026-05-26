@@ -203,9 +203,15 @@
   </button>
 
   <!-- Lipa Namba Modal -->
-  <div id="lipa-modal" class="fixed inset-0 z-[60] hidden items-center justify-center p-4 transition-opacity" style="background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);">
-    <div class="bg-white rounded-2xl shadow-2xl overflow-hidden relative max-w-sm w-full animate-in fade-in zoom-in duration-200 border border-slate-200">
-      <button id="btn-close-lipa" type="button" class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/40 backdrop-blur-md border border-white/50 shadow-sm text-slate-800 hover:bg-white/60 transition-all z-20 text-2xl leading-none">&times;</button>
+  <div id="lipa-modal" class="fixed inset-0 z-[60] hidden flex-col items-center justify-center p-4 gap-4 transition-opacity" style="background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);">
+    <!-- Close Button — sits above the card -->
+    <button id="btn-close-lipa" type="button" style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.28)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+    <!-- Image Card -->
+    <div class="bg-white rounded-2xl shadow-2xl overflow-hidden max-w-sm w-full border border-slate-200">
       <img src="/assets/hotspot_ms/images/lipa-namba-qr.jpg" alt="Lipa kwa kuscan" loading="lazy" class="w-full h-auto block" />
     </div>
   </div>
