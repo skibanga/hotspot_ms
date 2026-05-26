@@ -106,6 +106,22 @@
       return out;
     }
   </script>
+<style>
+  @keyframes lipa-pulse {
+    0%   { transform: scale(1);   opacity: 0.7; }
+    70%  { transform: scale(1.9); opacity: 0; }
+    100% { transform: scale(1.9); opacity: 0; }
+  }
+  .lipa-ring {
+    position: absolute; inset: 0;
+    border-radius: 0.75rem;
+    background: #f59e0b;
+    opacity: 0;
+    animation: lipa-pulse 2s ease-out infinite;
+  }
+  .lipa-ring:nth-child(2) { animation-delay: 0.6s; }
+  .lipa-ring:nth-child(3) { animation-delay: 1.2s; }
+</style>
 </head>
 <body class="bg-background-light min-h-screen font-display">
   {% include "templates/includes/hotspot/nav.html" %}
@@ -198,9 +214,14 @@
   {% include "templates/includes/hotspot/footer.html" %}
 
   <!-- Floating Lipa Namba Button -->
-  <button id="btn-open-lipa" style="position: fixed; bottom: 24px; right: 24px; z-index: 9999;" class="h-12 md:h-14 px-6 md:px-8 bg-primary hover:bg-primary/90 text-white font-black text-base md:text-lg rounded-xl shadow-lg shadow-primary/25 transition-all flex items-center justify-center" type="button">
-    {{ _("LIPA NAMBA") }}
-  </button>
+  <div style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: inline-flex; align-items: center; justify-content: center;">
+    <span class="lipa-ring"></span>
+    <span class="lipa-ring"></span>
+    <span class="lipa-ring"></span>
+    <button id="btn-open-lipa" style="position:relative;z-index:1;background:#f59e0b;color:#1e293b;" class="h-12 md:h-14 px-6 md:px-8 font-black text-base md:text-lg rounded-xl shadow-lg transition-all flex items-center justify-center hover:brightness-110 active:scale-95" type="button">
+      {{ _("LIPA NAMBA") }}
+    </button>
+  </div>
 
   <!-- Lipa Namba Modal -->
   <div id="lipa-modal" class="fixed inset-0 z-[60] hidden flex-col items-center justify-center p-4 gap-4 transition-opacity" style="background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);">
