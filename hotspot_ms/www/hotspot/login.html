@@ -197,6 +197,19 @@
 
   {% include "templates/includes/hotspot/footer.html" %}
 
+  <!-- Floating Lipa Namba Button -->
+  <button id="btn-open-lipa" style="position: fixed; bottom: 24px; right: 24px; z-index: 9999;" class="h-12 md:h-14 px-6 md:px-8 bg-primary hover:bg-primary/90 text-white font-black text-base md:text-lg rounded-xl shadow-lg shadow-primary/25 transition-all flex items-center justify-center" type="button">
+    {{ _("LIPA NAMBA") }}
+  </button>
+
+  <!-- Lipa Namba Modal -->
+  <div id="lipa-modal" class="fixed inset-0 z-[60] hidden items-center justify-center p-4 transition-opacity" style="background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);">
+    <div class="bg-white rounded-2xl shadow-2xl overflow-hidden relative max-w-sm w-full animate-in fade-in zoom-in duration-200 border border-slate-200">
+      <button id="btn-close-lipa" type="button" class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/40 backdrop-blur-md border border-white/50 shadow-sm text-slate-800 hover:bg-white/60 transition-all z-20 text-2xl leading-none">&times;</button>
+      <img src="/assets/hotspot_ms/images/lipa-namba-qr.jpg" alt="Lipa kwa kuscan" loading="lazy" class="w-full h-auto block" />
+    </div>
+  </div>
+
   <div id="buy-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" style="background: rgba(15, 23, 42, 0.45);">
     <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl p-6" style="width:min(560px, 100%);">
       <div class="flex items-center justify-between mb-4">
@@ -896,6 +909,30 @@
             showFreeFeedback("err", __("Something went wrong. Please try again."));
             btnClaimFree.disabled = false;
             btnClaimFree.textContent = "🚀 " + __("Get Free Access");
+          }
+        });
+      }
+      
+      // Lipa Namba Modal Logic
+      const btnOpenLipa = document.getElementById("btn-open-lipa");
+      const btnCloseLipa = document.getElementById("btn-close-lipa");
+      const lipaModal = document.getElementById("lipa-modal");
+
+      if (btnOpenLipa && btnCloseLipa && lipaModal) {
+        btnOpenLipa.addEventListener("click", () => {
+          lipaModal.classList.remove("hidden");
+          lipaModal.classList.add("flex");
+        });
+        
+        btnCloseLipa.addEventListener("click", () => {
+          lipaModal.classList.add("hidden");
+          lipaModal.classList.remove("flex");
+        });
+        
+        lipaModal.addEventListener("click", (e) => {
+          if (e.target === lipaModal) {
+            lipaModal.classList.add("hidden");
+            lipaModal.classList.remove("flex");
           }
         });
       }
