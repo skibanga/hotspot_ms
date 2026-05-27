@@ -511,6 +511,21 @@ def generate_voucher_from_sms_payment(
     except Exception:
         pass
 
+    # --- Create Payment Transaction for accounting and history ---
+    try:
+        tx = frappe.new_doc("Payment Transaction")
+        tx.payment_ref = reference
+        tx.status = "Successful"
+        tx.plan = plan_name
+        tx.voucher = voucher.name
+        tx.customer = phone_number
+        tx.requested_on = now_datetime()
+        tx.completed_on = now_datetime()
+        tx.provider_response_message = "Auto-generated from SMS via Auto Vocha"
+        tx.insert(ignore_permissions=True)
+    except Exception as e:
+        frappe.log_error(f"Failed to create Payment Transaction for {reference}: {e}", "SMS Payment Error")
+
     frappe.db.commit()
 
     return _success(
