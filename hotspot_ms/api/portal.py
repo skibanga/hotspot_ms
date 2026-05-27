@@ -500,7 +500,7 @@ def generate_voucher_from_sms_payment(
         )
 
     # --- Generate new voucher ---
-    voucher = _issue_payment_voucher(plan_name, customer=phone_number)
+    voucher = _issue_payment_voucher(plan_name)
 
     # Optionally store the SMS reference for deduplication
     try:
@@ -518,7 +518,6 @@ def generate_voucher_from_sms_payment(
         tx.status = "Successful"
         tx.plan = plan_name
         tx.voucher = voucher.name
-        tx.customer = phone_number
         tx.requested_on = now_datetime()
         tx.completed_on = now_datetime()
         tx.provider_response_message = "Auto-generated from SMS via Auto Vocha"
