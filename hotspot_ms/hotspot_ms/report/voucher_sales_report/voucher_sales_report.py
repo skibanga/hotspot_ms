@@ -115,23 +115,13 @@ def execute(filters=None):
                 {
                     "name": _("Revenue (TSh)"),
                     "values": list(date_revenue.values()),
-                    "chartType": "line",
-                },
-                {
-                    "name": _("Vouchers Sold"),
-                    "values": list(date_counts.values()),
-                    "chartType": "bar",
-                },
+                }
             ],
         },
-        "type": "axis-mixed",
-        "axisOptions": {
-            "xIsSeries": True,
-            "secondaryYAxis": {
-                "datasetIndex": 1,  # Vouchers Sold on secondary axis
-            },
-        },
-        "title": _("Daily Sales Trend"),
+        "type": "line",
+        "lineOptions": {"regionFill": 1},
+        "axisOptions": {"xIsSeries": True},
+        "title": _("Daily Revenue Trend"),
     }
 
     # ── Columns ──────────────────────────────────────────────────────────────────
