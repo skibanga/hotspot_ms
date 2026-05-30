@@ -517,6 +517,7 @@ def generate_voucher_from_sms_payment(
         tx.payment_ref = reference
         tx.status = "Successful"
         tx.plan = plan_name
+        tx.amount = amount
         tx.voucher = voucher.name
         tx.requested_on = now_datetime()
         tx.completed_on = now_datetime()
