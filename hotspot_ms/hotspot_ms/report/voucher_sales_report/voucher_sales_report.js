@@ -6,6 +6,7 @@ frappe.query_reports["Voucher Sales Report"] = {
 			fieldtype: "Select",
 			options: [
 				"",
+				"Today",
 				"Last 24 Hours",
 				"This Week",
 				"This Month",
@@ -20,6 +21,9 @@ frappe.query_reports["Voucher Sales Report"] = {
 
 				if (!range || range === "This Month") {
 					from_date = frappe.datetime.month_start();
+					to_date = today;
+				} else if (range === "Today") {
+					from_date = today;
 					to_date = today;
 				} else if (range === "Last 24 Hours") {
 					from_date = frappe.datetime.add_days(today, -1);
