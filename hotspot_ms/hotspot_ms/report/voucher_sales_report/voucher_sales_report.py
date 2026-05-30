@@ -49,10 +49,13 @@ def execute(filters=None):
 
     # ── Compute KPI summary values ──────────────────────────────────────────────
     # Every voucher generated = a sale. Revenue = sum of all plan prices.
+    GATEWAY_RATE = 0.005  # 0.5% payment gateway charge
     total_vouchers = len(rows)
     total_revenue = sum(flt(r.price) for r in rows)
+    gateway_charges = round(total_revenue * GATEWAY_RATE, 2)
+    net_revenue = total_revenue - gateway_charges
     days_in_range = max(date_diff(to_date, from_date) + 1, 1)
-    avg_per_day = total_revenue / days_in_range
+    avg_per_day = net_revenue / days_in_range
 
     report_summary = [
         {
@@ -63,15 +66,27 @@ def execute(filters=None):
         },
         {
             "value": total_revenue,
-            "label": _("Total Revenue (TSh)"),
+            "label": _("Gross Revenue (TSh)"),
+            "datatype": "Currency",
+            "indicator": "blue",
+        },
+        {
+            "value": gateway_charges,
+            "label": _("Gateway Charges 0.5% (TSh)"),
+            "datatype": "Currency",
+            "indicator": "orange",
+        },
+        {
+            "value": net_revenue,
+            "label": _("Net Revenue (TSh)"),
             "datatype": "Currency",
             "indicator": "green",
         },
         {
             "value": round(avg_per_day, 0),
-            "label": _("Avg Revenue / Day"),
+            "label": _("Avg Net Revenue / Day"),
             "datatype": "Currency",
-            "indicator": "blue",
+            "indicator": "green",
         },
     ]
 
@@ -158,5 +173,16 @@ def execute(filters=None):
         }
         for r in rows
     ]
+
+    # ── Totals row at the bottom ─────────────────────────────────────────────────
+    if data:
+        data.append({
+            "date": _("TOTAL"),
+            "voucher_code": f"{total_vouchers} vouchers",
+            "plan": "",
+            "price": total_revenue,
+            "is_complimentary": "",
+            "bold": 1,
+        })
 
     return columns, data, None, chart, report_summary
