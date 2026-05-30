@@ -49,11 +49,10 @@ def ensure_default_hotspot_plans() -> dict[str, int]:
 	for row in DEFAULT_HOTSPOT_PLANS:
 		existing = frappe.db.get_value("Hotspot Plan", {"plan_name": row["plan_name"]}, "name")
 		if existing:
-			doc = frappe.get_doc("Hotspot Plan", existing)
-			updated += 1
-		else:
-			doc = frappe.new_doc("Hotspot Plan")
-			created += 1
+			continue
+
+		doc = frappe.new_doc("Hotspot Plan")
+		created += 1
 
 		doc.plan_name = row["plan_name"]
 		doc.enabled = 1
