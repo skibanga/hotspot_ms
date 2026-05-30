@@ -36,15 +36,15 @@ def execute(filters=None):
     rows = frappe.db.sql(
         f"""
         SELECT
-            DATE(v.generated_on)   AS date,
-            v.voucher_code,
+            DATE(v.generated_on)    AS date,
             v.plan,
-            IFNULL(p.price, 0)     AS price,
-            v.is_complimentary
+            COUNT(v.name)           AS total_vouchers,
+            SUM(IFNULL(p.price, 0)) AS total_revenue
         FROM `tabHotspot Voucher` v
         LEFT JOIN `tabHotspot Plan` p ON p.name = v.plan
         WHERE {where}
-        ORDER BY v.generated_on DESC
+        GROUP BY DATE(v.generated_on), v.plan
+        ORDER BY date DESC, v.plan ASC
         """,
         query_params,
         as_dict=True,
@@ -53,8 +53,8 @@ def execute(filters=None):
     # ── Compute KPI summary values ──────────────────────────────────────────────
     # Every voucher generated = a sale. Revenue = sum of all plan prices.
     GATEWAY_RATE = 0.005  # 0.5% payment gateway charge
-    total_vouchers = len(rows)
-    total_revenue = sum(flt(r.price) for r in rows)
+    total_vouchers = sum(r.total_vouchers for r in rows)
+    total_revenue = sum(flt(r.total_revenue) for r in rows)
     gateway_charges = round(total_revenue * GATEWAY_RATE, 2)
     net_revenue = total_revenue - gateway_charges
     days_in_range = max(date_diff(to_date, from_date) + 1, 1)
@@ -105,8 +105,8 @@ def execute(filters=None):
     for r in rows:
         key = str(r.date)
         if key in date_counts:
-            date_counts[key] += 1
-            date_revenue[key] += flt(r.price)
+            date_counts[key] += r.total_vouchers
+            date_revenue[key] += flt(r.total_revenue)
 
     chart = {
         "data": {
@@ -130,33 +130,26 @@ def execute(filters=None):
             "fieldname": "date",
             "label": _("Date"),
             "fieldtype": "Date",
-            "width": 110,
-        },
-        {
-            "fieldname": "voucher_code",
-            "label": _("Voucher Code"),
-            "fieldtype": "Link",
-            "options": "Hotspot Voucher",
-            "width": 180,
+            "width": 130,
         },
         {
             "fieldname": "plan",
             "label": _("Plan"),
             "fieldtype": "Link",
             "options": "Hotspot Plan",
+            "width": 180,
+        },
+        {
+            "fieldname": "total_vouchers",
+            "label": _("Total Vouchers"),
+            "fieldtype": "Int",
             "width": 150,
         },
         {
-            "fieldname": "price",
-            "label": _("Price (TSh)"),
+            "fieldname": "total_revenue",
+            "label": _("Total Revenue (TSh)"),
             "fieldtype": "Currency",
-            "width": 130,
-        },
-        {
-            "fieldname": "is_complimentary",
-            "label": _("Complimentary"),
-            "fieldtype": "Check",
-            "width": 120,
+            "width": 180,
         },
     ]
 
@@ -164,10 +157,9 @@ def execute(filters=None):
     data = [
         {
             "date": r.date,
-            "voucher_code": r.voucher_code,
             "plan": r.plan,
-            "price": r.price,
-            "is_complimentary": r.is_complimentary,
+            "total_vouchers": r.total_vouchers,
+            "total_revenue": r.total_revenue,
         }
         for r in rows
     ]
@@ -176,10 +168,9 @@ def execute(filters=None):
     if data:
         data.append({
             "date": _("TOTAL"),
-            "voucher_code": f"{total_vouchers} vouchers",
             "plan": "",
-            "price": total_revenue,
-            "is_complimentary": "",
+            "total_vouchers": total_vouchers,
+            "total_revenue": total_revenue,
             "bold": 1,
         })
 
