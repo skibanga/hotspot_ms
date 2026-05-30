@@ -7,6 +7,7 @@
  "field_order": [
   "voucher_code",
   "status",
+  "is_complimentary",
   "column_break_1",
   "plan",
   "batch",
@@ -44,6 +45,13 @@
    "label": "Status",
    "options": "New\nActive\nUsed\nExpired\nBlocked",
    "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "Tick for vouchers given as gifts or courtesy. These will be excluded from sales reports by default.",
+   "fieldname": "is_complimentary",
+   "fieldtype": "Check",
+   "label": "Complimentary"
   },
   {
    "fieldname": "column_break_1",
