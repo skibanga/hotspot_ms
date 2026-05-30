@@ -14,12 +14,14 @@ frappe.query_reports["Voucher Sales Report"] = {
 			default: "",
 			on_change: function (report) {
 				const range = report.get_filter_value("quick_range");
-				if (!range) return; // blank → let user pick dates manually
-
 				const today = frappe.datetime.get_today();
-				let from_date, to_date;
+				let from_date = frappe.datetime.month_start();
+				let to_date = today;
 
-				if (range === "Last 24 Hours") {
+				if (!range || range === "This Month") {
+					from_date = frappe.datetime.month_start();
+					to_date = today;
+				} else if (range === "Last 24 Hours") {
 					from_date = frappe.datetime.add_days(today, -1);
 					to_date = today;
 				} else if (range === "This Week") {
