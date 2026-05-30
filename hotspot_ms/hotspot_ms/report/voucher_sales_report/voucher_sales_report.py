@@ -34,12 +34,9 @@ def execute(filters=None):
         f"""
         SELECT
             DATE(v.generated_on)   AS date,
-            v.name,
             v.voucher_code,
             v.plan,
             IFNULL(p.price, 0)     AS price,
-            v.status,
-            v.activated_on,
             v.is_complimentary
         FROM `tabHotspot Voucher` v
         LEFT JOIN `tabHotspot Plan` p ON p.name = v.plan
@@ -51,24 +48,18 @@ def execute(filters=None):
     )
 
     # ── Compute KPI summary values ──────────────────────────────────────────────
+    # Every voucher generated = a sale. Revenue = sum of all plan prices.
     total_vouchers = len(rows)
-    activated = [r for r in rows if r.status in ("Active", "Used")]
-    total_revenue = sum(flt(r.price) for r in activated)
+    total_revenue = sum(flt(r.price) for r in rows)
     days_in_range = max(date_diff(to_date, from_date) + 1, 1)
     avg_per_day = total_revenue / days_in_range
 
     report_summary = [
         {
             "value": total_vouchers,
-            "label": _("Total Vouchers"),
+            "label": _("Total Vouchers Sold"),
             "datatype": "Int",
             "indicator": "blue",
-        },
-        {
-            "value": len(activated),
-            "label": _("Activated"),
-            "datatype": "Int",
-            "indicator": "green",
         },
         {
             "value": total_revenue,
@@ -85,33 +76,39 @@ def execute(filters=None):
     ]
 
     # ── Build line chart (vouchers generated per day) ───────────────────────────
-    # Create a dict of date → count
     date_counts = {}
+    date_revenue = {}
     current = from_date
     while current <= to_date:
         date_counts[str(current)] = 0
+        date_revenue[str(current)] = 0
         current = add_days(current, 1)
 
     for r in rows:
         key = str(r.date)
         if key in date_counts:
             date_counts[key] += 1
+            date_revenue[key] += flt(r.price)
 
     chart = {
         "data": {
             "labels": list(date_counts.keys()),
             "datasets": [
                 {
-                    "name": _("Vouchers Generated"),
+                    "name": _("Vouchers Sold"),
                     "values": list(date_counts.values()),
+                    "chartType": "bar",
+                },
+                {
+                    "name": _("Revenue (TSh)"),
+                    "values": list(date_revenue.values()),
                     "chartType": "line",
-                }
+                },
             ],
         },
-        "type": "line",
-        "lineOptions": {"regionFill": 1},
+        "type": "axis-mixed",
         "axisOptions": {"xIsSeries": True},
-        "title": _("Daily Voucher Generation Trend"),
+        "title": _("Daily Sales Trend"),
     }
 
     # ── Columns ──────────────────────────────────────────────────────────────────
@@ -127,32 +124,20 @@ def execute(filters=None):
             "label": _("Voucher Code"),
             "fieldtype": "Link",
             "options": "Hotspot Voucher",
-            "width": 160,
+            "width": 180,
         },
         {
             "fieldname": "plan",
             "label": _("Plan"),
             "fieldtype": "Link",
             "options": "Hotspot Plan",
-            "width": 140,
+            "width": 150,
         },
         {
             "fieldname": "price",
             "label": _("Price (TSh)"),
             "fieldtype": "Currency",
-            "width": 120,
-        },
-        {
-            "fieldname": "status",
-            "label": _("Status"),
-            "fieldtype": "Data",
-            "width": 100,
-        },
-        {
-            "fieldname": "activated_on",
-            "label": _("Activated On"),
-            "fieldtype": "Datetime",
-            "width": 160,
+            "width": 130,
         },
         {
             "fieldname": "is_complimentary",
@@ -169,8 +154,6 @@ def execute(filters=None):
             "voucher_code": r.voucher_code,
             "plan": r.plan,
             "price": r.price,
-            "status": r.status,
-            "activated_on": r.activated_on,
             "is_complimentary": r.is_complimentary,
         }
         for r in rows
