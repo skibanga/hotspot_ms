@@ -27,6 +27,9 @@ def execute(filters=None):
     if not include_complimentary:
         conditions.append("IFNULL(v.is_complimentary, 0) = 0")
 
+    # Always exclude Blocked vouchers
+    conditions.append("v.status != 'Blocked'")
+
     where = " AND ".join(conditions)
 
     # ── Fetch voucher rows with plan price ──────────────────────────────────────
