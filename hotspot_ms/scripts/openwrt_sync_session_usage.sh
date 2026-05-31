@@ -22,6 +22,8 @@ NAS_SECRET="${NAS_SECRET:-}"
 POLL_INTERVAL="${POLL_INTERVAL:-30}"
 LOG_TAG="${LOG_TAG:-hotspot-sync}"
 API_PATH="/api/method/hotspot_ms.api.portal.sync_session_usage"
+DEAUTH_API_PATH="/api/method/hotspot_ms.api.portal.pull_disconnect_actions"
+ACK_API_PATH="/api/method/hotspot_ms.api.portal.acknowledge_disconnect_action"
 
 [ -f /etc/hotspot_restore.conf ] && . /etc/hotspot_restore.conf
 
@@ -139,6 +141,31 @@ sync_usage() {
   return 1
 }
 
+poll_deauth() {
+  local url response count i mac session_id
+  url="${FRAPPE_BASE_URL%/}${DEAUTH_API_PATH}?nas_identifier=$(urlencode "$NAS_IDENTIFIER")&secret=$(urlencode "$NAS_SECRET")"
+  response="$(wget -qO- --timeout=15 "$url" 2>/dev/null || true)"
+  [ -n "$response" ] || return 0
+  
+  count="$(printf '%s' "$response" | jsonfilter -e '@.message.count' 2>/dev/null || echo 0)"
+  [ "$count" -gt 0 ] || return 0
+  
+  i=0
+  while [ "$i" -lt "$count" ]; do
+    mac="$(printf '%s' "$response" | jsonfilter -e "@.message.actions[$i].mac_address" 2>/dev/null || true)"
+    session_id="$(printf '%s' "$response" | jsonfilter -e "@.message.actions[$i].session_id" 2>/dev/null || true)"
+    
+    if [ -n "$mac" ] && [ -n "$session_id" ]; then
+      log "Deauthenticating MAC $mac (Session: $session_id)"
+      ndsctl deauth "$mac" >/dev/null 2>&1 || true
+      
+      # Acknowledge to Frappe
+      wget -qO- "${FRAPPE_BASE_URL%/}${ACK_API_PATH}?nas_identifier=$(urlencode "$NAS_IDENTIFIER")&secret=$(urlencode "$NAS_SECRET")&session_id=$(urlencode "$session_id")&result=ok" >/dev/null 2>&1 || true
+    fi
+    i=$((i + 1))
+  done
+}
+
 main() {
   require_cmd ndsctl
   require_cmd wget
@@ -149,11 +176,13 @@ main() {
   [ -n "$NAS_SECRET" ] || { echo "NAS_SECRET is required" >&2; exit 1; }
 
   if [ "${1:-}" = "--once" ]; then
+    poll_deauth
     sync_usage
     exit 0
   fi
 
   while true; do
+    poll_deauth
     sync_usage
     sleep "$POLL_INTERVAL"
   done
