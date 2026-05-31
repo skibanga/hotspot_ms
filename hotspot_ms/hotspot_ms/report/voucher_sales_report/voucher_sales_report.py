@@ -68,26 +68,14 @@ def execute(filters=None):
             "indicator": "blue",
         },
         {
-            "value": total_revenue,
-            "label": _("Gross Revenue (TSh)"),
-            "datatype": "Currency",
-            "indicator": "blue",
-        },
-        {
-            "value": gateway_charges,
-            "label": _("Gateway Charges 0.5% (TSh)"),
-            "datatype": "Currency",
-            "indicator": "orange",
-        },
-        {
             "value": net_revenue,
-            "label": _("Net Revenue (TSh)"),
+            "label": _("Total Revenue (TSh)"),
             "datatype": "Currency",
             "indicator": "green",
         },
         {
             "value": round(avg_per_day, 0),
-            "label": _("Avg Net Revenue / Day"),
+            "label": _("Avg Revenue / Day"),
             "datatype": "Currency",
             "indicator": "green",
         },
