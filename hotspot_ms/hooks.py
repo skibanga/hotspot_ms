@@ -174,6 +174,9 @@ scheduler_events = {
 	"cron": {
 		"*/1 * * * *": [
 			"hotspot_ms.tasks.close_expired_or_used_sessions",
+		],
+		"*/2 * * * *": [
+			"hotspot_ms.tasks.auto_activate_stuck_vouchers",
 		]
 	}
 }

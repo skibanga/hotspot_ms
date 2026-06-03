@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import frappe
+import json
 from frappe.utils import cint, flt, get_datetime, now_datetime
 
 DEAUTH_PENDING_PREFIX = "DEAUTH_PENDING|"
@@ -79,3 +80,46 @@ def close_expired_or_used_sessions() -> dict[str, int]:
 		frappe.db.commit()
 
 	return {"closed_sessions": closed, "updated_vouchers": voucher_updates}
+
+
+def auto_activate_stuck_vouchers() -> dict[str, int]:
+	"""
+	Automatically activate 'New' vouchers that have a Successful Payment Transaction,
+	but failed to auto-activate via webhook (usually because the user closed the captive portal browser).
+	"""
+	txs = frappe.get_all(
+		"Payment Transaction",
+		filters={"status": "Successful", "voucher": ["is", "set"]},
+		fields=["name", "voucher", "webhook_payload"]
+	)
+	
+	activated = 0
+	for tx in txs:
+		voucher = frappe.get_doc("Hotspot Voucher", tx.voucher)
+		if voucher.status == "New":
+			payload = {}
+			if tx.webhook_payload:
+				try:
+					payload = json.loads(tx.webhook_payload)
+				except Exception:
+					pass
+			
+			data = payload.get("data", {})
+			metadata = data.get("metadata", {})
+			
+			mac_address = metadata.get("mac_address")
+			if mac_address:
+				try:
+					from hotspot_ms.api.portal import activate_voucher
+					res = activate_voucher(
+						voucher_code=voucher.voucher_code,
+						mac_address=mac_address,
+						ip_address=metadata.get("ip_address"),
+						nas_device=metadata.get("nas_device")
+					)
+					if res.get("ok"):
+						activated += 1
+				except Exception:
+					pass
+					
+	return {"auto_activated_vouchers": activated}
