@@ -52,13 +52,10 @@ def execute(filters=None):
 
     # ── Compute KPI summary values ──────────────────────────────────────────────
     # Every voucher generated = a sale. Revenue = sum of all plan prices.
-    GATEWAY_RATE = 0.005  # 0.5% payment gateway charge
     total_vouchers = sum(r.total_vouchers for r in rows)
     total_revenue = sum(flt(r.total_revenue) for r in rows)
-    gateway_charges = round(total_revenue * GATEWAY_RATE, 2)
-    net_revenue = total_revenue - gateway_charges
     days_in_range = max(date_diff(to_date, from_date) + 1, 1)
-    avg_per_day = net_revenue / days_in_range
+    avg_per_day = total_revenue / days_in_range
 
     report_summary = [
         {
@@ -68,7 +65,7 @@ def execute(filters=None):
             "indicator": "blue",
         },
         {
-            "value": net_revenue,
+            "value": total_revenue,
             "label": _("Total Revenue (TSh)"),
             "datatype": "Currency",
             "indicator": "green",
