@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ _(portal_login_title) or _("Hapa Kitonga WiFi Login") }}</title>
   <link rel="stylesheet" href="/assets/hotspot_ms/css/hotspot_portal.css" />
-  <script>
+    <script>
     window.HOTSPOT_CAPTIVE = {{ captive_json | safe }};
     window.HOTSPOT_TRANSLATIONS = {
       "No packages available": "{{ _('No packages available.') }}",
@@ -98,14 +98,18 @@
       "No free plan is currently active.": "{{ _('No free plan is currently active.') }}",
       "No free plan is currently available": "{{ _('No free plan is currently available') }}"
     };
-    function __(str, args=[]) {
-      let out = window.HOTSPOT_TRANSLATIONS[str] || str;
+    function __(str, args) {
+      args = args || [];
+      var out = window.HOTSPOT_TRANSLATIONS[str] || str;
       if (args.length) {
-        args.forEach((a, i) => { out = out.replace(`{${i}}`, a); });
+        for (var i = 0; i < args.length; i++) {
+          out = out.replace("{" + i + "}", args[i]);
+        }
       }
       return out;
     }
   </script>
+
 <style>
   @keyframes lipa-pulse {
     0%   { transform: scale(1);   opacity: 0.7; }
@@ -128,9 +132,9 @@
 
   <main class="relative min-h-[calc(100vh-73px)] w-full flex flex-col lg:flex-row">
     <div class="absolute inset-0 gradient-bg opacity-10 pointer-events-none"></div>
-    <div class="relative w-full max-w-7xl mx-auto p-6 md:p-12 flex flex-col gap-6 md:gap-8">
+    <div class="relative w-full max-w-7xl mx-auto p-6 md:p-12 flex flex-col pb-28 md:pb-32 space-y-6 md:space-y-8">
       <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div class="flex items-center gap-2" style="display:flex;flex-direction:row;flex-wrap:nowrap;">
+        <div class="flex items-center space-x-2" style="display:flex;flex-direction:row;flex-wrap:nowrap;">
           <div class="flex items-center justify-center rounded-xl border border-slate-200 bg-white px-2" style="height:58px;flex:1 1 0;min-width:0;">
             <img src="/assets/hotspot_ms/images/mobile-money/airtel2.png" alt="Airtel Money" loading="lazy" style="width:100%;max-width:88px;height:28px;object-fit:contain;" />
           </div>
@@ -146,28 +150,28 @@
         </div>
       </section>
 
-      <div class="flex flex-col lg:flex-row gap-8 lg:gap-16">
-        <div class="w-full lg:w-5/12 flex flex-col gap-6">
+      <div class="flex flex-col lg:flex-row space-y-8 lg:space-y-0 lg:space-x-16">
+        <div class="w-full lg:w-5/12 flex flex-col space-y-6">
 
           <div id="free-banner" class="hidden rounded-2xl border-2 border-green-400 bg-gradient-to-br from-green-50 to-emerald-50 p-6 shadow-lg relative overflow-hidden">
           <div class="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-black px-8 py-1 rotate-45 translate-x-6 translate-y-2">{{ _("FREE") }}</div>
-          <div class="flex flex-col gap-3">
-            <div class="flex items-center gap-2">
+          <div class="flex flex-col space-y-3">
+            <div class="flex items-center space-x-2">
               <span class="text-3xl">🎁</span>
               <h3 class="text-green-900 text-xl font-black">{{ _("Free Internet Access") }}</h3>
             </div>
             <p class="text-green-800 text-sm leading-relaxed">{{ _("Get 1 hour of free high-speed internet — no payment needed. One free session per device per day.") }}</p>
-            <button id="btn-claim-free" type="button" class="w-full h-12 bg-green-500 hover:bg-green-600 text-white font-black text-base rounded-xl shadow-lg shadow-green-500/25 transition-all flex items-center justify-center gap-2">
+            <button id="btn-claim-free" type="button" class="w-full h-12 bg-green-500 hover:bg-green-600 text-white font-black text-base rounded-xl shadow-lg shadow-green-500/25 transition-all flex items-center justify-center space-x-2">
               🚀 {{ _("Get Free Access") }}
             </button>
-            <div id="free-feedback" class="hidden items-center gap-2 p-3 rounded-lg border text-sm font-medium"></div>
+            <div id="free-feedback" class="hidden items-center space-x-2 p-3 rounded-lg border text-sm font-medium"></div>
           </div>
         </div>
 
         <div class="space-y-2">
           <h1 class="text-slate-900 text-3xl font-black tracking-tight">{{ _("Available Packages") }}</h1>
         </div>
-        <div id="package-list" class="grid gap-4"></div>
+        <div id="package-list" class="space-y-4"></div>
       </div>
 
         <div class="w-full lg:w-7/12 flex items-start">
@@ -189,16 +193,16 @@
               </div>
             </div>
 
-            <div id="voucher-feedback" class="hidden items-center gap-3 p-4 border rounded-lg text-sm font-medium">
+            <div id="voucher-feedback" class="hidden items-center space-x-3 p-4 border rounded-lg text-sm font-medium">
               <span id="feedback-icon" class="font-black text-base">i</span>
               <p id="feedback-text"></p>
             </div>
 
-            <div class="flex flex-col gap-4 pt-4">
-              <button id="btn-connect" class="w-full h-14 bg-primary hover:bg-primary/90 text-white font-black text-lg rounded-xl shadow-lg shadow-primary/25 transition-all flex items-center justify-center gap-2" type="submit">
+            <div class="flex flex-col space-y-4 pt-4">
+              <button id="btn-connect" class="w-full h-14 bg-primary hover:bg-primary/90 text-white font-black text-lg rounded-xl shadow-lg shadow-primary/25 transition-all flex items-center justify-center space-x-2" type="submit">
                 {{ _("Connect Now") }}
               </button>
-              <button id="btn-validate" class="w-full h-14 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-all flex items-center justify-center gap-2" type="button">
+              <button id="btn-validate" class="w-full h-14 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-all flex items-center justify-center space-x-2" type="button">
                 {{ _("Validate Only") }}
               </button>
             </div>
@@ -226,7 +230,7 @@
   </div>
 
   <!-- Lipa Namba Modal -->
-  <div id="lipa-modal" class="fixed inset-0 z-[60] hidden items-center justify-center p-4 gap-4 transition-opacity" style="background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); flex-direction: column;">
+  <div id="lipa-modal" class="fixed inset-0 z-[60] hidden items-center justify-center p-4 space-y-4 transition-opacity" style="background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); flex-direction: column;">
     <!-- Close Button -->
     <button id="btn-close-lipa" type="button" style="width:48px;height:48px;flex-shrink:0;border-radius:50%;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.28)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
       <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -249,17 +253,17 @@
       <p id="buy-plan-amount" class="text-slate-900 text-2xl font-black mb-4"></p>
 
       <label class="block text-sm font-bold text-slate-700 uppercase tracking-wider mb-2" for="buy-phone">{{ _("Phone Number") }}</label>
-      <div class="flex items-center gap-2 mb-4">
+      <div class="flex items-center space-x-2 mb-4">
         <span class="h-12 px-3 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 font-bold inline-flex items-center">+255</span>
         <input id="buy-phone" type="tel" inputmode="numeric" placeholder="7XXXXXXXX" class="w-full h-12 px-4 rounded-lg border border-slate-200 bg-white text-slate-900 focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none" />
       </div>
 
-      <div id="buy-feedback" class="hidden items-center gap-2 p-3 rounded-lg border text-sm mb-4">
+      <div id="buy-feedback" class="hidden items-center space-x-2 p-3 rounded-lg border text-sm mb-4">
         <span id="buy-feedback-icon" class="font-black">i</span>
         <p id="buy-feedback-text"></p>
       </div>
 
-      <div class="flex gap-3">
+      <div class="flex space-x-3">
         <button id="buy-cancel" type="button" class="flex-1 h-11 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50">{{ _("Cancel") }}</button>
         <button id="buy-confirm" type="button" class="flex-1 h-11 rounded-lg bg-primary text-white font-black hover:bg-primary/90">{{ _("Confirm") }}</button>
       </div>
@@ -297,9 +301,9 @@
       </div>
 
       <!-- Bottom action bar -->
-      <div class="p-6 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-3">
+      <div class="p-6 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex flex-col space-y-3">
         <!-- CTA Link -->
-        <a id="ad-cta" href="#" target="_blank" class="w-full h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all text-sm hidden">
+        <a id="ad-cta" href="#" target="_blank" class="w-full h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-xl flex items-center justify-center space-x-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all text-sm hidden">
           <span>Learn More</span>
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -307,114 +311,133 @@
         </a>
         
         <!-- Locked Connect button -->
-        <button id="ad-connect" disabled class="w-full h-14 bg-primary text-white font-black rounded-xl text-lg shadow-lg shadow-primary/25 opacity-50 cursor-not-allowed transition-all flex items-center justify-center gap-2">
+        <button id="ad-connect" disabled class="w-full h-14 bg-primary text-white font-black rounded-xl text-lg shadow-lg shadow-primary/25 opacity-50 cursor-not-allowed transition-all flex items-center justify-center space-x-2">
           <span>Please watch full ad</span>
         </button>
       </div>
     </div>
   </div>
 
-  <script>
+    <script>
     (function () {
-      const packageList = document.getElementById("package-list");
-      const voucherInput = document.getElementById("voucher-code");
-      const form = document.getElementById("voucher-form");
-      const btnValidate = document.getElementById("btn-validate");
-      const feedback = document.getElementById("voucher-feedback");
-      const feedbackText = document.getElementById("feedback-text");
-      const feedbackIcon = document.getElementById("feedback-icon");
-      const captiveInfo = document.getElementById("captive-info");
-      const buyModal = document.getElementById("buy-modal");
-      const buyClose = document.getElementById("buy-close");
-      const buyCancel = document.getElementById("buy-cancel");
-      const buyConfirm = document.getElementById("buy-confirm");
-      const buyPhone = document.getElementById("buy-phone");
-      const buyPlanLabel = document.getElementById("buy-plan-label");
-      const buyPlanAmount = document.getElementById("buy-plan-amount");
-      const buyFeedback = document.getElementById("buy-feedback");
-      const buyFeedbackText = document.getElementById("buy-feedback-text");
-      const buyFeedbackIcon = document.getElementById("buy-feedback-icon");
-      const qs = new URLSearchParams(window.location.search || "");
-      const serverCaptive = window.HOTSPOT_CAPTIVE || {};
-      let selectedPlan = null;
+      var packageList = document.getElementById("package-list");
+      var voucherInput = document.getElementById("voucher-code");
+      var form = document.getElementById("voucher-form");
+      var btnValidate = document.getElementById("btn-validate");
+      var feedback = document.getElementById("voucher-feedback");
+      var feedbackText = document.getElementById("feedback-text");
+      var feedbackIcon = document.getElementById("feedback-icon");
+      var captiveInfo = document.getElementById("captive-info");
+      var buyModal = document.getElementById("buy-modal");
+      var buyClose = document.getElementById("buy-close");
+      var buyCancel = document.getElementById("buy-cancel");
+      var buyConfirm = document.getElementById("buy-confirm");
+      var buyPhone = document.getElementById("buy-phone");
+      var buyPlanLabel = document.getElementById("buy-plan-label");
+      var buyPlanAmount = document.getElementById("buy-plan-amount");
+      var buyFeedback = document.getElementById("buy-feedback");
+      var buyFeedbackText = document.getElementById("buy-feedback-text");
+      var buyFeedbackIcon = document.getElementById("buy-feedback-icon");
+      var serverCaptive = window.HOTSPOT_CAPTIVE || {};
+      var selectedPlan = null;
+
+      function getQueryParam(key) {
+        var query = window.location.search.substring(1);
+        var vars = query.split("&");
+        for (var i = 0; i < vars.length; i++) {
+          var pair = vars[i].split("=");
+          if (pair[0] === key) {
+            return decodeURIComponent(pair[1] || "");
+          }
+        }
+        return "";
+      }
 
       function parseEmbeddedParam(urlValue, key) {
         if (!urlValue) return "";
         try {
-          const nested = new URL(urlValue);
-          return (nested.searchParams.get(key) || "").trim();
+          var parser = document.createElement('a');
+          parser.href = urlValue;
+          var query = parser.search.substring(1);
+          var vars = query.split("&");
+          for (var i = 0; i < vars.length; i++) {
+            var pair = vars[i].split("=");
+            if (pair[0] === key) {
+              return decodeURIComponent(pair[1] || "").trim();
+            }
+          }
         } catch (e) {
-          return "";
+          // ignore
         }
+        return "";
       }
 
-      const authactionRaw = (qs.get("authaction") || "").trim();
-      const captive = {
-        tok: (serverCaptive.tok || qs.get("tok") || "").trim(),
-        redir: (serverCaptive.redir || qs.get("redir") || "").trim(),
-        clientip: (serverCaptive.clientip || qs.get("clientip") || parseEmbeddedParam(authactionRaw, "clientip") || "").trim(),
-        clientmac: (serverCaptive.clientmac || qs.get("clientmac") || parseEmbeddedParam(authactionRaw, "clientmac") || "").trim(),
+      var authactionRaw = (getQueryParam("authaction") || "").trim();
+      var captive = {
+        tok: (serverCaptive.tok || getQueryParam("tok") || "").trim(),
+        redir: (serverCaptive.redir || getQueryParam("redir") || "").trim(),
+        clientip: (serverCaptive.clientip || getQueryParam("clientip") || parseEmbeddedParam(authactionRaw, "clientip") || "").trim(),
+        clientmac: (serverCaptive.clientmac || getQueryParam("clientmac") || parseEmbeddedParam(authactionRaw, "clientmac") || "").trim(),
         authaction: (serverCaptive.authaction || authactionRaw || "").trim(),
-        fas: (serverCaptive.fas || qs.get("fas") || "").trim(),
-        gatewayname: (serverCaptive.gatewayname || qs.get("gatewayname") || "").trim(),
-        gatewayaddress: (serverCaptive.gatewayaddress || qs.get("gatewayaddress") || "").trim(),
-        gatewayport: (serverCaptive.gatewayport || qs.get("gatewayport") || "").trim(),
-        authdir: (serverCaptive.authdir || qs.get("authdir") || "").trim(),
-        hid: (serverCaptive.hid || qs.get("hid") || "").trim(),
-        secure_fas: Boolean(serverCaptive.secure_fas),
+        fas: (serverCaptive.fas || getQueryParam("fas") || "").trim(),
+        gatewayname: (serverCaptive.gatewayname || getQueryParam("gatewayname") || "").trim(),
+        gatewayaddress: (serverCaptive.gatewayaddress || getQueryParam("gatewayaddress") || "").trim(),
+        gatewayport: (serverCaptive.gatewayport || getQueryParam("gatewayport") || "").trim(),
+        authdir: (serverCaptive.authdir || getQueryParam("authdir") || "").trim(),
+        hid: (serverCaptive.hid || getQueryParam("hid") || "").trim(),
+        secure_fas: Boolean(serverCaptive.secure_fas)
       };
 
       if (captive.tok || captive.authaction) {
         captiveInfo.style.display = "block";
-        const bits = [];
-        if (captive.clientip) bits.push(`IP: ${captive.clientip}`);
-        if (captive.clientmac) bits.push(`MAC: ${captive.clientmac}`);
-        captiveInfo.textContent = `${__("Captive session detected")}${bits.length ? ` (${bits.join(", ")})` : ""}.`;
+        var bits = [];
+        if (captive.clientip) bits.push("IP: " + captive.clientip);
+        if (captive.clientmac) bits.push("MAC: " + captive.clientmac);
+        captiveInfo.textContent = __("Captive session detected") + (bits.length ? " (" + bits.join(", ") + ")" : "") + ".";
       }
 
       function showFeedback(type, text) {
-        feedback.classList.remove("hidden", "bg-red-50", "border-red-200", "text-red-600", "bg-green-50", "border-green-200", "text-green-600");
+        feedback.className = "hidden items-center space-x-3 p-4 border rounded-lg text-sm font-medium";
         if (type === "ok") {
-          feedback.classList.add("bg-green-50", "border-green-200", "text-green-600", "flex");
+          feedback.className = "flex items-center space-x-3 p-4 border rounded-lg text-sm font-medium bg-green-50 border-green-200 text-green-600";
           feedbackIcon.textContent = "✓";
         } else {
-          feedback.classList.add("bg-red-50", "border-red-200", "text-red-600", "flex");
+          feedback.className = "flex items-center space-x-3 p-4 border rounded-lg text-sm font-medium bg-red-50 border-red-200 text-red-600";
           feedbackIcon.textContent = "!";
         }
         feedbackText.textContent = text || "";
       }
 
       function showBuyFeedback(type, text) {
-        buyFeedback.classList.remove("hidden", "bg-red-50", "border-red-200", "text-red-600", "bg-green-50", "border-green-200", "text-green-600", "bg-blue-50", "border-blue-200", "text-blue-700");
+        buyFeedback.className = "hidden items-center space-x-2 p-3 rounded-lg border text-sm mb-4";
         if (type === "ok") {
-          buyFeedback.classList.add("bg-green-50", "border-green-200", "text-green-600", "flex");
+          buyFeedback.className = "flex items-center space-x-2 p-3 rounded-lg border text-sm mb-4 bg-green-50 border-green-200 text-green-600";
           buyFeedbackIcon.textContent = "✓";
         } else if (type === "info") {
-          buyFeedback.classList.add("bg-blue-50", "border-blue-200", "text-blue-700", "flex");
+          buyFeedback.className = "flex items-center space-x-2 p-3 rounded-lg border text-sm mb-4 bg-blue-50 border-blue-200 text-blue-700";
           buyFeedbackIcon.textContent = "i";
         } else {
-          buyFeedback.classList.add("bg-red-50", "border-red-200", "text-red-600", "flex");
+          buyFeedback.className = "flex items-center space-x-2 p-3 rounded-lg border text-sm mb-4 bg-red-50 border-red-200 text-red-600";
           buyFeedbackIcon.textContent = "!";
         }
         buyFeedbackText.textContent = text || "";
       }
 
       function hideBuyFeedback() {
-        buyFeedback.classList.add("hidden");
+        buyFeedback.className = "hidden items-center space-x-2 p-3 rounded-lg border text-sm mb-4";
       }
 
       function normalizePhone(value) {
-        const digits = String(value || "").replace(/\D/g, "");
+        var digits = String(value || "").replace(/\D/g, "");
         if (!digits) return "";
-        if (digits.startsWith("255")) return digits;
-        if (digits.startsWith("0")) return `255${digits.slice(1)}`;
-        return `255${digits}`;
+        if (digits.indexOf("255") === 0) return digits;
+        if (digits.indexOf("0") === 0) return "255" + digits.slice(1);
+        return "255" + digits;
       }
 
       function closeBuyModal() {
         selectedPlan = null;
-        buyModal.classList.add("hidden");
-        buyModal.classList.remove("flex");
+        buyModal.style.display = "none";
         buyPhone.value = "";
         hideBuyFeedback();
         buyConfirm.disabled = false;
@@ -424,127 +447,172 @@
       function openBuyModal(plan) {
         selectedPlan = plan;
         buyPlanLabel.textContent = plan.plan_name || plan.name || "Package";
-        buyPlanAmount.textContent = `TSh ${Number(plan.price || 0).toLocaleString()}`;
+        buyPlanAmount.textContent = "TSh " + Number(plan.price || 0).toLocaleString();
         hideBuyFeedback();
         buyPhone.value = "";
         buyConfirm.disabled = false;
         buyConfirm.textContent = __("Confirm");
-        buyModal.classList.remove("hidden");
-        buyModal.classList.add("flex");
-        setTimeout(() => buyPhone.focus(), 50);
+        buyModal.style.display = "flex";
+        setTimeout(function() { buyPhone.focus(); }, 50);
       }
 
       function cleanParams(input) {
-        const out = {};
-        for (const [key, value] of Object.entries(input || {})) {
-          if (value === null || value === undefined) continue;
-          const text = String(value).trim();
-          if (!text) continue;
-          out[key] = text;
+        var out = {};
+        for (var key in input) {
+          if (input.hasOwnProperty(key)) {
+            var value = input[key];
+            if (value === null || value === undefined) continue;
+            var text = String(value).trim();
+            if (!text) continue;
+            out[key] = text;
+          }
         }
         return out;
       }
 
-      async function callApi(method, params) {
-        const query = new URLSearchParams(cleanParams(params)).toString();
-        const url = `/api/method/${method}` + (query ? `?${query}` : "");
-        const res = await fetch(url, { credentials: "same-origin" });
-        const data = await res.json();
-        const message = data.message || {};
-        if (message.message) message.message = __(message.message);
-        return message;
+      function buildQueryString(params) {
+        var qs = [];
+        for (var key in params) {
+          if (params.hasOwnProperty(key)) {
+            qs.push(encodeURIComponent(key) + "=" + encodeURIComponent(params[key]));
+          }
+        }
+        return qs.join("&");
+      }
+
+      function callApi(method, params) {
+        return new Promise(function(resolve, reject) {
+          var query = buildQueryString(cleanParams(params));
+          var url = "/api/method/" + method + (query ? "?" + query : "");
+          var xhr = new XMLHttpRequest();
+          xhr.open("GET", url, true);
+          xhr.withCredentials = true;
+          xhr.setRequestHeader("Accept", "application/json");
+          xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4) {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                  var data = JSON.parse(xhr.responseText);
+                  var message = data.message || {};
+                  if (message.message) message.message = __(message.message);
+                  resolve(message);
+                } catch (e) {
+                  reject(e);
+                }
+              } else {
+                reject(new Error("Request failed"));
+              }
+            }
+          };
+          xhr.onerror = function() {
+            reject(new Error("Network error"));
+          };
+          xhr.send();
+        });
       }
 
       function packageCard(p, idx) {
-        const featured = idx === 1;
-        const amount = Number(p.price || 0).toLocaleString();
-        const validity = `${p.validity_value} ${p.validity_unit}`;
-        const speed = p.download_kbps ? __("Up to {0}Mbps Speed", [Math.max(1, Math.round(p.download_kbps / 1000))]) : __("High Speed Access");
-        const label = featured ? __("POPULAR") : __("PACKAGE");
-        return `
-          <div class="flex flex-col gap-4 rounded-xl ${featured ? "border-2 border-primary shadow-lg" : "border border-slate-200 shadow-sm"} bg-white p-6 relative overflow-hidden">
-            ${featured ? '<div class="absolute top-0 right-0"><div class="bg-primary text-white text-[10px] font-black px-8 py-1 rotate-45 translate-x-6 translate-y-2">' + label + '</div></div>' : ""}
-            <div class="flex flex-col gap-1">
-              <div class="flex items-center justify-between">
-                <h3 class="text-slate-900 text-lg font-bold">${p.plan_name}</h3>
-                <span class="text-xs font-semibold uppercase tracking-wider rounded-full bg-slate-100 text-slate-500 px-3 py-1">${label}</span>
-              </div>
-              <div class="flex items-baseline gap-2 mt-2">
-                <span class="text-slate-900 text-3xl font-black">${amount}</span>
-                <span class="text-slate-500 text-sm font-bold uppercase">${__("TSh / {0}", [validity])}</span>
-              </div>
-            </div>
-            <div class="space-y-2">
-              <div class="flex items-center gap-2 text-sm text-slate-600"><span class="text-primary font-bold">•</span>${speed}</div>
-              <div class="flex items-center gap-2 text-sm text-slate-600"><span class="text-primary font-bold">•</span>${p.data_limit_mb ? __("{0} MB data", [p.data_limit_mb]) : __("Unlimited data")}</div>
-            </div>
-            <button
-              type="button"
-              class="buy-plan-btn w-full flex items-center justify-center rounded-lg h-11 bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-colors"
-              data-plan="${p.name}"
-              data-plan-name="${(p.plan_name || "").replace(/"/g, "&quot;")}"
-              data-price="${p.price || 0}"
-            >${__("Buy")}</button>
-          </div>
-        `;
+        var featured = idx === 1;
+        var amount = Number(p.price || 0).toLocaleString();
+        var validity = p.validity_value + " " + p.validity_unit;
+        var speed = p.download_kbps ? __("Up to {0}Mbps Speed", [Math.max(1, Math.round(p.download_kbps / 1000))]) : __("High Speed Access");
+        var label = featured ? __("POPULAR") : __("PACKAGE");
+        
+        var cardClass = "flex flex-col space-y-4 rounded-xl " + (featured ? "border-2 border-primary shadow-lg" : "border border-slate-200 shadow-sm") + " bg-white p-6 relative overflow-hidden";
+        var html = '<div class="' + cardClass + '">';
+        
+        if (featured) {
+          html += '<div class="absolute top-0 right-0"><div class="bg-primary text-white text-[10px] font-black px-8 py-1 rotate-45 translate-x-6 translate-y-2">' + label + '</div></div>';
+        }
+        
+        html += '<div class="flex flex-col space-y-1">';
+        html += '<div class="flex items-center justify-between">';
+        html += '<h3 class="text-slate-900 text-lg font-bold">' + p.plan_name + '</h3>';
+        html += '<span class="text-xs font-semibold uppercase tracking-wider rounded-full bg-slate-100 text-slate-500 px-3 py-1">' + label + '</span>';
+        html += '</div>';
+        html += '<div class="flex items-baseline space-x-2 mt-2">';
+        html += '<span class="text-slate-900 text-3xl font-black">' + amount + '</span>';
+        html += '<span class="text-slate-500 text-sm font-bold uppercase">' + __("TSh / {0}", [validity]) + '</span>';
+        html += '</div></div>';
+        html += '<div class="space-y-2">';
+        html += '<div class="flex items-center space-x-2 text-sm text-slate-600"><span class="text-primary font-bold">•</span>' + speed + '</div>';
+        html += '<div class="flex items-center space-x-2 text-sm text-slate-600"><span class="text-primary font-bold">•</span>' + (p.data_limit_mb ? __("{0} MB data", [p.data_limit_mb]) : __("Unlimited data")) + '</div>';
+        html += '</div>';
+        html += '<button type="button" class="buy-plan-btn w-full flex items-center justify-center rounded-lg h-11 bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-colors" ';
+        html += 'data-plan="' + p.name + '" data-plan-name="' + (p.plan_name || "").replace(/"/g, "&quot;") + '" data-price="' + (p.price || 0) + '">';
+        html += __("Buy") + '</button></div>';
+        
+        return html;
       }
 
-      async function loadPackages() {
-        try {
-          const result = await callApi("hotspot_ms.api.portal.get_packages");
-          const items = result.packages || [];
-          if (!items.length) {
-            packageList.innerHTML = `<p class="text-sm text-slate-500">${__("No packages available")}</p>`;
-            return;
-          }
-
-          const hasFree = items.some((p) => Number(p.is_free) === 1);
-          const paidItems = items.filter((p) => Number(p.is_free) !== 1);
-
-          if (hasFree && captive.clientmac) {
-            const freeBanner = document.getElementById("free-banner");
-            if (freeBanner) {
-              freeBanner.classList.remove("hidden");
-              freeBanner.classList.add("flex");
+      function loadPackages() {
+        callApi("hotspot_ms.api.portal.get_packages")
+          .then(function(result) {
+            var items = result.packages || [];
+            if (!items.length) {
+              packageList.innerHTML = '<p class="text-sm text-slate-500">' + __("No packages available") + '</p>';
+              return;
             }
-          }
 
-          if (!paidItems.length) {
-            packageList.innerHTML = `<p class="text-sm text-slate-500">${__("No paid packages available")}</p>`;
-          } else {
-            packageList.innerHTML = paidItems.map((p, idx) => packageCard(p, idx)).join("");
-          }
-        } catch (e) {
-          packageList.innerHTML = `<p class="text-sm text-red-500">${__("Failed to load packages")}</p>`;
-        }
-      }
+            var hasFree = false;
+            var paidItems = [];
+            for (var i = 0; i < items.length; i++) {
+              if (Number(items[i].is_free) === 1) {
+                hasFree = true;
+              } else {
+                paidItems.push(items[i]);
+              }
+            }
 
-      async function waitForPaymentSuccess(paymentRef) {
-        const maxChecks = 45; // ~135 seconds
-        for (let i = 0; i < maxChecks; i += 1) {
-          const statusResult = await callApi("hotspot_ms.api.portal.payment_transaction_status", {
-            payment_ref: paymentRef,
+            if (hasFree && captive.clientmac) {
+              var freeBanner = document.getElementById("free-banner");
+              if (freeBanner) {
+                freeBanner.className = freeBanner.className.replace("hidden", "flex");
+              }
+            }
+
+            if (!paidItems.length) {
+              packageList.innerHTML = '<p class="text-sm text-slate-500">' + __("No paid packages available") + '</p>';
+            } else {
+              var listHtml = "";
+              for (var j = 0; j < paidItems.length; j++) {
+                listHtml += packageCard(paidItems[j], j);
+              }
+              packageList.innerHTML = listHtml;
+            }
+          })
+          .catch(function(e) {
+            packageList.innerHTML = '<p class="text-sm text-red-500">' + __("Failed to load packages") + '</p>';
           });
-
-          const status = (statusResult.payment?.status || "").trim();
-          if (status === "Successful") return { ok: true, status };
-          if (status === "Failed" || status === "Cancelled") {
-            const translatedStatus = status === "Failed" ? __("failed") : __("cancelled");
-            return { ok: false, status, message: __("Payment is {0}", [translatedStatus]) };
-          }
-
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-        }
-        return { ok: false, status: "Pending", message: __("Payment confirmation timed out. If you already approved USSD, wait a bit and try again.") };
       }
 
-      async function confirmBuyFlow() {
+      function waitForPaymentSuccess(paymentRef, checksRemaining) {
+        if (checksRemaining <= 0) {
+          return Promise.resolve({ ok: false, status: "Pending", message: __("Payment confirmation timed out. If you already approved USSD, wait a bit and try again.") });
+        }
+        return callApi("hotspot_ms.api.portal.payment_transaction_status", { payment_ref: paymentRef })
+          .then(function(statusResult) {
+            var status = (statusResult.payment && statusResult.payment.status ? statusResult.payment.status : "").trim();
+            if (status === "Successful") return { ok: true, status: status };
+            if (status === "Failed" || status === "Cancelled") {
+              var translatedStatus = status === "Failed" ? __("failed") : __("cancelled");
+              return { ok: false, status: status, message: __("Payment is {0}", [translatedStatus]) };
+            }
+            return new Promise(function(resolve) {
+              setTimeout(function() {
+                waitForPaymentSuccess(paymentRef, checksRemaining - 1).then(resolve);
+              }, 3000);
+            });
+          });
+      }
+
+      function confirmBuyFlow() {
         if (!selectedPlan || !selectedPlan.plan) {
           showBuyFeedback("err", __("No package selected."));
           return;
         }
 
-        const normalizedPhone = normalizePhone(buyPhone.value);
+        var normalizedPhone = normalizePhone(buyPhone.value);
         if (!/^255\d{9}$/.test(normalizedPhone)) {
           showBuyFeedback("err", __("Enter a valid Tanzania number, e.g. 712345678."));
           return;
@@ -554,7 +622,7 @@
         buyConfirm.textContent = __("Sending...");
         showBuyFeedback("info", __("Initiating USSD push..."));
 
-        const created = await callApi("hotspot_ms.api.snippe.create_snippe_payment", {
+        callApi("hotspot_ms.api.snippe.create_snippe_payment", {
           plan: selectedPlan.plan,
           payment_type: "mobile",
           phone_number: normalizedPhone,
@@ -569,129 +637,137 @@
             gatewayaddress: captive.gatewayaddress || "",
             gatewayport: captive.gatewayport || "",
             authdir: captive.authdir || "",
-            hid: captive.hid || "",
-          }),
+            hid: captive.hid || ""
+          })
+        }).then(function(created) {
+          if (!created.ok || !created.payment_ref) {
+            showBuyFeedback("err", created.message || __("Could not initiate payment."));
+            buyConfirm.disabled = false;
+            buyConfirm.textContent = __("Confirm");
+            return;
+          }
+
+          showBuyFeedback("info", __("USSD push sent. Approve on your phone, then waiting for confirmation..."));
+          var paymentRef = created.payment_ref;
+          
+          return waitForPaymentSuccess(paymentRef, 45).then(function(waited) {
+            if (!waited.ok) {
+              showBuyFeedback("err", waited.message || __("Payment not completed."));
+              buyConfirm.disabled = false;
+              buyConfirm.textContent = __("Confirm");
+              return;
+            }
+
+            showBuyFeedback("ok", __("Payment confirmed. Granting internet access..."));
+            return callApi("hotspot_ms.api.portal.activate_paid_access", {
+              payment_ref: paymentRef,
+              mac_address: captive.clientmac,
+              ip_address: captive.clientip,
+              nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
+              tok: captive.tok,
+              redir: captive.redir,
+              authaction: captive.authaction,
+              fas: captive.fas,
+              gatewayaddress: captive.gatewayaddress,
+              gatewayport: captive.gatewayport,
+              authdir: captive.authdir,
+              hid: captive.hid
+            }).then(function(access) {
+              if (!access.ok || !access.redirect_url) {
+                showBuyFeedback("err", access.message || __("Paid, but could not grant access."));
+                buyConfirm.disabled = false;
+                buyConfirm.textContent = __("Confirm");
+                return;
+              }
+              window.location.href = access.redirect_url;
+            });
+          });
+        }).catch(function(error) {
+          showBuyFeedback("err", __("Payment flow failed. Please try again."));
+          buyConfirm.disabled = false;
+          buyConfirm.textContent = __("Confirm");
         });
-        if (!created.ok || !created.payment_ref) {
-          showBuyFeedback("err", created.message || __("Could not initiate payment."));
-          buyConfirm.disabled = false;
-          buyConfirm.textContent = __("Confirm");
-          return;
-        }
-
-        showBuyFeedback("info", __("USSD push sent. Approve on your phone, then waiting for confirmation..."));
-        const paymentRef = created.payment_ref;
-        const waited = await waitForPaymentSuccess(paymentRef);
-        if (!waited.ok) {
-          showBuyFeedback("err", waited.message || __("Payment not completed."));
-          buyConfirm.disabled = false;
-          buyConfirm.textContent = __("Confirm");
-          return;
-        }
-
-        showBuyFeedback("ok", __("Payment confirmed. Granting internet access..."));
-        const access = await callApi("hotspot_ms.api.portal.activate_paid_access", {
-          payment_ref: paymentRef,
-          mac_address: captive.clientmac,
-          ip_address: captive.clientip,
-          nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
-          tok: captive.tok,
-          redir: captive.redir,
-          authaction: captive.authaction,
-          fas: captive.fas,
-          gatewayaddress: captive.gatewayaddress,
-          gatewayport: captive.gatewayport,
-          authdir: captive.authdir,
-          hid: captive.hid,
-        });
-
-        if (!access.ok || !access.redirect_url) {
-          showBuyFeedback("err", access.message || __("Paid, but could not grant access."));
-          buyConfirm.disabled = false;
-          buyConfirm.textContent = __("Confirm");
-          return;
-        }
-
-        window.location.href = access.redirect_url;
       }
 
-      async function verifyVoucher() {
-        const code = (voucherInput.value || "").trim();
+      function verifyVoucher() {
+        var code = (voucherInput.value || "").trim();
         if (!code) {
           showFeedback("err", __("Enter voucher code first."));
-          return null;
+          return Promise.resolve(null);
         }
-        const result = await callApi("hotspot_ms.api.portal.verify_voucher", {
+        return callApi("hotspot_ms.api.portal.verify_voucher", {
           voucher_code: code,
           mac_address: captive.clientmac,
-          ip_address: captive.clientip,
+          ip_address: captive.clientip
+        }).then(function(result) {
+          if (!result.ok) {
+            showFeedback("err", __(result.message) || __("Invalid or expired voucher code. Please try again."));
+            return null;
+          }
+          showFeedback("ok", __("Voucher valid for plan") + " " + (result.voucher ? result.voucher.plan : "") + ".");
+          return result;
         });
-        if (!result.ok) {
-          showFeedback("err", __(result.message) || __("Invalid or expired voucher code. Please try again."));
-          return null;
-        }
-        showFeedback("ok", `${__("Voucher valid for plan")} ${result.voucher?.plan || ""}.`);
-        return result;
       }
 
-      btnValidate.addEventListener("click", async function () {
-        try {
-          await verifyVoucher();
-        } catch (e) {
+      btnValidate.addEventListener("click", function () {
+        verifyVoucher().catch(function(e) {
           showFeedback("err", __("Validation failed. Try again."));
-        }
+        });
       });
 
-      form.addEventListener("submit", async function (e) {
+      form.addEventListener("submit", function (e) {
         e.preventDefault();
-        try {
-          const verified = await verifyVoucher();
+        verifyVoucher().then(function(verified) {
           if (!verified) return;
 
-          const code = (voucherInput.value || "").trim();
-          const activated = await callApi("hotspot_ms.api.portal.activate_voucher", {
+          var code = (voucherInput.value || "").trim();
+          return callApi("hotspot_ms.api.portal.activate_voucher", {
             voucher_code: code,
             mac_address: captive.clientmac,
             ip_address: captive.clientip,
-            nas_device: captive.gatewayname || captive.hid,
+            nas_device: captive.gatewayname || captive.hid
+          }).then(function(activated) {
+            if (!activated.ok) {
+              showFeedback("err", activated.message || "Could not activate voucher.");
+              return;
+            }
+
+            return callApi("hotspot_ms.api.portal.build_opennds_redirect", {
+              session_id: activated.session_id,
+              voucher_code: code,
+              tok: captive.tok,
+              redir: captive.redir,
+              authaction: captive.authaction,
+              fas: captive.fas,
+              gatewayaddress: captive.gatewayaddress,
+              gatewayport: captive.gatewayport,
+              authdir: captive.authdir,
+              hid: captive.hid,
+              nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid
+            }).then(function(redirectResult) {
+              if (!redirectResult.ok || !redirectResult.redirect_url) {
+                showFeedback("err", redirectResult.message || "Could not complete captive login redirect.");
+                return;
+              }
+              window.location.href = redirectResult.redirect_url;
+            });
           });
-          if (!activated.ok) {
-            showFeedback("err", activated.message || "Could not activate voucher.");
-            return;
-          }
-
-          const redirectResult = await callApi("hotspot_ms.api.portal.build_opennds_redirect", {
-            session_id: activated.session_id,
-            voucher_code: code,
-            tok: captive.tok,
-            redir: captive.redir,
-            authaction: captive.authaction,
-            fas: captive.fas,
-            gatewayaddress: captive.gatewayaddress,
-            gatewayport: captive.gatewayport,
-            authdir: captive.authdir,
-            hid: captive.hid,
-            nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
-          });
-
-          if (!redirectResult.ok || !redirectResult.redirect_url) {
-            showFeedback("err", redirectResult.message || "Could not complete captive login redirect.");
-            return;
-          }
-
-          window.location.href = redirectResult.redirect_url;
-        } catch (err) {
+        }).catch(function(err) {
           showFeedback("err", "Connection request failed.");
-        }
+        });
       });
 
       packageList.addEventListener("click", function (event) {
-        const btn = event.target.closest(".buy-plan-btn");
-        if (!btn) return;
+        var btn = event.target;
+        while (btn && btn !== this && !btn.className.match(/buy-plan-btn/)) {
+          btn = btn.parentNode;
+        }
+        if (!btn || btn === this) return;
+        
         openBuyModal({
           plan: (btn.getAttribute("data-plan") || "").trim(),
           plan_name: (btn.getAttribute("data-plan-name") || "").trim(),
-          price: Number(btn.getAttribute("data-price") || 0),
+          price: Number(btn.getAttribute("data-price") || 0)
         });
       });
 
@@ -700,72 +776,61 @@
       buyModal.addEventListener("click", function (event) {
         if (event.target === buyModal) closeBuyModal();
       });
-      buyConfirm.addEventListener("click", async function () {
-        try {
-          await confirmBuyFlow();
-        } catch (error) {
-          showBuyFeedback("err", __("Payment flow failed. Please try again."));
-          buyConfirm.disabled = false;
-          buyConfirm.textContent = __("Confirm");
-        }
+      
+      buyConfirm.addEventListener("click", function () {
+        confirmBuyFlow();
       });
 
       loadPackages();
 
-      // ── Auto-recover: check for paid-but-unused vouchers on page load ──
       if (captive.clientmac) {
-        (async function checkPendingPaidAccess() {
-          try {
-            const pending = await callApi("hotspot_ms.api.portal.check_pending_paid_voucher", {
+        callApi("hotspot_ms.api.portal.check_pending_paid_voucher", {
+          mac_address: captive.clientmac
+        }).then(function(pending) {
+          if (pending.found && pending.payment_ref) {
+            return callApi("hotspot_ms.api.portal.activate_paid_access", {
+              payment_ref: pending.payment_ref,
               mac_address: captive.clientmac,
-            });
-            if (pending.found && pending.payment_ref) {
-              // Found a paid voucher that was never activated — auto-connect now
-              const access = await callApi("hotspot_ms.api.portal.activate_paid_access", {
-                payment_ref: pending.payment_ref,
-                mac_address: captive.clientmac,
-                ip_address: captive.clientip,
-                nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
-                tok: captive.tok,
-                redir: captive.redir,
-                authaction: captive.authaction,
-                fas: captive.fas,
-                gatewayaddress: captive.gatewayaddress,
-                gatewayport: captive.gatewayport,
-                authdir: captive.authdir,
-                hid: captive.hid,
-              });
+              ip_address: captive.clientip,
+              nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
+              tok: captive.tok,
+              redir: captive.redir,
+              authaction: captive.authaction,
+              fas: captive.fas,
+              gatewayaddress: captive.gatewayaddress,
+              gatewayport: captive.gatewayport,
+              authdir: captive.authdir,
+              hid: captive.hid
+            }).then(function(access) {
               if (access.ok && access.redirect_url) {
                 window.location.href = access.redirect_url;
-                return;
               }
-            }
-          } catch (e) {
-            console.log("Auto-recovery check skipped:", e);
+            });
           }
-        })();
+        }).catch(function(e) {
+          // ignore
+        });
       }
 
-      // ── Free access claim flow ──
-      const freeBanner = document.getElementById("free-banner");
-      const btnClaimFree = document.getElementById("btn-claim-free");
-      const freeFeedback = document.getElementById("free-feedback");
+      var freeBanner = document.getElementById("free-banner");
+      var btnClaimFree = document.getElementById("btn-claim-free");
+      var freeFeedback = document.getElementById("free-feedback");
 
       function showFreeFeedback(type, text) {
         if (!freeFeedback) return;
-        freeFeedback.className = "flex items-center gap-2 p-3 rounded-lg border text-sm font-medium";
+        freeFeedback.className = "flex items-center space-x-2 p-3 rounded-lg border text-sm font-medium";
         if (type === "ok") {
-          freeFeedback.classList.add("bg-green-50", "border-green-200", "text-green-700");
+          freeFeedback.className += " bg-green-50 border-green-200 text-green-700";
         } else if (type === "info") {
-          freeFeedback.classList.add("bg-blue-50", "border-blue-200", "text-blue-700");
+          freeFeedback.className += " bg-blue-50 border-blue-200 text-blue-700";
         } else {
-          freeFeedback.classList.add("bg-red-50", "border-red-200", "text-red-600");
+          freeFeedback.className += " bg-red-50 border-red-200 text-red-600";
         }
         freeFeedback.textContent = text || "";
       }
 
       if (btnClaimFree) {
-        btnClaimFree.addEventListener("click", async function () {
+        btnClaimFree.addEventListener("click", function () {
           if (!captive.clientmac) {
             showFreeFeedback("err", "Cannot detect your device. Please connect via the hotspot WiFi.");
             return;
@@ -775,24 +840,19 @@
           btnClaimFree.textContent = __("Checking Status...");
           showFreeFeedback("info", __("Checking your daily free status..."));
 
-          try {
-            // 1. Check daily free limit status
-            const status = await callApi("hotspot_ms.api.portal.check_free_slice_status", {
-              mac_address: captive.clientmac,
-            });
-
+          callApi("hotspot_ms.api.portal.check_free_slice_status", {
+            mac_address: captive.clientmac
+          }).then(function(status) {
             if (!status.ok || !status.allowed) {
               showFreeFeedback("err", status.message || __("You have reached your daily limit of free access today. Please buy a package to continue!"));
               btnClaimFree.disabled = false;
               btnClaimFree.textContent = "🚀 " + __("Get Free Access");
-              return;
+              return Promise.reject("handled");
             }
-
-            // 2. Fetch active ad
-            const adRes = await callApi("hotspot_ms.api.portal.get_random_active_ad", {
-              mac_address: captive.clientmac,
+            return callApi("hotspot_ms.api.portal.get_random_active_ad", {
+              mac_address: captive.clientmac
             });
-
+          }).then(function(adRes) {
             if (!adRes.ok) {
               showFreeFeedback("err", adRes.message || __("Failed to load ad. Please try again."));
               btnClaimFree.disabled = false;
@@ -800,51 +860,49 @@
               return;
             }
 
-            const ad = adRes.ad;
-
-            // 3. Populate and show Ad-Wall Modal
-            const adModal = document.getElementById("ad-modal");
-            const adTitle = document.getElementById("ad-title");
-            const adTimer = document.getElementById("ad-timer");
-            const adVideo = document.getElementById("ad-video");
-            const adCarousel = document.getElementById("ad-carousel");
-            const adImage = document.getElementById("ad-image");
-            const adText = document.getElementById("ad-text");
-            const adTextTitle = document.getElementById("ad-text-title");
-            const adCta = document.getElementById("ad-cta");
-            const adConnect = document.getElementById("ad-connect");
+            var ad = adRes.ad;
+            var adModal = document.getElementById("ad-modal");
+            var adTitle = document.getElementById("ad-title");
+            var adTimer = document.getElementById("ad-timer");
+            var adVideo = document.getElementById("ad-video");
+            var adCarousel = document.getElementById("ad-carousel");
+            var adImage = document.getElementById("ad-image");
+            var adText = document.getElementById("ad-text");
+            var adTextTitle = document.getElementById("ad-text-title");
+            var adCta = document.getElementById("ad-cta");
+            var adConnect = document.getElementById("ad-connect");
 
             adTitle.textContent = ad.title || __("Sponsor Ad");
             
-            // Setup CTA link
             if (ad.cta_url) {
               adCta.href = ad.cta_url;
-              adCta.classList.remove("hidden");
+              adCta.className = adCta.className.replace("hidden", "flex");
             } else {
-              adCta.classList.add("hidden");
+              adCta.className = adCta.className.replace("flex", "hidden");
             }
 
-            // Reset visibility
-            adVideo.classList.add("hidden");
-            adCarousel.classList.add("hidden");
-            adText.classList.add("hidden");
+            adVideo.className = adVideo.className.replace("flex", "hidden");
+            adCarousel.className = adCarousel.className.replace("flex", "hidden");
+            adText.className = adText.className.replace("flex", "hidden");
+            
             adConnect.disabled = true;
-            adConnect.className = "w-full h-14 bg-primary text-white font-black rounded-xl text-lg shadow-lg shadow-primary/25 opacity-50 cursor-not-allowed transition-all flex items-center justify-center gap-2";
-            adConnect.innerHTML = `<span>${__("Please watch full ad")}</span>`;
+            adConnect.className = "w-full h-14 bg-primary text-white font-black rounded-xl text-lg shadow-lg shadow-primary/25 opacity-50 cursor-not-allowed transition-all flex items-center justify-center space-x-2";
+            adConnect.innerHTML = '<span>' + __("Please watch full ad") + '</span>';
 
-            // Load media type
-            let duration = 15; // default 15s countdown
-            let activeTimer = null;
+            var duration = 15;
+            var activeTimer = null;
 
             if (ad.ad_type === "Video" && ad.video_file) {
               adVideo.src = ad.video_file;
-              adVideo.classList.remove("hidden");
+              adVideo.className = adVideo.className.replace("hidden", "flex");
               adVideo.muted = false;
-              adVideo.play().catch(() => {
-                adVideo.muted = true;
-                adVideo.play();
-              });
-              
+              var playPromise = adVideo.play();
+              if (playPromise !== undefined) {
+                playPromise.catch(function() {
+                  adVideo.muted = true;
+                  adVideo.play();
+                });
+              }
               adVideo.onloadedmetadata = function() {
                 if (adVideo.duration && adVideo.duration > 0) {
                   duration = Math.min(Math.round(adVideo.duration), 120);
@@ -852,20 +910,19 @@
               };
             } else if (ad.ad_type === "Image Carousel" && ad.video_file) {
               adImage.src = ad.video_file;
-              adCarousel.classList.remove("hidden");
+              adCarousel.className = adCarousel.className.replace("hidden", "flex");
               duration = 10;
             } else {
               adTextTitle.textContent = ad.title || __("Tanzania Hotspot");
-              adText.classList.remove("hidden");
+              adText.className = adText.className.replace("hidden", "flex");
               duration = 8;
             }
 
             adModal.style.display = "flex";
 
-            // Start countdown timer
-            const updateTimer = () => {
+            var updateTimer = function() {
               if (duration > 0) {
-                adTimer.textContent = `${__("Unlock in")} ${duration}s`;
+                adTimer.textContent = __("Unlock in") + " " + duration + "s";
                 duration--;
                 activeTimer = setTimeout(updateTimer, 1000);
               } else {
@@ -873,27 +930,24 @@
                 adTimer.className = "px-3 py-1 bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-black rounded-full transition-all animate-bounce";
                 
                 adConnect.disabled = false;
-                adConnect.className = "w-full h-14 bg-primary hover:bg-primary/90 text-white font-black rounded-xl text-lg shadow-lg shadow-primary/25 transition-all flex items-center justify-center gap-2 cursor-pointer";
-                adConnect.innerHTML = `<span>${__("Unlock Internet Now")} 🚀</span>`;
+                adConnect.className = "w-full h-14 bg-primary hover:bg-primary/90 text-white font-black rounded-xl text-lg shadow-lg shadow-primary/25 transition-all flex items-center justify-center space-x-2 cursor-pointer";
+                adConnect.innerHTML = '<span>' + __("Unlock Internet Now") + ' 🚀</span>';
               }
             };
 
             updateTimer();
 
-            // Connect button handler
-            adConnect.onclick = async function() {
+            adConnect.onclick = function() {
               if (activeTimer) clearTimeout(activeTimer);
               adConnect.disabled = true;
-              adConnect.innerHTML = `<span>${__("Connecting...")}</span> <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+              adConnect.innerHTML = '<span>' + __("Connecting...") + '</span> <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
 
-              try {
-                const claimed = await callApi("hotspot_ms.api.portal.log_ad_view_and_claim_slice", {
-                  mac_address: captive.clientmac,
-                  ad_id: ad.name,
-                  ip_address: captive.clientip,
-                  nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
-                });
-
+              callApi("hotspot_ms.api.portal.log_ad_view_and_claim_slice", {
+                mac_address: captive.clientmac,
+                ad_id: ad.name,
+                ip_address: captive.clientip,
+                nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid
+              }).then(function(claimed) {
                 if (!claimed.ok) {
                   showFreeFeedback("err", __(claimed.message) || __("Could not claim free access."));
                   adModal.style.display = "none";
@@ -904,7 +958,7 @@
 
                 showFreeFeedback("ok", __(claimed.message) || __("Free access granted!"));
 
-                const redirectResult = await callApi("hotspot_ms.api.portal.build_opennds_redirect", {
+                return callApi("hotspot_ms.api.portal.build_opennds_redirect", {
                   session_id: claimed.session_id,
                   voucher_code: claimed.voucher_code,
                   tok: captive.tok,
@@ -915,57 +969,54 @@
                   gatewayport: captive.gatewayport,
                   authdir: captive.authdir,
                   hid: captive.hid,
-                  nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
+                  nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid
+                }).then(function(redirectResult) {
+                  adModal.style.display = "none";
+                  if (redirectResult.ok && redirectResult.redirect_url) {
+                    window.location.href = redirectResult.redirect_url;
+                  } else {
+                    showFreeFeedback("ok", __("Free access active! You can now browse the internet."));
+                    btnClaimFree.textContent = "✓ " + __("Access Granted");
+                  }
                 });
-
-                adModal.style.display = "none";
-                
-                if (redirectResult.ok && redirectResult.redirect_url) {
-                  window.location.href = redirectResult.redirect_url;
-                } else {
-                  showFreeFeedback("ok", __("Free access active! You can now browse the internet."));
-                  btnClaimFree.textContent = "✓ " + __("Access Granted");
-                }
-              } catch (err) {
+              }).catch(function(err) {
                 showFreeFeedback("err", __("Something went wrong. Please try again."));
                 adModal.style.display = "none";
                 btnClaimFree.disabled = false;
                 btnClaimFree.textContent = "🚀 " + __("Get Free Access");
-              }
+              });
             };
-
-          } catch (error) {
-            showFreeFeedback("err", __("Something went wrong. Please try again."));
-            btnClaimFree.disabled = false;
-            btnClaimFree.textContent = "🚀 " + __("Get Free Access");
-          }
+          }).catch(function(error) {
+            if (error !== "handled") {
+              showFreeFeedback("err", __("Something went wrong. Please try again."));
+              btnClaimFree.disabled = false;
+              btnClaimFree.textContent = "🚀 " + __("Get Free Access");
+            }
+          });
         });
       }
-      
-      // Lipa Namba Modal Logic
-      const btnOpenLipa = document.getElementById("btn-open-lipa");
-      const btnCloseLipa = document.getElementById("btn-close-lipa");
-      const lipaModal = document.getElementById("lipa-modal");
+
+      var btnOpenLipa = document.getElementById("btn-open-lipa");
+      var btnCloseLipa = document.getElementById("btn-close-lipa");
+      var lipaModal = document.getElementById("lipa-modal");
 
       if (btnOpenLipa && btnCloseLipa && lipaModal) {
-        btnOpenLipa.addEventListener("click", () => {
-          lipaModal.classList.remove("hidden");
-          lipaModal.classList.add("flex");
+        btnOpenLipa.addEventListener("click", function() {
+          lipaModal.style.display = "flex";
         });
         
-        btnCloseLipa.addEventListener("click", () => {
-          lipaModal.classList.add("hidden");
-          lipaModal.classList.remove("flex");
+        btnCloseLipa.addEventListener("click", function() {
+          lipaModal.style.display = "none";
         });
         
-        lipaModal.addEventListener("click", (e) => {
+        lipaModal.addEventListener("click", function(e) {
           if (e.target === lipaModal) {
-            lipaModal.classList.add("hidden");
-            lipaModal.classList.remove("flex");
+            lipaModal.style.display = "none";
           }
         });
       }
     })();
   </script>
+
 </body>
 </html>
