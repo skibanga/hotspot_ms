@@ -220,7 +220,7 @@
   </div>
 
   <!-- Floating Lipa Namba Button -->
-  <div style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: inline-flex; align-items: center; justify-content: center;">
+  <div id="lipa-floating-wrapper" style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: inline-flex; align-items: center; justify-content: center;">
     <span class="lipa-ring"></span>
     <span class="lipa-ring"></span>
     <span class="lipa-ring"></span>
@@ -1012,6 +1012,36 @@
         lipaModal.addEventListener("click", function(e) {
           if (e.target === lipaModal) {
             lipaModal.style.display = "none";
+          }
+        });
+      }
+
+      // Hide Lipa Namba when keyboard is open
+      var lipaWrapper = document.getElementById("lipa-floating-wrapper");
+      if (lipaWrapper) {
+        var inputs = document.getElementsByTagName("input");
+        for (var i = 0; i < inputs.length; i++) {
+          inputs[i].addEventListener("focus", function() {
+            lipaWrapper.style.display = "none";
+          });
+          inputs[i].addEventListener("blur", function() {
+            setTimeout(function() {
+              if (document.activeElement && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") {
+                lipaWrapper.style.display = "inline-flex";
+              }
+            }, 100);
+          });
+        }
+        
+        // Fallback for older Android browsers resizing the window
+        var initialHeight = window.innerHeight;
+        window.addEventListener("resize", function() {
+          if (window.innerHeight < initialHeight * 0.75) {
+            lipaWrapper.style.display = "none";
+          } else {
+            if (!document.activeElement || (document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA")) {
+              lipaWrapper.style.display = "inline-flex";
+            }
           }
         });
       }
