@@ -171,7 +171,7 @@ def _resolve_allowed_methods(allowed_methods: str | None) -> list[str]:
 	return values or ["mobile_money", "qr"]
 
 
-def _create_payment_transaction(
+def _create_pending_payment_transaction(
 	*,
 	payment_ref: str,
 	plan_doc,
@@ -179,12 +179,10 @@ def _create_payment_transaction(
 	payment_type: str,
 	idempotency_key: str,
 	currency: str,
-	response: dict[str, Any],
 ) -> Any:
-	data = (response or {}).get("data") or {}
 	tx = frappe.new_doc("Payment Transaction")
 	tx.payment_ref = payment_ref
-	tx.status = _status_from_snippe(data.get("status"))
+	tx.status = "Pending"
 	tx.plan = plan_doc.name
 	tx.amount = flt(plan_doc.price)
 	tx.currency = currency
@@ -192,15 +190,23 @@ def _create_payment_transaction(
 	tx.provider = "Snippe"
 	tx.payment_type = payment_type
 	tx.idempotency_key = idempotency_key
-	tx.external_id = data.get("reference") or data.get("id")
-	tx.checkout_url = data.get("payment_link_url") or data.get("checkout_url")
-	tx.payment_url = data.get("payment_url")
+	tx.provider_response_message = "Initiating payment..."
+	tx.insert(ignore_permissions=True)
+	return tx
+
+
+def _update_payment_transaction_from_response(tx, response: dict[str, Any]):
+	data = (response or {}).get("data") or {}
+	tx.status = _status_from_snippe(data.get("status"))
+	tx.external_id = data.get("reference") or data.get("id") or tx.external_id
+	tx.checkout_url = data.get("payment_link_url") or data.get("checkout_url") or tx.checkout_url
+	tx.payment_url = data.get("payment_url") or tx.payment_url
 	tx.provider_response_code = str((response or {}).get("code") or "")
 	tx.provider_response_message = data.get("status") or "pending"
 	tx.notes = _safe_json_text(response)
 	if tx.status == "Successful" and not tx.completed_on:
 		tx.completed_on = now_datetime()
-	tx.insert(ignore_permissions=True)
+	tx.save(ignore_permissions=True)
 	return tx
 
 
@@ -486,6 +492,16 @@ def create_snippe_payment(
 		if session_customer:
 			session_payload["customer"] = session_customer
 
+		tx = _create_pending_payment_transaction(
+			payment_ref=payment_ref,
+			plan_doc=plan_doc,
+			customer=customer,
+			payment_type=payment_type,
+			idempotency_key=idempotency_key,
+			currency=currency,
+		)
+		frappe.db.commit()
+
 		session_response, session_error = _snippe_request(
 			settings,
 			"POST",
@@ -494,17 +510,14 @@ def create_snippe_payment(
 			idempotency_key=idempotency_key,
 		)
 		if session_error:
+			tx.status = "Failed"
+			tx.provider_response_message = session_error.get("message") or "Request Failed"
+			tx.notes = _safe_json_text(session_error)
+			tx.save(ignore_permissions=True)
+			frappe.db.commit()
 			return session_error
 
-		tx = _create_payment_transaction(
-			payment_ref=payment_ref,
-			plan_doc=plan_doc,
-			customer=customer,
-			payment_type=payment_type,
-			idempotency_key=idempotency_key,
-			currency=currency,
-			response=session_response or {},
-		)
+		_update_payment_transaction_from_response(tx, session_response or {})
 		frappe.db.commit()
 		return _ok(
 			"Snippe checkout session created",
@@ -559,6 +572,16 @@ def create_snippe_payment(
 			}
 		)
 
+	tx = _create_pending_payment_transaction(
+		payment_ref=payment_ref,
+		plan_doc=plan_doc,
+		customer=customer,
+		payment_type=payment_type,
+		idempotency_key=idempotency_key,
+		currency=currency,
+	)
+	frappe.db.commit()
+
 	response, request_error = _snippe_request(
 		settings,
 		"POST",
@@ -567,18 +590,14 @@ def create_snippe_payment(
 		idempotency_key=idempotency_key,
 	)
 	if request_error:
+		tx.status = "Failed"
+		tx.provider_response_message = request_error.get("message") or "Request Failed"
+		tx.notes = _safe_json_text(request_error)
+		tx.save(ignore_permissions=True)
+		frappe.db.commit()
 		return request_error
 
-	tx = _create_payment_transaction(
-		payment_ref=payment_ref,
-		plan_doc=plan_doc,
-		customer=customer,
-		payment_type=payment_type,
-		idempotency_key=idempotency_key,
-		currency=currency,
-		response=response or {},
-	)
-
+	_update_payment_transaction_from_response(tx, response or {})
 	frappe.db.commit()
 	return _ok(
 		"Snippe payment created",
