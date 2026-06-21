@@ -125,6 +125,9 @@
   }
   .lipa-ring:nth-child(2) { animation-delay: 0.6s; }
   .lipa-ring:nth-child(3) { animation-delay: 1.2s; }
+  @media (min-width: 1024px) {
+    .lg-custom-spacing { margin-left: 4rem !important; }
+  }
 </style>
 </head>
 <body class="bg-background-light min-h-screen font-display">
@@ -174,7 +177,7 @@
         <div id="package-list" class="space-y-4"></div>
       </div>
 
-        <div class="w-full lg:w-7/12 flex items-start">
+        <div class="w-full lg:w-7/12 flex items-start lg-custom-spacing">
           <div class="w-full bg-white rounded-2xl shadow-2xl border border-slate-200 p-8 md:p-12">
           <div class="mb-8 text-center">
             <h2 class="text-slate-900 text-3xl font-black mb-3">{{ _("Welcome Back") }}</h2>
