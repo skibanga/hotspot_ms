@@ -69,48 +69,31 @@ urlencode() {
 }
 
 scan_active_clients_usage() {
-  ndsctl status | awk '
-    function to_bytes(num, unit) {
-      u = tolower(unit)
-      if (u ~ /g/) return num * 1073741824
-      if (u ~ /m/) return num * 1048576
-      if (u ~ /k/) return num * 1024
-      return num
-    }
+  ndsctl json 2>/dev/null | awk -F'"' '
     BEGIN {
-      first = 1
       printf "["
+      first = 1
+      mac = ""
+      state = ""
+      datain = 0
+      dataout = 0
     }
-    /Client [0-9]+/ || /Client [0-9]+$/ {
-      ip=""
-      mac=""
-      token=""
-      state=""
-      datain=0
-      dataout=0
-      next
-    }
-    /MAC:/ {
-      for (i = 1; i <= NF; i++) {
-        if ($i == "MAC:") mac = $(i + 1)
-      }
-      next
-    }
-    /State:/ { state = $2; next }
-    /Download this session:/ {
-      dataout = to_bytes($4, $5)
-      next
-    }
-    /Upload this session:/ {
-      datain = to_bytes($4, $5)
-      if (state == "Authenticated" && mac != "") {
-        if (first == 0) {
-          printf ","
+    /^[ \t]*"mac":/ { mac = $4 }
+    /^[ \t]*"state":/ { state = $4 }
+    /^[ \t]*"download_this_session":/ { dataout = $4 }
+    /^[ \t]*"upload_this_session":/ { datain = $4 }
+    /^[ \t]*},/ || /^[ \t]*}$/ {
+      if (mac != "" && state != "") {
+        if (state == "Authenticated") {
+          if (first == 0) printf ","
+          printf "{\"mac_address\":\"%s\",\"input_octets\":%s,\"output_octets\":%s}", mac, datain, dataout
+          first = 0
         }
-        printf "{\"mac_address\":\"%s\",\"input_octets\":%s,\"output_octets\":%s}", mac, datain, dataout
-        first = 0
+        mac = ""
+        state = ""
+        datain = 0
+        dataout = 0
       }
-      next
     }
     END {
       printf "]"
