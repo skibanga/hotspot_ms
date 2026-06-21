@@ -124,9 +124,10 @@ def _status_from_snippe(snippe_status: str | None) -> str:
 
 
 def _issue_voucher(plan_name: str, customer: str | None = None):
+	from hotspot_ms.api.portal import generate_unique_voucher_code
 	plan = frappe.get_doc("Hotspot Plan", plan_name)
 	voucher = frappe.new_doc("Hotspot Voucher")
-	voucher.voucher_code = f"SNP-{secrets.token_hex(5).upper()}"
+	voucher.voucher_code = generate_unique_voucher_code(7)
 	voucher.status = "New"
 	voucher.plan = plan.name
 	if flt(plan.data_limit_mb) > 0:

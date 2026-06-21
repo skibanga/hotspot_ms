@@ -40,10 +40,20 @@ def _resolve_voucher(voucher_code: str):
     return frappe.get_doc("Hotspot Voucher", voucher_name)
 
 
+def generate_unique_voucher_code(length: int = 7) -> str:
+    import random
+    # Alphabet specifically excludes 0, O, 1, I, l to avoid user confusion
+    alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+    while True:
+        code = "".join(random.choice(alphabet) for _ in range(length))
+        if not frappe.db.exists("Hotspot Voucher", {"voucher_code": code}):
+            return code
+
+
 def _issue_payment_voucher(plan_name: str, customer: str | None = None):
     plan = frappe.get_doc("Hotspot Plan", plan_name)
     voucher = frappe.new_doc("Hotspot Voucher")
-    voucher.voucher_code = f"SNP-{secrets.token_hex(5).upper()}"
+    voucher.voucher_code = generate_unique_voucher_code(7)
     voucher.status = "New"
     voucher.plan = plan.name
     if flt(plan.data_limit_mb) > 0:
