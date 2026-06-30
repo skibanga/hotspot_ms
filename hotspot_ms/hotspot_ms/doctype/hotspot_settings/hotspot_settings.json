@@ -5,7 +5,9 @@
  "engine": "InnoDB",
  "field_order": [
   "portal_brand",
-  "customer_support_number"
+  "customer_support_number",
+  "enable_maintenance_mode",
+  "maintenance_message"
  ],
  "fields": [
   {
@@ -19,6 +21,18 @@
    "fieldname": "customer_support_number",
    "fieldtype": "Phone",
    "label": "Customer Support Number"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_maintenance_mode",
+   "fieldtype": "Check",
+   "label": "Enable Maintenance Mode"
+  },
+  {
+   "depends_on": "eval:doc.enable_maintenance_mode == 1",
+   "fieldname": "maintenance_message",
+   "fieldtype": "Small Text",
+   "label": "Maintenance Message"
   }
  ],
  "grid_page_length": 50,
