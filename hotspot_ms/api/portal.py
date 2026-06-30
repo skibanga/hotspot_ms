@@ -1521,6 +1521,7 @@ def sync_session_usage(
                 if not z_session.terminate_cause or not z_session.terminate_cause.startswith(DEAUTH_PENDING_PREFIX):
                     z_session.terminate_cause = f"{DEAUTH_PENDING_PREFIX}Zombie Session"
                     z_session.save(ignore_permissions=True)
+                    frappe.db.commit()
             continue
 
         session_name = sessions[0]["name"]
