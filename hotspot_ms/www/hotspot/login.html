@@ -154,13 +154,13 @@
       </section>
 
       {% if enable_maintenance_mode %}
-      <div class="w-full">
-        <div class="rounded-2xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50 p-10 shadow-xl relative overflow-hidden mb-6 text-center">
-          <div class="absolute top-0 right-0 bg-amber-500 text-white text-[10px] font-black px-8 py-1 rotate-45 translate-x-6 translate-y-2">{{ _("NOTICE") }}</div>
-          <div class="flex flex-col items-center justify-center space-y-4">
-            <span class="text-6xl mb-2">⚠️</span>
-            <h3 class="text-amber-900 text-3xl md:text-4xl font-black">{{ _("Service Notice") }}</h3>
-            <p class="text-amber-800 text-lg md:text-xl leading-relaxed font-bold max-w-2xl mx-auto">{{ _(maintenance_message) }}</p>
+      <div class="w-full flex justify-center mt-8">
+        <div class="rounded-3xl border border-slate-200 bg-white p-10 md:p-16 shadow-2xl relative overflow-hidden text-center max-w-4xl w-full">
+          <div class="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-black px-10 py-1.5 rotate-45 translate-x-8 translate-y-3 tracking-widest">{{ _("NOTICE") }}</div>
+          <div class="flex flex-col items-center justify-center space-y-6">
+            <span class="text-6xl md:text-7xl drop-shadow-md">🛠️</span>
+            <h3 class="text-slate-900 text-3xl md:text-5xl font-black tracking-tight">{{ _("Service Notice") }}</h3>
+            <p class="text-slate-600 text-lg md:text-xl leading-relaxed font-medium max-w-3xl mx-auto">{{ _(maintenance_message) }}</p>
           </div>
         </div>
       </div>
@@ -564,6 +564,7 @@
       }
 
       function loadPackages() {
+        if (!packageList) return;
         callApi("hotspot_ms.api.portal.get_packages")
           .then(function(result) {
             var items = result.packages || [];
@@ -727,16 +728,19 @@
         });
       }
 
-      btnValidate.addEventListener("click", function () {
-        verifyVoucher().catch(function(e) {
-          showFeedback("err", __("Validation failed. Try again."));
+      if (btnValidate) {
+        btnValidate.addEventListener("click", function () {
+          verifyVoucher().catch(function(e) {
+            showFeedback("err", __("Validation failed. Try again."));
+          });
         });
-      });
+      }
 
-      form.addEventListener("submit", function (e) {
-        e.preventDefault();
-        verifyVoucher().then(function(verified) {
-          if (!verified) return;
+      if (form) {
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          verifyVoucher().then(function(verified) {
+            if (!verified) return;
 
           var code = (voucherInput.value || "").trim();
           return callApi("hotspot_ms.api.portal.activate_voucher", {
@@ -774,30 +778,37 @@
           showFeedback("err", "Connection request failed.");
         });
       });
+      }
 
-      packageList.addEventListener("click", function (event) {
-        var btn = event.target;
-        while (btn && btn !== this && !btn.className.match(/buy-plan-btn/)) {
-          btn = btn.parentNode;
-        }
-        if (!btn || btn === this) return;
-        
-        openBuyModal({
-          plan: (btn.getAttribute("data-plan") || "").trim(),
-          plan_name: (btn.getAttribute("data-plan-name") || "").trim(),
-          price: Number(btn.getAttribute("data-price") || 0)
+      if (packageList) {
+        packageList.addEventListener("click", function (event) {
+          var btn = event.target;
+          while (btn && btn !== this && !btn.className.match(/buy-plan-btn/)) {
+            btn = btn.parentNode;
+          }
+          if (!btn || btn === this) return;
+          
+          openBuyModal({
+            plan: (btn.getAttribute("data-plan") || "").trim(),
+            plan_name: (btn.getAttribute("data-plan-name") || "").trim(),
+            price: Number(btn.getAttribute("data-price") || 0)
+          });
         });
-      });
+      }
 
-      buyClose.addEventListener("click", closeBuyModal);
-      buyCancel.addEventListener("click", closeBuyModal);
-      buyModal.addEventListener("click", function (event) {
-        if (event.target === buyModal) closeBuyModal();
-      });
+      if (buyClose) buyClose.addEventListener("click", closeBuyModal);
+      if (buyCancel) buyCancel.addEventListener("click", closeBuyModal);
+      if (buyModal) {
+        buyModal.addEventListener("click", function (event) {
+          if (event.target === buyModal) closeBuyModal();
+        });
+      }
       
-      buyConfirm.addEventListener("click", function () {
-        confirmBuyFlow();
-      });
+      if (buyConfirm) {
+        buyConfirm.addEventListener("click", function () {
+          confirmBuyFlow();
+        });
+      }
 
       loadPackages();
 
@@ -1014,25 +1025,34 @@
         });
       }
 
-      var btnOpenLipa = document.getElementById("btn-open-lipa");
-      var btnCloseLipa = document.getElementById("btn-close-lipa");
-      var lipaModal = document.getElementById("lipa-modal");
+    var btnLipa = document.getElementById("btn-open-lipa");
+    var btnCloseLipa = document.getElementById("btn-close-lipa");
+    var lipaModal = document.getElementById("lipa-modal");
 
-      if (btnOpenLipa && btnCloseLipa && lipaModal) {
-        btnOpenLipa.addEventListener("click", function() {
-          lipaModal.style.display = "flex";
-        });
-        
-        btnCloseLipa.addEventListener("click", function() {
+    if (btnLipa && btnCloseLipa && lipaModal) {
+      btnLipa.addEventListener("click", function() {
+        lipaModal.style.display = "flex";
+        setTimeout(function() {
+          lipaModal.style.opacity = "1";
+        }, 10);
+      });
+
+      btnCloseLipa.addEventListener("click", function() {
+        lipaModal.style.opacity = "0";
+        setTimeout(function() {
           lipaModal.style.display = "none";
-        });
-        
-        lipaModal.addEventListener("click", function(e) {
-          if (e.target === lipaModal) {
+        }, 300);
+      });
+
+      lipaModal.addEventListener("click", function(e) {
+        if (e.target === lipaModal) {
+          lipaModal.style.opacity = "0";
+          setTimeout(function() {
             lipaModal.style.display = "none";
-          }
-        });
-      }
+          }, 300);
+        }
+      });
+    }
 
       // Hide Lipa Namba when keyboard is open
       var lipaWrapper = document.getElementById("lipa-floating-wrapper");
