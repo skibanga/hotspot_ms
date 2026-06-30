@@ -153,20 +153,20 @@
         </div>
       </section>
 
+      {% if enable_maintenance_mode %}
+      <div class="w-full">
+        <div class="rounded-2xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50 p-10 shadow-xl relative overflow-hidden mb-6 text-center">
+          <div class="absolute top-0 right-0 bg-amber-500 text-white text-[10px] font-black px-8 py-1 rotate-45 translate-x-6 translate-y-2">{{ _("NOTICE") }}</div>
+          <div class="flex flex-col items-center justify-center space-y-4">
+            <span class="text-6xl mb-2">⚠️</span>
+            <h3 class="text-amber-900 text-3xl md:text-4xl font-black">{{ _("Service Notice") }}</h3>
+            <p class="text-amber-800 text-lg md:text-xl leading-relaxed font-bold max-w-2xl mx-auto">{{ _(maintenance_message) }}</p>
+          </div>
+        </div>
+      </div>
+      {% else %}
       <div class="flex flex-col lg:flex-row space-y-8 lg:space-y-0 lg:space-x-16">
         <div class="w-full lg:w-5/12 flex flex-col space-y-6">
-          {% if enable_maintenance_mode %}
-          <div class="rounded-2xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50 p-6 shadow-lg relative overflow-hidden">
-            <div class="absolute top-0 right-0 bg-amber-500 text-white text-[10px] font-black px-8 py-1 rotate-45 translate-x-6 translate-y-2">{{ _("NOTICE") }}</div>
-            <div class="flex flex-col space-y-3">
-              <div class="flex items-center space-x-2">
-                <span class="text-3xl">⚠️</span>
-                <h3 class="text-amber-900 text-xl font-black">{{ _("Service Notice") }}</h3>
-              </div>
-              <p class="text-amber-800 text-sm leading-relaxed font-bold">{{ _(maintenance_message) }}</p>
-            </div>
-          </div>
-          {% endif %}
 
           <div id="free-banner" class="hidden rounded-2xl border-2 border-green-400 bg-gradient-to-br from-green-50 to-emerald-50 p-6 shadow-lg relative overflow-hidden">
           <div class="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-black px-8 py-1 rotate-45 translate-x-6 translate-y-2">{{ _("FREE") }}</div>
@@ -227,6 +227,7 @@
           </div>
         </div>
       </div>
+      {% endif %}
     </div>
   </main>
 
@@ -235,6 +236,7 @@
   </div>
 
   <!-- Floating Lipa Namba Button -->
+  {% if not enable_maintenance_mode %}
   <div id="lipa-floating-wrapper" style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: inline-flex; align-items: center; justify-content: center;">
     <span class="lipa-ring"></span>
     <span class="lipa-ring"></span>
@@ -257,6 +259,7 @@
       <img src="/assets/hotspot_ms/images/lipa-namba-qr.jpg" alt="Lipa kwa kuscan" loading="lazy" style="display:block;width:auto;height:auto;max-width:100%;max-height:calc(100vh - 120px);object-fit:contain;" />
     </div>
   </div>
+  {% endif %}
 
   <div id="buy-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" style="background: rgba(15, 23, 42, 0.45);">
     <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl p-6" style="width:min(560px, 100%);">
