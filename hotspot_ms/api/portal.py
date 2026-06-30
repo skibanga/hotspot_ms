@@ -42,6 +42,7 @@ def _resolve_voucher(voucher_code: str):
 
 def generate_unique_voucher_code(length: int = 7) -> str:
     import random
+
     # Alphabet specifically excludes 0, O, 1, I, l to avoid user confusion
     alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
     while True:
@@ -534,7 +535,10 @@ def generate_voucher_from_sms_payment(
         tx.provider_response_message = "Auto-generated from SMS via Auto Vocha"
         tx.insert(ignore_permissions=True)
     except Exception as e:
-        frappe.log_error(f"Failed to create Payment Transaction for {reference}: {e}", "SMS Payment Error")
+        frappe.log_error(
+            f"Failed to create Payment Transaction for {reference}: {e}",
+            "SMS Payment Error",
+        )
 
     frappe.db.commit()
 
@@ -1501,6 +1505,22 @@ def sync_session_usage(
             ignore_permissions=True,
         )
         if not sessions:
+            # ZOMBIE HUNTER: The router reported a MAC, but Frappe ignored it because it's expired.
+            # We must actively force them back onto the router's Hit List to kill them!
+            recent_sessions = frappe.get_all(
+                "Hotspot Session",
+                filters=[["mac_address", "=", mac]],
+                fields=["name", "terminate_cause"],
+                order_by="creation desc",
+                limit=1,
+                ignore_permissions=True,
+            )
+            if recent_sessions:
+                z_session = frappe.get_doc("Hotspot Session", recent_sessions[0].name)
+                # Force the DEAUTH_PENDING flag so the router pulls it and kills it!
+                if not z_session.terminate_cause or not z_session.terminate_cause.startswith(DEAUTH_PENDING_PREFIX):
+                    z_session.terminate_cause = f"{DEAUTH_PENDING_PREFIX}Zombie Session"
+                    z_session.save(ignore_permissions=True)
             continue
 
         session_name = sessions[0]["name"]

@@ -136,14 +136,34 @@ poll_deauth() {
   i=0
   while [ "$i" -lt "$count" ]; do
     mac="$(printf '%s' "$response" | jsonfilter -e "@.message.actions[$i].mac_address" 2>/dev/null || true)"
+    ip="$(printf '%s' "$response" | jsonfilter -e "@.message.actions[$i].ip_address" 2>/dev/null || true)"
     session_id="$(printf '%s' "$response" | jsonfilter -e "@.message.actions[$i].session_id" 2>/dev/null || true)"
     
-    if [ -n "$mac" ] && [ -n "$session_id" ]; then
-      log "Deauthenticating MAC $mac (Session: $session_id)"
-      ndsctl deauth "$mac" >/dev/null 2>&1 || true
+    if [ -n "$session_id" ]; then
+      log "Deauthenticating (Session: $session_id)"
       
-      # Acknowledge to Frappe
-      wget -qO- "${FRAPPE_BASE_URL%/}${ACK_API_PATH}?nas_identifier=$(urlencode "$NAS_IDENTIFIER")&secret=$(urlencode "$NAS_SECRET")&session_id=$(urlencode "$session_id")&result=ok" >/dev/null 2>&1 || true
+      # Try MAC first, then IP
+      if [ -n "$mac" ]; then
+        ndsctl deauth "$mac" >/dev/null 2>&1 || true
+      fi
+      if [ -n "$ip" ]; then
+        ndsctl deauth "$ip" >/dev/null 2>&1 || true
+      fi
+      
+      # Verify if they are actually disconnected
+      still_connected=0
+      if [ -n "$mac" ]; then
+        if ndsctl json 2>/dev/null | grep -q "\"mac\":\"$mac\""; then
+          still_connected=1
+        fi
+      fi
+      
+      if [ "$still_connected" -eq 1 ]; then
+        log "ERROR: Failed to deauth MAC $mac"
+      else
+        log "Successfully deauthed, sending ack to Frappe"
+        wget -qO- "${FRAPPE_BASE_URL%/}${ACK_API_PATH}?nas_identifier=$(urlencode "$NAS_IDENTIFIER")&secret=$(urlencode "$NAS_SECRET")&session_id=$(urlencode "$session_id")&result=ok" >/dev/null 2>&1 || true
+      fi
     fi
     i=$((i + 1))
   done
