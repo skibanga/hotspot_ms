@@ -124,8 +124,35 @@ sync_usage() {
   return 1
 }
 
+kill_client_by_mac() {
+  local target_mac="$1"
+  local token
+  local ip
+  
+  # Attempt 1: Direct MAC
+  ndsctl deauth "$target_mac" >/dev/null 2>&1 || true
+  
+  # If still Authenticated, attempt 2: Token
+  if ndsctl status 2>/dev/null | grep -A 2 -i "$target_mac" | grep -q "State: Authenticated"; then
+    token="$(ndsctl status 2>/dev/null | awk -v m="$target_mac" 'tolower($0) ~ tolower(m) {getline; if ($1 == "Token:") print $2}')"
+    if [ -n "$token" ]; then
+      log "MAC deauth failed. Retrying with Token: $token"
+      ndsctl deauth "$token" >/dev/null 2>&1 || true
+    fi
+  fi
+  
+  # If still Authenticated, attempt 3: IP
+  if ndsctl status 2>/dev/null | grep -A 2 -i "$target_mac" | grep -q "State: Authenticated"; then
+    ip="$(ndsctl status 2>/dev/null | awk -v m="$target_mac" 'tolower($0) ~ tolower(m) {for(i=1;i<=NF;i++) if($i=="IP:") print $(i+1)}')"
+    if [ -n "$ip" ]; then
+      log "Token deauth failed. Retrying with IP: $ip"
+      ndsctl deauth "$ip" >/dev/null 2>&1 || true
+    fi
+  fi
+}
+
 poll_deauth() {
-  local url response count i mac session_id
+  local url response count i mac session_id still_connected
   url="${FRAPPE_BASE_URL%/}${DEAUTH_API_PATH}?nas_identifier=$(urlencode "$NAS_IDENTIFIER")&secret=$(urlencode "$NAS_SECRET")"
   response="$(wget -qO- --timeout=15 "$url" 2>/dev/null || true)"
   [ -n "$response" ] || return 0
@@ -136,32 +163,24 @@ poll_deauth() {
   i=0
   while [ "$i" -lt "$count" ]; do
     mac="$(printf '%s' "$response" | jsonfilter -e "@.message.actions[$i].mac_address" 2>/dev/null || true)"
-    ip="$(printf '%s' "$response" | jsonfilter -e "@.message.actions[$i].ip_address" 2>/dev/null || true)"
     session_id="$(printf '%s' "$response" | jsonfilter -e "@.message.actions[$i].session_id" 2>/dev/null || true)"
     
-    if [ -n "$session_id" ]; then
-      log "Deauthenticating (Session: $session_id)"
+    if [ -n "$session_id" ] && [ -n "$mac" ]; then
+      log "Deauthenticating MAC $mac (Session: $session_id)"
       
-      # Try MAC first, then IP
-      if [ -n "$mac" ]; then
-        ndsctl deauth "$mac" >/dev/null 2>&1 || true
-      fi
-      if [ -n "$ip" ]; then
-        ndsctl deauth "$ip" >/dev/null 2>&1 || true
-      fi
+      # Aggressively attempt to kill by MAC, Token, and IP
+      kill_client_by_mac "$mac"
       
-      # Verify if they are actually disconnected
+      # Verify if they are ACTUALLY kicked (no longer Authenticated)
       still_connected=0
-      if [ -n "$mac" ]; then
-        if ndsctl json 2>/dev/null | grep -q "\"mac\":\"$mac\""; then
-          still_connected=1
-        fi
+      if ndsctl status 2>/dev/null | grep -A 2 -i "$mac" | grep -q "State: Authenticated"; then
+        still_connected=1
       fi
       
       if [ "$still_connected" -eq 1 ]; then
-        log "ERROR: Failed to deauth MAC $mac"
+        log "ERROR: Failed to deauth MAC $mac using all methods."
       else
-        log "Successfully deauthed, sending ack to Frappe"
+        log "Successfully deauthed MAC $mac, sending ack to Frappe"
         wget -qO- "${FRAPPE_BASE_URL%/}${ACK_API_PATH}?nas_identifier=$(urlencode "$NAS_IDENTIFIER")&secret=$(urlencode "$NAS_SECRET")&session_id=$(urlencode "$session_id")&result=ok" >/dev/null 2>&1 || true
       fi
     fi
