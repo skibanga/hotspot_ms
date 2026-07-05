@@ -114,6 +114,9 @@ uci commit opennds
 /etc/init.d/opennds restart
 ```
 
+> **IMPORTANT: Android HTTPS Captive Portal Bug**
+> If you enforce HTTPS (Let's Encrypt) on your Frappe server, Android devices will drop the `clientmac` parameter during the HTTP to HTTPS redirect. To bypass this issue and properly collect MAC addresses for all devices, you must configure OpenNDS using Mode 3 (ThemeSpec). Please follow the instructions in [OPENNDS_ROUTER_SETUP.md](OPENNDS_ROUTER_SETUP.md) for the exact script and configuration details.
+
 Notes:
 - On OpenWrt 25.12 + openNDS 10.3.1, `uci: Invalid argument` can appear on start/restart even when service still works.
 - Real success check is:
