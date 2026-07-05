@@ -46,7 +46,7 @@ generate_splash_sequence() {
 		<title>Redirecting...</title>
 		<script>
 			// Replace 'hotspot.uniquemindpro.xyz' with your actual Frappe domain!
-			var redirUrl = \"https://hotspot.uniquemindpro.xyz/hotspot/login?clientmac=${clientmac}&clientip=${clientip}&tok=${tok}&redir=\" + encodeURIComponent(\"${redir}\");
+			var redirUrl = \"https://hotspot.uniquemindpro.xyz/hotspot/login?fas=${fas}\";
 			window.location.replace(redirUrl);
 		</script>
 		</head>

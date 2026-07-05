@@ -140,6 +140,7 @@ def _normalize_opennds_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "clientmacaddress": "clientmac",
         "gateway_addr": "gatewayaddress",
         "gateway_port": "gatewayport",
+        "token": "tok",
     }
     for source, target in aliases.items():
         if source in normalized and target not in normalized:
