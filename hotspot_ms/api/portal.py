@@ -385,8 +385,9 @@ def _find_restorable_voucher(mac_address: str, nas_name: str | None = None):
     )
 
     for row in rows:
-        if row.get("last_nas") and nas_name and row.get("last_nas") != nas_name:
-            continue
+        # Relaxed NAS check to support roaming / mismatched NAS IDs
+        # if row.get("last_nas") and nas_name and row.get("last_nas") != nas_name:
+        #     continue
 
         voucher = frappe.get_doc("Hotspot Voucher", row["name"])
         if _sync_voucher_status(voucher):
@@ -1063,7 +1064,17 @@ def build_opennds_redirect(
             mode="fas-secure",
         )
 
-    auth_base = authaction or fas
+    if not authaction and gatewayaddress:
+        host_port = _normalize_host_port(gatewayaddress)
+        if not host_port:
+            host_port = gatewayaddress
+        if ":" not in host_port:
+            port = gatewayport or _get_opennds_gateway_port(nas_device)
+            host_port = f"{host_port}:{port}" if port else host_port
+        auth_path = (authdir or _default_opennds_authdir()).lstrip("/")
+        authaction = f"http://{host_port}/{auth_path}/"
+
+    auth_base = authaction or (fas if fas and fas.startswith("http") else None)
     if auth_base and tok:
         redirect_url = _append_query(auth_base, {"tok": tok, "redir": status_url})
         return _success(
