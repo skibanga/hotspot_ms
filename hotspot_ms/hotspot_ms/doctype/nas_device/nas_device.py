@@ -118,6 +118,17 @@ uci commit network
 echo "3. Configuring OpenNDS..."
 uci set opennds.@opennds[0].gatewayport='{doc.opennds_gateway_port}'
 uci set opennds.@opennds[0].faskey='{doc.opennds_fas_key}'
+uci set opennds.@opennds[0].max_clients_per_token='1'
+uci set opennds.@opennds[0].login_option_enabled='3'
+uci set opennds.@opennds[0].theme_spec_path='/usr/lib/opennds/theme_click-to-continue.sh'
+
+# Clear and rebuild preauthenticated_users
+uci delete opennds.@opennds[0].preauthenticated_users || true
+uci add_list opennds.@opennds[0].preauthenticated_users='allow udp port 53'
+uci add_list opennds.@opennds[0].preauthenticated_users='allow tcp port 53'
+uci add_list opennds.@opennds[0].preauthenticated_users='allow tcp port 443 to 157.173.109.148'
+uci add_list opennds.@opennds[0].preauthenticated_users='allow tcp port 80 to 157.173.109.148'
+
 uci commit opennds
 
 echo "4. Creating Agent Configuration..."
@@ -127,7 +138,32 @@ NAS_IDENTIFIER="{nas_id}"
 NAS_SECRET="{doc.shared_secret}"
 EOF
 
-echo "5. Installing Worker Scripts..."
+echo "5. Installing Custom Theme and Worker Scripts..."
+
+mkdir -p /usr/lib/opennds
+cat << 'EOF' > /usr/lib/opennds/theme_click-to-continue.sh
+#!/bin/sh
+title="theme_click-to-continue"
+generate_splash_sequence() {
+	echo "<!DOCTYPE html>
+		<html>
+		<head>
+		<meta charset=\"utf-8\">
+		<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+		<title>Redirecting...</title>
+		<script>
+			var redirUrl = \"{site_url}/hotspot/login?fas=\$fas\";
+			window.location.replace(redirUrl);
+		</script>
+		</head>
+		<body style=\"background-color:#101622; color:white; font-family:sans-serif; text-align:center; padding-top:50px;\">
+		<p>Redirecting to secure login portal...</p>
+		</body>
+		</html>
+	"
+}
+EOF
+chmod +x /usr/lib/opennds/theme_click-to-continue.sh
 
 # Script 1: Restore Active Clients
 cat << 'EOF' > /usr/bin/hotspot_restore_active_clients.sh
