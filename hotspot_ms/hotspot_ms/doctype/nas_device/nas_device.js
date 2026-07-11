@@ -65,5 +65,42 @@ frappe.ui.form.on("Nas Device", {
 
 			dialog.show();
 		});
+		frm.add_custom_button(__("Generate Provisioning Script"), async () => {
+			const result = await frappe.call({
+				method: "hotspot_ms.hotspot_ms.doctype.nas_device.nas_device.generate_openwrt_provisioning_script",
+				args: {
+					name: frm.doc.name
+				},
+			});
+
+			const script = result.message && result.message.script;
+			if (!script) {
+				frappe.msgprint(__("Could not generate provisioning script."));
+				return;
+			}
+
+			const dialog = new frappe.ui.Dialog({
+				title: __("OpenWrt Provisioning Script"),
+				fields: [
+					{
+						fieldname: "script",
+						fieldtype: "Code",
+						label: __("Bash Script"),
+						options: "Shell",
+						read_only: 1,
+						default: script,
+					},
+				],
+				size: "extra-large",
+				primary_action_label: __("Copy"),
+				primary_action() {
+					frappe.utils.copy_to_clipboard(script);
+					dialog.hide();
+					frappe.show_alert({ message: __("Script copied to clipboard"), indicator: "green" });
+				},
+			});
+
+			dialog.show();
+		});
 	},
 });
