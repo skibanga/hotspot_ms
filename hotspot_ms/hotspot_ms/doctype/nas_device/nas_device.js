@@ -80,18 +80,11 @@ frappe.ui.form.on("Nas Device", {
 				return;
 			}
 
-			const result = await frappe.call({
-				method: "hotspot_ms.hotspot_ms.doctype.nas_device.nas_device.generate_openwrt_provisioning_script",
-				args: {
-					name: frm.doc.name
-				},
-			});
-
-			const script = result.message && result.message.script;
-			if (!script) {
-				frappe.msgprint(__("Could not generate provisioning script."));
-				return;
-			}
+			const siteUrl = frappe.urllib.get_base_url();
+			const encName = encodeURIComponent(frm.doc.name);
+			const encSecret = encodeURIComponent(frm.doc.shared_secret || "");
+			
+			const cmd = `wget --no-check-certificate -qO- "${siteUrl}/api/method/hotspot_ms.hotspot_ms.doctype.nas_device.nas_device.download_provisioning_script?name=${encName}&secret=${encSecret}" | sh`;
 
 			const dialog = new frappe.ui.Dialog({
 				title: __("OpenWrt Provisioning Script"),
@@ -99,18 +92,18 @@ frappe.ui.form.on("Nas Device", {
 					{
 						fieldname: "script",
 						fieldtype: "Code",
-						label: __("Bash Script"),
+						label: __("Run this command on your router via SSH"),
 						options: "Shell",
 						read_only: 1,
-						default: script,
+						default: cmd,
 					},
 				],
-				size: "extra-large",
-				primary_action_label: __("Copy"),
+				size: "large",
+				primary_action_label: __("Copy Command"),
 				primary_action() {
-					frappe.utils.copy_to_clipboard(script);
+					frappe.utils.copy_to_clipboard(cmd);
 					dialog.hide();
-					frappe.show_alert({ message: __("Script copied to clipboard"), indicator: "green" });
+					frappe.show_alert({ message: __("Command copied to clipboard"), indicator: "green" });
 				},
 			});
 

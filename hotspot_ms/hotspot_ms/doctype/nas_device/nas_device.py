@@ -699,3 +699,16 @@ echo " Provisioning Complete! "
 echo "=========================================="
 """
 	return {"ok": True, "script": script}
+
+
+@frappe.whitelist(allow_guest=True)
+def download_provisioning_script(name: str, secret: str):
+	doc = frappe.get_doc("Nas Device", name)
+	if doc.shared_secret != secret:
+		frappe.local.response["http_status_code"] = 403
+		return "Unauthorized"
+
+	res = generate_openwrt_provisioning_script(name)
+	frappe.response["type"] = "download"
+	frappe.response["filename"] = "provision.sh"
+	frappe.response["filecontent"] = res.get("script", "").encode("utf-8")
