@@ -144,7 +144,7 @@ mkdir -p /usr/lib/opennds
 cat << 'EOF' > /usr/lib/opennds/theme_click-to-continue.sh
 #!/bin/sh
 title="theme_click-to-continue"
-generate_splash_sequence() {
+generate_splash_sequence() {{
 	echo "<!DOCTYPE html>
 		<html>
 		<head>
@@ -161,7 +161,7 @@ generate_splash_sequence() {
 		</body>
 		</html>
 	"
-}
+}}
 EOF
 chmod +x /usr/lib/opennds/theme_click-to-continue.sh
 
