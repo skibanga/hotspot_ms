@@ -34,7 +34,13 @@ Default plans inserted:
 
 ## 2) Getting Started: Provisioning a Router
 
-To connect a new OpenWrt router to your Hotspot MS backend, you must first register it in ERPNext and then deploy the automated bootstrapper.
+To connect a new OpenWrt router to your Hotspot MS backend, you must first have OpenWrt installed, register the router in ERPNext, and then deploy the automated bootstrapper.
+
+**Step 0: Install OpenWrt (For Custom Mini-PCs)**
+If you are building your own router using an x86/64 Mini-PC instead of an off-the-shelf router:
+1. Download the firmware from the [OpenWrt 25.12.4 x86/64 Archive](https://archive.openwrt.org/releases/25.12.4/targets/x86/64/).
+2. We highly recommend downloading the `generic-squashfs-combined-efi.img.gz` image. This supports modern UEFI booting and allows for easy factory resets via the web interface.
+3. Flash the extracted `.img` file to your Mini-PC's internal drive or bootable USB using a tool like [BalenaEtcher](https://etcher.balena.io/) or Rufus.
 
 **Step 1: Register the NAS Device**
 1. Log into your ERPNext desk and search for **Nas Device**.
