@@ -131,6 +131,28 @@ uci add_list opennds.@opennds[0].preauthenticated_users='allow tcp port 80 to 15
 
 uci commit opennds
 
+echo "3b. Applying Hardening and Anti-Tethering Rules..."
+mkdir -p /usr/share/nftables.d/table-pre/
+cat << 'EOF' > /usr/share/nftables.d/table-pre/99-hotspot-hardening.nft
+chain hotspot_hardening {
+	type filter hook prerouting priority mangle; policy accept;
+
+	# Anti-Tethering: Drop packets coming from LAN with TTL 63
+	iifname { "br-lan", "eth1" } ip ttl 63 counter drop
+	iifname { "br-lan", "eth1" } ip6 hoplimit 63 counter drop
+
+	# Block common Proxy & VPN bypass ports (NetShare, PDANet, etc)
+	iifname { "br-lan", "eth1" } tcp dport { 1080, 3128, 7777, 8080, 8243, 10808 } counter drop
+	iifname { "br-lan", "eth1" } udp dport { 1080, 3128, 7777, 8080, 8243, 10808 } counter drop
+}
+EOF
+
+# Ensure wireless client isolation is enabled
+for section in $(uci show wireless 2>/dev/null | sed -n 's/^wireless\.\([^=]*\)=wifi-iface$/\1/p'); do
+	uci -q set "wireless.$section.isolate='1'" || true
+done
+uci commit wireless || true
+
 echo "4. Creating Agent Configuration..."
 cat << 'EOF' > /etc/hotspot_restore.conf
 FRAPPE_BASE_URL="{site_url}"
