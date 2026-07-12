@@ -32,114 +32,21 @@ Default plans inserted:
 - `TSh 1000 - 24 Hours`
 - `TSh 5000 - 7 Days`
 
-## 2) OpenWrt Network Setup (WAN + LAN USB Adapter)
+## 2) Hardware Setup (USB Adapters)
 
-Assumption:
-- `eth0` = WAN (to upstream/main router)
-- `eth1` = LAN (USB ethernet adapter to AP/switch)
-
-Install USB ethernet kernel modules:
-
+If you are using a standard OpenWrt router, you can skip this step. 
+If you are using a custom device with a USB ethernet adapter (like a Mini-PC), ensure your interfaces are assigned correctly (e.g., WAN to `eth0` and LAN to `eth1`) before provisioning:
 ```sh
-apk update
-apk add kmod-usb-net kmod-usb-net-asix kmod-usb-net-rtl8152 kmod-usb-net-cdc-ether
-```
-
-Configure interfaces:
-
-```sh
-uci set network.wan=interface
-uci set network.wan.device='eth0'
-uci set network.wan.proto='dhcp'
-
-uci set network.lan=interface
 uci set network.lan.device='eth1'
-uci set network.lan.proto='static'
-uci set network.lan.ipaddr='192.168.10.1'
-uci set network.lan.netmask='255.255.255.0'
-
 uci commit network
 /etc/init.d/network restart
 ```
 
-Enable DHCP on LAN:
+## 3) OpenWrt Automated Provisioning
 
-```sh
-uci set dhcp.lan.interface='lan'
-uci set dhcp.lan.start='100'
-uci set dhcp.lan.limit='200'
-uci set dhcp.lan.leasetime='12h'
-uci commit dhcp
-/etc/init.d/dnsmasq restart
-```
+The manual installation steps for OpenNDS and background worker scripts have been completely replaced by an automated installer!
 
-Verify:
-
-```sh
-ifstatus wan
-ip a
-ip route
-ping -c 3 8.8.8.8
-```
-
-## 3) Install and Configure openNDS
-
-Install openNDS and dependencies:
-
-```sh
-apk add opennds ca-bundle ca-certificates php8-cli php8-mod-openssl dnsmasq-full
-[ -x /usr/bin/php ] || ln -s /usr/bin/php8 /usr/bin/php
-```
-
-Configure FAS (external portal at Frappe):
-
-```sh
-uci set opennds.@opennds[0].enabled='1'
-uci set opennds.@opennds[0].gatewayinterface='eth1'
-uci set opennds.@opennds[0].fasremoteip='157.173.109.148'
-uci set opennds.@opennds[0].fasremotefqdn='hotspot.uniquemindpro.xyz'
-uci set opennds.@opennds[0].fasport='443'
-uci set opennds.@opennds[0].faspath='/hotspot/login'
-uci set opennds.@opennds[0].fas_secure_enabled='0'
-uci set opennds.@opennds[0].fassecureenabled='0'
-
-uci -q delete opennds.@opennds[0].preauthenticated_users
-uci add_list opennds.@opennds[0].preauthenticated_users='allow tcp port 443 to 157.173.109.148'
-uci add_list opennds.@opennds[0].preauthenticated_users='allow tcp port 80 to 157.173.109.148'
-uci add_list opennds.@opennds[0].preauthenticated_users='allow udp port 53'
-uci add_list opennds.@opennds[0].preauthenticated_users='allow tcp port 53'
-
-uci commit opennds
-/etc/init.d/opennds enable
-/etc/init.d/opennds restart
-```
-
-> **IMPORTANT: Android HTTPS Captive Portal Bug**
-> If you enforce HTTPS (Let's Encrypt) on your Frappe server, Android devices will drop the `clientmac` parameter during the HTTP to HTTPS redirect. To bypass this issue and properly collect MAC addresses for all devices, you must configure OpenNDS using Mode 3 (ThemeSpec). Please follow the instructions in [OPENNDS_ROUTER_SETUP.md](OPENNDS_ROUTER_SETUP.md) for the exact script and configuration details.
-
-Notes:
-- On OpenWrt 25.12 + openNDS 10.3.1, `uci: Invalid argument` can appear on start/restart even when service still works.
-- Real success check is:
-
-```sh
-pgrep -af opennds
-ls -l /tmp/ndsctl.sock
-ndsctl status
-```
-
-## 4) Link openNDS to Frappe Portal
-
-Test router can reach portal:
-
-```sh
-wget -O /tmp/portal.html https://hotspot.uniquemindpro.xyz/hotspot/login
-head -n 20 /tmp/portal.html
-```
-
-Client test:
-1. Connect client to hotspot LAN/Wi-Fi.
-2. Open `http://neverssl.com`.
-3. You should be redirected to `https://hotspot.uniquemindpro.xyz/hotspot/login?...`.
+Please refer to **Section 8) OpenWrt Automated Provisioning & Worker Services** below for the One-Liner Bootstrapper command that sets up everything instantly.
 
 ## 5) Frappe DocTypes Used in This Integration
 
@@ -207,46 +114,33 @@ Manual run:
 bench --site hotspot.uniquemindpro.xyz execute hotspot_ms.tasks.close_expired_or_used_sessions
 ```
 
-## 8) OpenWrt Worker Services (Automation)
+## 8) OpenWrt Automated Provisioning & Worker Services
 
-Enabled services:
+Instead of manually installing dependencies, configuring OpenNDS, and writing worker scripts, the entire process is now fully automated using a **One-Liner Bootstrapper**.
 
-```sh
-/etc/init.d/opennds enable
-/etc/init.d/hotspot_deauth enable
-/etc/init.d/opennds_watchdog enable
+To provision a new router:
+1. Create a new `Nas Device` record in ERPNext.
+2. Enter the router's details (Name, default IP `192.168.10.254`, and a strong `Shared Secret`).
+3. Click the **Generate FAS Key** button to create a secure token for OpenNDS.
+4. Save the document.
+5. Click **Generate Provisioning Script**.
+
+ERPNext will generate a single command:
+```bash
+wget --no-check-certificate -qO- "https://<your-site>/api/method/hotspot_ms.hotspot_ms.doctype.nas_device.nas_device.download_provisioning_script?name=<Nas_Name>&secret=<Secret>" | sh
 ```
 
-Check running:
+Paste this command into your OpenWrt SSH terminal. It will automatically:
+- Install required USB network drivers
+- Configure your LAN IP address
+- Setup and configure OpenNDS (FAS settings, whitelist ports)
+- Install custom worker scripts (`hotspot_restore_active_clients.sh`, `hotspot_deauth_worker.sh`, `hotspot_sync_session_usage.sh`)
+- Schedule them to run in the background
+- Restart all necessary services
 
+Verify that the background workers are running:
 ```sh
-pgrep -af 'opennds|hotspot_deauth_worker|opennds_watchdog'
-```
-
-Session restore worker:
-
-```sh
-install -m 0755 /root/openwrt_restore_active_clients.sh /usr/bin/hotspot_restore_active_clients.sh
-install -m 0755 /root/openwrt_hotspot_restore.init /etc/init.d/hotspot_restore
-
-cat >/etc/hotspot_restore.conf <<'EOF'
-FRAPPE_BASE_URL='https://hotspot.uniquemindpro.xyz'
-NAS_IDENTIFIER='OpenWrt-Main'
-NAS_SECRET='REPLACE_WITH_NAS_SHARED_SECRET'
-POLL_INTERVAL='15'
-EOF
-
-/etc/init.d/hotspot_restore enable
-/etc/init.d/hotspot_restore start
-```
-
-Manual one-shot test:
-
-```sh
-FRAPPE_BASE_URL='https://hotspot.uniquemindpro.xyz' \
-NAS_IDENTIFIER='OpenWrt-Main' \
-NAS_SECRET='<NAS_SHARED_SECRET>' \
-/usr/bin/hotspot_restore_active_clients.sh --once
+pgrep -af 'hotspot'
 ```
 
 ## 9) Tailwind CSS (Portal UI)
