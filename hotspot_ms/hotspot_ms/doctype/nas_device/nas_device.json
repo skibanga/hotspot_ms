@@ -45,6 +45,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "default": "192.168.10.254",
    "fieldname": "ip_address",
    "fieldtype": "Data",
    "in_list_view": 1,
