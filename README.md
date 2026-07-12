@@ -32,36 +32,56 @@ Default plans inserted:
 - `TSh 1000 - 24 Hours`
 - `TSh 5000 - 7 Days`
 
-## 2) Hardware Setup (USB Adapters)
+## 2) Getting Started: Provisioning a Router
 
-If you are using a standard OpenWrt router, you can skip this step. 
-If you are using a custom device with a USB ethernet adapter (like a Mini-PC), ensure your interfaces are assigned correctly (e.g., WAN to `eth0` and LAN to `eth1`) before provisioning:
-```sh
-uci set network.lan.device='eth1'
-uci commit network
-/etc/init.d/network restart
+To connect a new OpenWrt router to your Hotspot MS backend, you must first register it in ERPNext and then deploy the automated bootstrapper.
+
+**Step 1: Register the NAS Device**
+1. Log into your ERPNext desk and search for **Nas Device**.
+2. Click **Add Nas Device**.
+3. Fill in the required fields:
+   - **Short Name / Device Name**: Give it a recognizable name (e.g., `OpenWrt-Branch-1`).
+   - **IP Address**: Leave the default `192.168.10.254` (or enter your router's specific LAN IP).
+   - **NAS Type**: Select `OpenWrt`.
+   - **Shared Secret**: Enter a strong, random password (this secures the API calls between the router and the cloud).
+4. Save the document.
+5. Click the **Generate FAS Key** button. This creates the cryptographic token used by OpenNDS to authenticate users.
+
+**Step 2: Deploy to the Router**
+1. On the saved `Nas Device` record, click the **Generate Provisioning Script** button.
+2. A custom One-Liner Bootstrapper command will appear. It looks like this:
+
+```bash
+wget --no-check-certificate -qO- "https://<your-site>/api/method/hotspot_ms...download_provisioning_script?name=<Nas_Name>&secret=<Secret>" | sh
 ```
 
-## 3) OpenWrt Automated Provisioning
+3. Connect to your OpenWrt router via SSH (e.g., `ssh root@192.168.1.1`).
+4. Paste the command and hit Enter.
 
-The manual installation steps for OpenNDS and background worker scripts have been completely replaced by an automated installer!
+The bootstrapper will automatically:
+- Install all required USB network drivers
+- Configure your LAN IP address
+- Setup and configure OpenNDS (FAS settings, whitelist ports)
+- Install custom worker scripts (`hotspot_restore_active_clients`, `hotspot_deauth_worker`, `hotspot_sync_session_usage`)
+- Apply **Advanced Anti-Tethering** and **Proxy Blocking** firewall rules
+- Restart all necessary services
 
-Please refer to **Section 8) OpenWrt Automated Provisioning & Worker Services** below for the One-Liner Bootstrapper command that sets up everything instantly.
+Your router is now fully provisioned and ready to serve the captive portal!
 
-## 5) Frappe DocTypes Used in This Integration
+> **Hardware Note:** If you are using a custom device with a USB ethernet adapter (like a Mini-PC), ensure your interfaces are assigned correctly (e.g., WAN to `eth0` and LAN to `eth1`) before running the provisioning script:
+> ```sh
+> uci set network.lan.device='eth1'
+> uci commit network
+> /etc/init.d/network restart
+> ```
+
+## 3) Frappe DocTypes Used in This Integration
 
 - `Hotspot Plan`: package definition (price, validity, limits).
 - `Hotspot Voucher`: voucher code, status, device lock (`device_mac`), expiry, usage.
 - `Hotspot Session`: session lifecycle, IP/MAC, counters, terminate cause.
 - `Nas Device`: router identity and shared secret for pull/ack APIs.
 - `Voucher Batch`: bulk voucher generation.
-
-Important `Nas Device` example:
-- `device_name`: `OpenWrt-Main`
-- `ip_address`: `192.168.10.1`
-- `nas_type`: `OpenWrt`
-- `enabled`: `1`
-- `shared_secret`: strong secret used by router workers
 
 ## 6) Frappe APIs in Use
 
@@ -114,34 +134,7 @@ Manual run:
 bench --site hotspot.uniquemindpro.xyz execute hotspot_ms.tasks.close_expired_or_used_sessions
 ```
 
-## 8) OpenWrt Automated Provisioning & Worker Services
 
-Instead of manually installing dependencies, configuring OpenNDS, and writing worker scripts, the entire process is now fully automated using a **One-Liner Bootstrapper**.
-
-To provision a new router:
-1. Create a new `Nas Device` record in ERPNext.
-2. Enter the router's details (Name, default IP `192.168.10.254`, and a strong `Shared Secret`).
-3. Click the **Generate FAS Key** button to create a secure token for OpenNDS.
-4. Save the document.
-5. Click **Generate Provisioning Script**.
-
-ERPNext will generate a single command:
-```bash
-wget --no-check-certificate -qO- "https://<your-site>/api/method/hotspot_ms.hotspot_ms.doctype.nas_device.nas_device.download_provisioning_script?name=<Nas_Name>&secret=<Secret>" | sh
-```
-
-Paste this command into your OpenWrt SSH terminal. It will automatically:
-- Install required USB network drivers
-- Configure your LAN IP address
-- Setup and configure OpenNDS (FAS settings, whitelist ports)
-- Install custom worker scripts (`hotspot_restore_active_clients.sh`, `hotspot_deauth_worker.sh`, `hotspot_sync_session_usage.sh`)
-- Schedule them to run in the background
-- Restart all necessary services
-
-Verify that the background workers are running:
-```sh
-pgrep -af 'hotspot'
-```
 
 ## 9) Tailwind CSS (Portal UI)
 
