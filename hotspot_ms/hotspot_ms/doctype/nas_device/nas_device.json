@@ -85,7 +85,8 @@
   {
    "fieldname": "opennds_fas_key",
    "fieldtype": "Small Text",
-   "label": "openNDS FAS Key"
+   "label": "openNDS FAS Key",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_2",

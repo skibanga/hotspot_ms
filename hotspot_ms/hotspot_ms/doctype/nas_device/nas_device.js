@@ -26,6 +26,11 @@ frappe.ui.form.on("Nas Device", {
 		});
 
 		frm.add_custom_button(__("Generate Hardening Bundle"), async () => {
+			if (frm.is_dirty()) {
+				frappe.msgprint(__("Please save the document before generating the script."));
+				return;
+			}
+
 			const result = await frappe.call({
 				method: "hotspot_ms.hotspot_ms.doctype.nas_device.nas_device.generate_openwrt_hardening_bundle",
 				args: {
@@ -66,6 +71,15 @@ frappe.ui.form.on("Nas Device", {
 			dialog.show();
 		});
 		frm.add_custom_button(__("Generate Provisioning Script"), async () => {
+			if (frm.is_dirty()) {
+				frappe.msgprint(__("Please save the document before generating the script."));
+				return;
+			}
+			if (!frm.doc.opennds_fas_key) {
+				frappe.msgprint(__("Please generate the FAS Key first."));
+				return;
+			}
+
 			const result = await frappe.call({
 				method: "hotspot_ms.hotspot_ms.doctype.nas_device.nas_device.generate_openwrt_provisioning_script",
 				args: {
