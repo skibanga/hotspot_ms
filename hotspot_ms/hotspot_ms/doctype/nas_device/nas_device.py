@@ -109,7 +109,7 @@ echo "=========================================="
 
 echo "1. Installing required packages..."
 apk update || true
-apk add kmod-usb-net-rtl8152 kmod-usb-net-asix || true
+apk add kmod-usb-net-rtl8152 kmod-usb-net-asix ca-certificates ca-bundle || true
 
 echo "2. Configuring Network..."
 uci set network.lan.ipaddr='{doc.ip_address}'
