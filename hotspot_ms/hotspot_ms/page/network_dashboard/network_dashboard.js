@@ -5,7 +5,6 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
 		single_column: true
 	});
 
-    // Add Tailwind via CDN for this page specifically to ensure premium styling
     if (!document.getElementById('tailwind-cdn')) {
         let script = document.createElement('script');
         script.id = 'tailwind-cdn';
@@ -15,14 +14,11 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
 
     $(wrapper).find('.layout-main-section').append(`
         <div id="noc-dashboard-app" class="p-6 bg-slate-50 min-h-screen">
-            <!-- Header section removed since Frappe already has a page title, but we can keep a subtle sub-header if needed -->
-            
             <div v-if="loading && firstLoad" class="flex justify-center items-center h-64">
                 <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
             </div>
             
             <div v-else>
-                <!-- KPI Cards -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200 transition-all hover:shadow-md">
                         <div class="flex items-center justify-between">
@@ -68,7 +64,6 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Hardware Health -->
                     <div class="lg:col-span-1 space-y-6">
                         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                             <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
@@ -87,7 +82,6 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
                                         <span class="text-xs font-mono text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md">{{ router.vpn_ip_address || 'No VPN IP' }}</span>
                                     </div>
                                     
-                                    <!-- APs for this Router -->
                                     <div v-if="getApsForRouter(router.name).length" class="ml-6 mt-3 space-y-2">
                                         <div v-for="ap in getApsForRouter(router.name)" :key="ap.name" class="flex items-center justify-between text-sm">
                                             <div class="flex items-center text-slate-600">
@@ -102,7 +96,6 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
                         </div>
                     </div>
 
-                    <!-- Live Active Users -->
                     <div class="lg:col-span-2">
                         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                             <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
@@ -168,46 +161,68 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
         </div>
     `);
 
-    // Initialize Vue App
     frappe.require('https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js', () => {
         new Vue({
             el: '#noc-dashboard-app',
-                        }
-                        this.loading = false;
-                    }
-                });
+            data: {
+                loading: true,
+                firstLoad: true,
+                routers: [],
+                aps: [],
+                active_clients: [],
+                kicking: null
             },
-            getApsForRouter(routerName) {
-                return this.aps.filter(ap => ap.nas_device === routerName);
+            mounted() {
+                this.fetchData();
+                setInterval(() => this.fetchData(), 30000);
             },
-            formatBytes(bytes, decimals = 2) {
-                if (!+bytes) return '0 Bytes';
-                const k = 1024;
-                const dm = decimals < 0 ? 0 : decimals;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-            },
-            kickUser(client) {
-                frappe.confirm(`Are you sure you want to instantly disconnect ${client.mac_address}?`, () => {
-                    this.kicking = client.mac_address;
+            methods: {
+                fetchData() {
+                    this.loading = true;
                     frappe.call({
-                        method: 'hotspot_ms.hotspot_ms.page.network_dashboard.network_dashboard.kick_client',
-                        args: {
-                            mac_address: client.mac_address,
-                            nas_device_name: client.nas_device
-                        },
+                        method: 'hotspot_ms.hotspot_ms.page.network_dashboard.network_dashboard.get_dashboard_data',
                         callback: (r) => {
-                            this.kicking = null;
-                            if (!r.exc) {
-                                frappe.show_alert({message: `Successfully disconnected ${client.mac_address}`, indicator: 'green'});
-                                this.fetchData();
+                            if (r.message) {
+                                this.routers = r.message.routers || [];
+                                this.aps = r.message.aps || [];
+                                this.active_clients = r.message.active_clients || [];
                             }
+                            this.loading = false;
+                            this.firstLoad = false;
                         }
                     });
-                });
+                },
+                getApsForRouter(routerName) {
+                    return this.aps.filter(ap => ap.nas_device === routerName);
+                },
+                formatBytes(bytes, decimals = 2) {
+                    if (!+bytes) return '0 Bytes';
+                    const k = 1024;
+                    const dm = decimals < 0 ? 0 : decimals;
+                    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return \`\${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} \${sizes[i]}\`;
+                },
+                kickUser(client) {
+                    frappe.confirm(\`Are you sure you want to instantly disconnect \${client.mac_address}?\`, () => {
+                        this.kicking = client.mac_address;
+                        frappe.call({
+                            method: 'hotspot_ms.hotspot_ms.page.network_dashboard.network_dashboard.kick_client',
+                            args: {
+                                mac_address: client.mac_address,
+                                nas_device_name: client.nas_device
+                            },
+                            callback: (r) => {
+                                this.kicking = null;
+                                if (!r.exc) {
+                                    frappe.show_alert({message: \`Successfully disconnected \${client.mac_address}\`, indicator: 'green'});
+                                    this.fetchData();
+                                }
+                            }
+                        });
+                    });
+                }
             }
-        }
-    });
+        });
     });
 }
