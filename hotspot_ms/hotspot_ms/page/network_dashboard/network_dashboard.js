@@ -105,9 +105,9 @@ frappe.pages['network-dashboard'].on_page_load = function (wrapper) {
                                         <div v-if="router.latest_speed_results && router.latest_speed_results.length" class="space-y-2">
                                             <div v-for="res in router.latest_speed_results" :key="res.interface" class="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-100">
                                                 <div class="flex flex-col">
-                                                    <span class="text-xs font-bold text-slate-800">{{ res.isp }} <span class="text-[10px] font-mono font-medium text-slate-400 bg-white px-1 py-0.5 rounded border border-slate-200 ml-1">{{ res.interface }}</span></span>
-                                                    <span v-if="res.status === 'Offline'" class="text-[10px] font-bold text-rose-500 mt-1 flex items-center"><div class="w-1.5 h-1.5 bg-rose-500 rounded-full mr-1.5"></div> OFFLINE</span>
-                                                    <span v-else-if="res.status === 'Error'" class="text-[10px] font-bold text-rose-500 mt-1 flex items-center"><div class="w-1.5 h-1.5 bg-rose-500 rounded-full mr-1.5"></div> TEST FAILED</span>
+                                                    <span class="text-xs font-bold text-slate-800 uppercase">{{ res.interface }}</span>
+                                                    <span v-if="res.status === 'Offline'" class="text-[10px] font-bold text-rose-500 mt-1 flex items-center"><div class="w-1.5 h-1.5 bg-rose-500 rounded-full mr-1.5"></div> OFFLINE - {{ res.isp }}</span>
+                                                    <span v-else-if="res.status === 'Error'" class="text-[10px] font-bold text-rose-500 mt-1 flex items-center"><div class="w-1.5 h-1.5 bg-rose-500 rounded-full mr-1.5"></div> TEST FAILED - {{ res.isp }}</span>
                                                     <div v-else class="flex space-x-3 mt-1.5 text-xs font-semibold">
                                                         <span class="text-emerald-600 flex items-center" title="Download Speed"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg> {{ res.download_mbps }} Mbps</span>
                                                         <span class="text-blue-600 flex items-center" title="Upload Speed"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg> {{ res.upload_mbps }} Mbps</span>
@@ -278,7 +278,13 @@ frappe.pages['network-dashboard'].on_page_load = function (wrapper) {
                                 // Find the active router object from the array because setInterval might have replaced it while we were waiting!
                                 const currentRouter = this.routers.find(rt => rt.name === router.name);
                                 if (currentRouter) {
-                                    this.$set(currentRouter, 'latest_speed_results', r.message.results);
+                                    // Sort results so Online interfaces are always at the top
+                                    const sortedResults = r.message.results.sort((a, b) => {
+                                        if (a.status === 'Online' && b.status !== 'Online') return -1;
+                                        if (a.status !== 'Online' && b.status === 'Online') return 1;
+                                        return 0;
+                                    });
+                                    this.$set(currentRouter, 'latest_speed_results', sortedResults);
                                 }
                             } else {
                                 frappe.show_alert({
