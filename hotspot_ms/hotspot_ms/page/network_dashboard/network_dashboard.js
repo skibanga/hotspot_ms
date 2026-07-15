@@ -99,11 +99,23 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
                                         </div>
                                         <div v-else class="text-xs text-slate-400 font-medium">Speed Not Tested</div>
                                         
-                                        <button @click="runSpeedTest(router)" :disabled="testingSpeedRouter === router.name" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-3 py-1.5 rounded transition-all flex items-center disabled:opacity-50 shadow-sm">
-                                            <svg v-if="testingSpeedRouter === router.name" class="animate-spin -ml-1 mr-1.5 h-3 w-3 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                            <svg v-else class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                                            {{ testingSpeedRouter === router.name ? 'Testing...' : 'Speedtest' }}
-                                        </button>
+                                        <div class="flex items-center space-x-1.5">
+                                            <div v-if="testingSpeedRouter === router.name" class="flex items-center text-[10px] font-bold text-indigo-500 uppercase tracking-wide mr-2">
+                                                <svg class="animate-spin mr-1.5 h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                                Testing...
+                                            </div>
+                                            <template v-else>
+                                                <button @click="runSpeedTest(router, null)" title="Test Combined Speed" class="text-[10px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-2.5 py-1.5 rounded transition-colors uppercase tracking-wide shadow-sm">
+                                                    Combined
+                                                </button>
+                                                <button @click="runSpeedTest(router, '192.168.18.2')" title="Test WAN 1 Only" class="text-[10px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1.5 rounded transition-colors uppercase tracking-wide">
+                                                    WAN 1
+                                                </button>
+                                                <button @click="runSpeedTest(router, '192.168.8.12')" title="Test WAN 2 Only" class="text-[10px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1.5 rounded transition-colors uppercase tracking-wide">
+                                                    WAN 2
+                                                </button>
+                                            </template>
+                                        </div>>
                                     </div>
                                 </li>
                             </ul>
@@ -245,12 +257,13 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
                         });
                     });
                 },
-                runSpeedTest(router) {
+                runSpeedTest(router, sourceIp = null) {
                     this.testingSpeedRouter = router.name;
                     frappe.call({
                         method: 'hotspot_ms.hotspot_ms.page.network_dashboard.network_dashboard.run_speedtest',
                         args: {
-                            nas_device_name: router.name
+                            nas_device_name: router.name,
+                            source_ip: sourceIp
                         },
                         callback: (r) => {
                             if (r.message && r.message.status === 'success') {
