@@ -9,7 +9,10 @@
   "enabled",
   "column_break_1",
   "ip_address",
+  "vpn_ip_address",
   "nas_type",
+  "status",
+  "last_heartbeat",
   "section_break_1",
   "shared_secret",
   "short_name",
@@ -60,6 +63,27 @@
    "in_list_view": 1,
    "label": "NAS Type",
    "options": "OpenWrt\nMikroTik\nCoovaChilli\nOther"
+  },
+  {
+   "fieldname": "vpn_ip_address",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "VPN IP Address"
+  },
+  {
+   "default": "Offline",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Online\nOffline\nDegraded",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_heartbeat",
+   "fieldtype": "Datetime",
+   "label": "Last Heartbeat",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_1",

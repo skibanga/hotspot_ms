@@ -1,0 +1,80 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:mac_address",
+ "creation": "2026-07-15 12:28:06.165358",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "mac_address",
+  "ip_address",
+  "nas_device",
+  "download_bytes",
+  "upload_bytes",
+  "connected_since"
+ ],
+ "fields": [
+  {
+   "fieldname": "mac_address",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "MAC Address",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "ip_address",
+   "fieldtype": "Data",
+   "label": "IP Address"
+  },
+  {
+   "fieldname": "nas_device",
+   "fieldtype": "Link",
+   "label": "NAS Device",
+   "options": "Nas Device"
+  },
+  {
+   "fieldname": "download_bytes",
+   "fieldtype": "Int",
+   "label": "Download Bytes"
+  },
+  {
+   "fieldname": "upload_bytes",
+   "fieldtype": "Int",
+   "label": "Upload Bytes"
+  },
+  {
+   "fieldname": "connected_since",
+   "fieldtype": "Datetime",
+   "label": "Connected Since"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-15 12:28:06.165358",
+ "modified_by": "Administrator",
+ "module": "Hotspot MS",
+ "name": "Hotspot Active Client",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

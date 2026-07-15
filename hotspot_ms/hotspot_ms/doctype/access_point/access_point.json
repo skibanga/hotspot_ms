@@ -1,0 +1,75 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:ap_name",
+ "creation": "2026-07-15 12:28:05.756467",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "ap_name",
+  "lan_ip",
+  "nas_device",
+  "status",
+  "last_ping"
+ ],
+ "fields": [
+  {
+   "fieldname": "ap_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "AP Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "lan_ip",
+   "fieldtype": "Data",
+   "label": "LAN IP Address"
+  },
+  {
+   "fieldname": "nas_device",
+   "fieldtype": "Link",
+   "label": "Linked NAS Device",
+   "options": "Nas Device"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Online\nOffline"
+  },
+  {
+   "fieldname": "last_ping",
+   "fieldtype": "Datetime",
+   "label": "Last Ping"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-15 12:28:05.756467",
+ "modified_by": "Administrator",
+ "module": "Hotspot MS",
+ "name": "Access Point",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
