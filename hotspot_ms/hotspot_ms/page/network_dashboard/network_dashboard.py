@@ -5,7 +5,18 @@ def get_dashboard_data():
     routers = frappe.get_all("Nas Device", filters={"enabled": 1}, fields=["name", "device_name", "vpn_ip_address", "status", "last_heartbeat"])
     aps = frappe.get_all("Access Point", fields=["name", "ap_name", "lan_ip", "status", "last_ping", "nas_device"])
     active_clients = frappe.get_all("Hotspot Active Client", fields=["name", "mac_address", "ip_address", "nas_device", "download_bytes", "upload_bytes", "connected_since"])
-    
+    for client in active_clients:
+        voucher = frappe.db.get_value("Hotspot Voucher", 
+            {"device_mac": client.mac_address, "status": "Active"}, 
+            ["name", "status"], as_dict=True)
+        
+        if voucher:
+            client.voucher_code = voucher.name
+            client.voucher_status = voucher.status
+        else:
+            client.voucher_code = "None"
+            client.voucher_status = "Null"
+            
     return {
         "routers": routers,
         "aps": aps,

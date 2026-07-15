@@ -111,13 +111,14 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
                                         <tr class="bg-white text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
                                             <th class="px-6 py-4 font-semibold">Device MAC</th>
                                             <th class="px-6 py-4 font-semibold">IP Address</th>
+                                            <th class="px-6 py-4 font-semibold">Voucher</th>
                                             <th class="px-6 py-4 font-semibold">Data (D/U)</th>
                                             <th class="px-6 py-4 font-semibold text-right">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-100">
                                         <tr v-if="active_clients.length === 0">
-                                            <td colspan="4" class="px-6 py-12 text-center text-slate-500">
+                                            <td colspan="5" class="px-6 py-12 text-center text-slate-500">
                                                 <div class="flex flex-col items-center">
                                                     <svg class="w-12 h-12 text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                                                     <p class="font-medium">No active users currently online.</p>
@@ -128,6 +129,13 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
                                         <tr v-for="client in active_clients" :key="client.name" class="hover:bg-slate-50 transition-colors group">
                                             <td class="px-6 py-4 text-slate-700 font-mono text-sm">{{ client.mac_address }}</td>
                                             <td class="px-6 py-4 text-slate-600 text-sm font-medium">{{ client.ip_address }}</td>
+                                            <td class="px-6 py-4">
+                                                <div class="flex flex-col">
+                                                    <span class="text-sm font-semibold text-slate-700">{{ client.voucher_code }}</span>
+                                                    <span v-if="client.voucher_status === 'Null'" class="text-[10px] font-bold text-rose-500 uppercase tracking-wider mt-0.5">Ghost MAC / No Voucher</span>
+                                                    <span v-else class="text-[10px] font-bold text-emerald-500 uppercase tracking-wider mt-0.5">{{ client.voucher_status }}</span>
+                                                </div>
+                                            </td>
                                             <td class="px-6 py-4">
                                                 <div class="flex items-center space-x-3">
                                                     <span class="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-xs font-semibold flex items-center border border-emerald-100">
