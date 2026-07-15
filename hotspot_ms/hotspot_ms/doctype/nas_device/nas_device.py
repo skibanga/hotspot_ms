@@ -134,17 +134,17 @@ uci commit opennds
 echo "3b. Applying Hardening and Anti-Tethering Rules..."
 mkdir -p /usr/share/nftables.d/table-pre/
 cat << 'EOF' > /usr/share/nftables.d/table-pre/99-hotspot-hardening.nft
-chain hotspot_hardening {
+chain hotspot_hardening {{
 	type filter hook prerouting priority mangle; policy accept;
 
 	# Anti-Tethering: Drop packets coming from LAN with TTL 63
-	iifname { "br-lan", "eth1" } ip ttl 63 counter drop
-	iifname { "br-lan", "eth1" } ip6 hoplimit 63 counter drop
+	iifname {{ "br-lan", "eth1" }} ip ttl 63 counter drop
+	iifname {{ "br-lan", "eth1" }} ip6 hoplimit 63 counter drop
 
 	# Block common Proxy & VPN bypass ports (NetShare, PDANet, etc)
-	iifname { "br-lan", "eth1" } tcp dport { 1080, 3128, 7777, 8080, 8243, 10808 } counter drop
-	iifname { "br-lan", "eth1" } udp dport { 1080, 3128, 7777, 8080, 8243, 10808 } counter drop
-}
+	iifname {{ "br-lan", "eth1" }} tcp dport {{ 1080, 3128, 7777, 8080, 8243, 10808 }} counter drop
+	iifname {{ "br-lan", "eth1" }} udp dport {{ 1080, 3128, 7777, 8080, 8243, 10808 }} counter drop
+}}
 EOF
 
 # Ensure wireless client isolation is enabled
