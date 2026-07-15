@@ -113,7 +113,10 @@ def run_speedtest(nas_device_name):
                         ifstatus_out = stdout.read().decode('utf-8')
                         try:
                             ifstatus_json = json.loads(ifstatus_out)
-                            ip = ifstatus_json.get("ipv4-address", [{}])[0].get("address")
+                            ip = None
+                            if "ipv4-address" in ifstatus_json and len(ifstatus_json["ipv4-address"]) > 0:
+                                ip = ifstatus_json["ipv4-address"][0].get("address")
+                                
                             if ip:
                                 # Phase 3: Targeted Speedtest Execution
                                 stdin, stdout, stderr = ssh.exec_command(f"/usr/bin/speedtest-go --json --source={ip}")
@@ -130,17 +133,33 @@ def run_speedtest(nas_device_name):
                                         "download_mbps": round(server.get("dl_speed", 0) / 125000, 1),
                                         "upload_mbps": round(server.get("ul_speed", 0) / 125000, 1)
                                     })
-                                except Exception:
+                                except Exception as st_err:
                                     results.append({
                                         "interface": iface,
                                         "status": "Error",
-                                        "isp": "Speedtest Failed",
+                                        "isp": f"Speedtest Failed: {str(st_err)}",
                                         "ping": 0,
                                         "download_mbps": 0,
                                         "upload_mbps": 0
                                     })
-                        except Exception:
-                            pass
+                            else:
+                                results.append({
+                                    "interface": iface,
+                                    "status": "Error",
+                                    "isp": f"No IPv4 Address Found",
+                                    "ping": 0,
+                                    "download_mbps": 0,
+                                    "upload_mbps": 0
+                                })
+                        except Exception as e:
+                            results.append({
+                                "interface": iface,
+                                "status": "Error",
+                                "isp": f"ifstatus Parse Error: {str(e)}",
+                                "ping": 0,
+                                "download_mbps": 0,
+                                "upload_mbps": 0
+                            })
                             
         ssh.close()
         return {"status": "success", "results": results}

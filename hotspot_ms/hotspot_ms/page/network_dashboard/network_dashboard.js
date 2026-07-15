@@ -1,9 +1,9 @@
-frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
-	var page = frappe.ui.make_app_page({
-		parent: wrapper,
-		title: 'Network Dashboard',
-		single_column: true
-	});
+frappe.pages['network-dashboard'].on_page_load = function (wrapper) {
+    var page = frappe.ui.make_app_page({
+        parent: wrapper,
+        title: 'Network Dashboard',
+        single_column: true
+    });
 
     if (!document.getElementById('tailwind-cdn')) {
         let script = document.createElement('script');
@@ -258,7 +258,7 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
                             callback: (r) => {
                                 this.kicking = null;
                                 if (!r.exc) {
-                                    frappe.show_alert({message: `Successfully disconnected ${client.mac_address}`, indicator: 'green'});
+                                    frappe.show_alert({ message: `Successfully disconnected ${client.mac_address}`, indicator: 'green' });
                                     this.fetchData();
                                 }
                             }
