@@ -91,6 +91,20 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
                                             <span class="text-slate-400 font-mono text-xs">{{ ap.lan_ip }}</span>
                                         </div>
                                     </div>
+                                    
+                                    <div class="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
+                                        <div v-if="router.latest_speed" class="flex space-x-3 text-xs font-semibold">
+                                            <span class="text-emerald-600 flex items-center" title="Download Speed"><svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg> {{ router.latest_speed.download_mbps }} Mbps</span>
+                                            <span class="text-blue-600 flex items-center" title="Upload Speed"><svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg> {{ router.latest_speed.upload_mbps }} Mbps</span>
+                                        </div>
+                                        <div v-else class="text-xs text-slate-400 font-medium">Speed Not Tested</div>
+                                        
+                                        <button @click="runSpeedTest(router)" :disabled="testingSpeedRouter === router.name" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-3 py-1.5 rounded transition-all flex items-center disabled:opacity-50 shadow-sm">
+                                            <svg v-if="testingSpeedRouter === router.name" class="animate-spin -ml-1 mr-1.5 h-3 w-3 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                            <svg v-else class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                            {{ testingSpeedRouter === router.name ? 'Testing...' : 'Speedtest' }}
+                                        </button>
+                                    </div>
                                 </li>
                             </ul>
                         </div>
@@ -178,7 +192,8 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
                 routers: [],
                 aps: [],
                 active_clients: [],
-                kicking: null
+                kicking: null,
+                testingSpeedRouter: null
             },
             mounted() {
                 this.fetchData();
@@ -228,6 +243,33 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
                                 }
                             }
                         });
+                    });
+                },
+                runSpeedTest(router) {
+                    this.testingSpeedRouter = router.name;
+                    frappe.call({
+                        method: 'hotspot_ms.hotspot_ms.page.network_dashboard.network_dashboard.run_speedtest',
+                        args: {
+                            nas_device_name: router.name
+                        },
+                        callback: (r) => {
+                            if (r.message && r.message.status === 'success') {
+                                this.$set(router, 'latest_speed', r.message);
+                                frappe.show_alert({
+                                    message: `Speed test complete: ${r.message.download_mbps} Mbps Down on ${r.message.isp}`,
+                                    indicator: 'green'
+                                });
+                            } else {
+                                frappe.show_alert({
+                                    message: `Speed test failed to run or parse`,
+                                    indicator: 'red'
+                                });
+                            }
+                            this.testingSpeedRouter = null;
+                        },
+                        error: () => {
+                            this.testingSpeedRouter = null;
+                        }
                     });
                 }
             }

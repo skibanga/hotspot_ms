@@ -45,3 +45,41 @@ def kick_client(mac_address, nas_device_name):
     except Exception as e:
         frappe.log_error(title="Failed to kick client", message=str(e))
         frappe.throw(f"Failed to connect to router: {str(e)}")
+
+@frappe.whitelist()
+def run_speedtest(nas_device_name, source_ip=None):
+    router = frappe.get_doc("Nas Device", nas_device_name)
+    if not router.vpn_ip_address:
+        frappe.throw("Router does not have a VPN IP Address configured.")
+        
+    try:
+        import paramiko
+        import json
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(hostname=router.vpn_ip_address, username='root', timeout=10)
+        
+        cmd = "/usr/bin/speedtest-go --json"
+        if source_ip:
+            cmd += f" --source={source_ip}"
+            
+        stdin, stdout, stderr = ssh.exec_command(cmd)
+        output = stdout.read().decode('utf-8')
+        ssh.close()
+        
+        try:
+            data = json.loads(output)
+            # speedtest-go outputs in bytes per second. Divide by 125000 to get Mbps.
+            return {
+                "status": "success",
+                "ping": round(data.get("ping", 0), 2),
+                "download_mbps": round(data.get("download", 0) / 125000, 2),
+                "upload_mbps": round(data.get("upload", 0) / 125000, 2),
+                "isp": data.get("client", {}).get("isp", "Unknown ISP")
+            }
+        except json.JSONDecodeError:
+            frappe.throw(f"Failed to parse speedtest output: {output}")
+            
+    except Exception as e:
+        frappe.log_error(title="Failed to run speedtest", message=str(e))
+        frappe.throw(f"Speedtest failed: {str(e)}")
