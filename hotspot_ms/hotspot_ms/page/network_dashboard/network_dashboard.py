@@ -69,16 +69,21 @@ def run_speedtest(nas_device_name, source_ip=None):
         
         try:
             data = json.loads(output)
-            # speedtest-go outputs in bytes per second. Divide by 125000 to get Mbps.
+            server = data.get("servers", [{}])[0]
+            user_info = data.get("user_info", {})
+            
+            # dl_speed and ul_speed are in bytes per second. Divide by 125000 to get Mbps.
+            # latency is in nanoseconds. Divide by 1000000 to get milliseconds.
             return {
                 "status": "success",
-                "ping": round(data.get("ping", 0), 2),
-                "download_mbps": round(data.get("download", 0) / 125000, 2),
-                "upload_mbps": round(data.get("upload", 0) / 125000, 2),
-                "isp": data.get("client", {}).get("isp", "Unknown ISP")
+                "ping": round(server.get("latency", 0) / 1000000, 1),
+                "download_mbps": round(server.get("dl_speed", 0) / 125000, 1),
+                "upload_mbps": round(server.get("ul_speed", 0) / 125000, 1),
+                "isp": user_info.get("Isp", "Unknown ISP")
             }
-        except json.JSONDecodeError:
-            frappe.throw(f"Failed to parse speedtest output: {output}")
+        except Exception as e:
+            frappe.log_error(title="Speedtest Parse Error", message=f"{str(e)}\nOutput: {output}")
+            frappe.throw(f"Failed to parse speedtest output. Error: {str(e)}")
             
     except Exception as e:
         frappe.log_error(title="Failed to run speedtest", message=str(e))
