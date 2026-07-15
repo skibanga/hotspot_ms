@@ -165,10 +165,10 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
                 const dm = decimals < 0 ? 0 : decimals;
                 const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
                 const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return \`\${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} \${sizes[i]}\`;
+                return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
             },
             kickUser(client) {
-                frappe.confirm(\`Are you sure you want to instantly disconnect \${client.mac_address}?\`, () => {
+                frappe.confirm(`Are you sure you want to instantly disconnect ${client.mac_address}?`, () => {
                     this.kicking = client.mac_address;
                     frappe.call({
                         method: 'hotspot_ms.hotspot_ms.page.network_dashboard.network_dashboard.kick_client',
@@ -179,7 +179,7 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
                         callback: (r) => {
                             this.kicking = null;
                             if (!r.exc) {
-                                frappe.show_alert({message: \`Successfully disconnected \${client.mac_address}\`, indicator: 'green'});
+                                frappe.show_alert({message: `Successfully disconnected ${client.mac_address}`, indicator: 'green'});
                                 this.fetchData();
                             }
                         }
