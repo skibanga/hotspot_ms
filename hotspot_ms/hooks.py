@@ -177,6 +177,9 @@ scheduler_events = {
 		],
 		"*/2 * * * *": [
 			"hotspot_ms.tasks.auto_activate_stuck_vouchers",
+		],
+		"*/3 * * * *": [
+			"hotspot_ms.tasks.sync_router_data.execute",
 		]
 	}
 }
