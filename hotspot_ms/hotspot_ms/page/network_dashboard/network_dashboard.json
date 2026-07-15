@@ -1,0 +1,23 @@
+{
+ "content": null,
+ "creation": "2026-07-15 13:05:03.515930",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-07-15 13:05:03.515930",
+ "modified_by": "Administrator",
+ "module": "Hotspot MS",
+ "name": "network-dashboard",
+ "owner": "Administrator",
+ "page_name": "network-dashboard",
+ "roles": [
+  {
+   "role": "System Manager"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Network Dashboard"
+}
