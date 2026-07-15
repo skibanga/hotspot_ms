@@ -165,8 +165,8 @@ def sync_all_routers_data():
 						"mac_address": mac,
 						"ip_address": data.get('ip'),
 						"nas_device": router.name,
-						"download_bytes": data.get('download_this_session', 0),
-						"upload_bytes": data.get('upload_this_session', 0),
+						"download_bytes": int(data.get('download_this_session', 0) or 0) * 1024,
+						"upload_bytes": int(data.get('upload_this_session', 0) or 0) * 1024,
 						"connected_since": frappe.utils.now()
 					}).insert(ignore_permissions=True)
 						
