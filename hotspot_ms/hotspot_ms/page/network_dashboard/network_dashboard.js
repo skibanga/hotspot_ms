@@ -132,11 +132,11 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
                                                 <div class="flex items-center space-x-3">
                                                     <span class="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-xs font-semibold flex items-center border border-emerald-100">
                                                         <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg> 
-                                                        {{ formatBytes(client.download_bytes) }}
+                                                        {{ formatBytes(client.download_bytes * 1024) }}
                                                     </span>
                                                     <span class="text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-xs font-semibold flex items-center border border-blue-100">
                                                         <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg> 
-                                                        {{ formatBytes(client.upload_bytes) }}
+                                                        {{ formatBytes(client.upload_bytes * 1024) }}
                                                     </span>
                                                 </div>
                                             </td>

@@ -154,6 +154,12 @@ def sync_all_routers_data():
 			nds_data = json.loads(output)
 			clients = nds_data.get('clients', {})
 			
+			def safe_int(val):
+				try:
+					return int(val)
+				except (ValueError, TypeError):
+					return 0
+
 			# Clear old active clients for this router
 			frappe.db.delete("Hotspot Active Client", {"nas_device": router.name})
 			
@@ -165,8 +171,8 @@ def sync_all_routers_data():
 						"mac_address": mac,
 						"ip_address": data.get('ip'),
 						"nas_device": router.name,
-						"download_bytes": int(data.get('download_this_session', 0) or 0) * 1024,
-						"upload_bytes": int(data.get('upload_this_session', 0) or 0) * 1024,
+						"download_bytes": safe_int(data.get('download_this_session')),
+						"upload_bytes": safe_int(data.get('upload_this_session')),
 						"connected_since": frappe.utils.now()
 					}).insert(ignore_permissions=True)
 						
