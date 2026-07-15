@@ -92,30 +92,32 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
                                         </div>
                                     </div>
                                     
-                                    <div class="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
-                                        <div v-if="router.latest_speed" class="flex space-x-3 text-xs font-semibold">
-                                            <span class="text-emerald-600 flex items-center" title="Download Speed"><svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg> {{ router.latest_speed.download_mbps }} Mbps</span>
-                                            <span class="text-blue-600 flex items-center" title="Upload Speed"><svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg> {{ router.latest_speed.upload_mbps }} Mbps</span>
+                                    <div class="mt-4 pt-3 border-t border-slate-100 flex flex-col space-y-3">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Multi-WAN Speeds</span>
+                                            <button @click="runSpeedTest(router)" :disabled="testingSpeedRouter === router.name" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded transition-colors uppercase tracking-wide flex items-center disabled:opacity-50">
+                                                <svg v-if="testingSpeedRouter === router.name" class="animate-spin -ml-1 mr-1.5 h-3 w-3 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                                <svg v-else class="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                                {{ testingSpeedRouter === router.name ? 'Testing...' : 'Run Test' }}
+                                            </button>
                                         </div>
-                                        <div v-else class="text-xs text-slate-400 font-medium">Speed Not Tested</div>
-                                        
-                                        <div class="flex items-center space-x-1.5">
-                                            <div v-if="testingSpeedRouter === router.name" class="flex items-center text-[10px] font-bold text-indigo-500 uppercase tracking-wide mr-2">
-                                                <svg class="animate-spin mr-1.5 h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                                Testing...
+
+                                        <div v-if="router.latest_speed_results && router.latest_speed_results.length" class="space-y-2">
+                                            <div v-for="res in router.latest_speed_results" :key="res.interface" class="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                                                <div class="flex flex-col">
+                                                    <span class="text-xs font-bold text-slate-800">{{ res.isp }} <span class="text-[10px] font-mono font-medium text-slate-400 bg-white px-1 py-0.5 rounded border border-slate-200 ml-1">{{ res.interface }}</span></span>
+                                                    <span v-if="res.status === 'Offline'" class="text-[10px] font-bold text-rose-500 mt-1 flex items-center"><div class="w-1.5 h-1.5 bg-rose-500 rounded-full mr-1.5"></div> OFFLINE</span>
+                                                    <span v-else-if="res.status === 'Error'" class="text-[10px] font-bold text-rose-500 mt-1 flex items-center"><div class="w-1.5 h-1.5 bg-rose-500 rounded-full mr-1.5"></div> TEST FAILED</span>
+                                                    <div v-else class="flex space-x-3 mt-1.5 text-xs font-semibold">
+                                                        <span class="text-emerald-600 flex items-center" title="Download Speed"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg> {{ res.download_mbps }} Mbps</span>
+                                                        <span class="text-blue-600 flex items-center" title="Upload Speed"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg> {{ res.upload_mbps }} Mbps</span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <template v-else>
-                                                <button @click="runSpeedTest(router, null)" title="Test Combined Speed" class="text-[10px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-2.5 py-1.5 rounded transition-colors uppercase tracking-wide shadow-sm">
-                                                    Combined
-                                                </button>
-                                                <button @click="runSpeedTest(router, '192.168.18.2')" title="Test WAN 1 Only" class="text-[10px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1.5 rounded transition-colors uppercase tracking-wide">
-                                                    WAN 1
-                                                </button>
-                                                <button @click="runSpeedTest(router, '192.168.8.12')" title="Test WAN 2 Only" class="text-[10px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1.5 rounded transition-colors uppercase tracking-wide">
-                                                    WAN 2
-                                                </button>
-                                            </template>
-                                        </div>>
+                                        </div>
+                                        <div v-else class="text-xs text-slate-400 font-medium text-center py-2 bg-slate-50 rounded border border-slate-100 border-dashed">
+                                            No speed test results yet.
+                                        </div>
                                     </div>
                                 </li>
                             </ul>
@@ -218,7 +220,13 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
                         method: 'hotspot_ms.hotspot_ms.page.network_dashboard.network_dashboard.get_dashboard_data',
                         callback: (r) => {
                             if (r.message) {
-                                this.routers = r.message.routers || [];
+                                const oldRouters = this.routers;
+                                this.routers = (r.message.routers || []).map(rt => {
+                                    const existing = oldRouters.find(o => o.name === rt.name);
+                                    return Object.assign({}, rt, {
+                                        latest_speed_results: existing ? existing.latest_speed_results : null
+                                    });
+                                });
                                 this.aps = r.message.aps || [];
                                 this.active_clients = r.message.active_clients || [];
                             }
@@ -257,24 +265,19 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
                         });
                     });
                 },
-                runSpeedTest(router, sourceIp = null) {
+                runSpeedTest(router) {
                     this.testingSpeedRouter = router.name;
                     frappe.call({
                         method: 'hotspot_ms.hotspot_ms.page.network_dashboard.network_dashboard.run_speedtest',
                         args: {
-                            nas_device_name: router.name,
-                            source_ip: sourceIp
+                            nas_device_name: router.name
                         },
                         callback: (r) => {
                             if (r.message && r.message.status === 'success') {
-                                this.$set(router, 'latest_speed', r.message);
-                                frappe.show_alert({
-                                    message: `Speed test complete: ${r.message.download_mbps} Mbps Down on ${r.message.isp}`,
-                                    indicator: 'green'
-                                });
+                                this.$set(router, 'latest_speed_results', r.message.results);
                             } else {
                                 frappe.show_alert({
-                                    message: `Speed test failed to run or parse`,
+                                    message: `Speed test failed to complete`,
                                     indicator: 'red'
                                 });
                             }

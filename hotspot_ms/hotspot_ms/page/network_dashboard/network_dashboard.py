@@ -47,7 +47,7 @@ def kick_client(mac_address, nas_device_name):
         frappe.throw(f"Failed to connect to router: {str(e)}")
 
 @frappe.whitelist()
-def run_speedtest(nas_device_name, source_ip=None):
+def run_speedtest(nas_device_name):
     router = frappe.get_doc("Nas Device", nas_device_name)
     if not router.vpn_ip_address:
         frappe.throw("Router does not have a VPN IP Address configured.")
@@ -55,36 +55,96 @@ def run_speedtest(nas_device_name, source_ip=None):
     try:
         import paramiko
         import json
+        import re
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(hostname=router.vpn_ip_address, username='root', timeout=10)
         
-        cmd = "/usr/bin/speedtest-go --json"
-        if source_ip:
-            cmd += f" --source={source_ip}"
-            
-        stdin, stdout, stderr = ssh.exec_command(cmd)
-        output = stdout.read().decode('utf-8')
-        ssh.close()
+        # Phase 1: Smart MWAN Check
+        stdin, stdout, stderr = ssh.exec_command("mwan3 status")
+        mwan_out = stdout.read().decode('utf-8')
+        mwan_err = stderr.read().decode('utf-8')
         
-        try:
-            data = json.loads(output)
-            server = data.get("servers", [{}])[0]
-            user_info = data.get("user_info", {})
-            
-            # dl_speed and ul_speed are in bytes per second. Divide by 125000 to get Mbps.
-            # latency is in nanoseconds. Divide by 1000000 to get milliseconds.
-            return {
-                "status": "success",
-                "ping": round(server.get("latency", 0) / 1000000, 1),
-                "download_mbps": round(server.get("dl_speed", 0) / 125000, 1),
-                "upload_mbps": round(server.get("ul_speed", 0) / 125000, 1),
-                "isp": user_info.get("Isp", "Unknown ISP")
-            }
-        except Exception as e:
-            frappe.log_error(title="Speedtest Parse Error", message=f"{str(e)}\nOutput: {output}")
-            frappe.throw(f"Failed to parse speedtest output. Error: {str(e)}")
-            
+        results = []
+        
+        if "not found" in mwan_out or "not found" in mwan_err or not mwan_out.strip():
+            # Fallback: Single ISP Router
+            stdin, stdout, stderr = ssh.exec_command("/usr/bin/speedtest-go --json")
+            output = stdout.read().decode('utf-8')
+            try:
+                data = json.loads(output)
+                server = data.get("servers", [{}])[0]
+                user_info = data.get("user_info", {})
+                results.append({
+                    "interface": "wan",
+                    "status": "Online",
+                    "isp": user_info.get("Isp", "Unknown ISP"),
+                    "ping": round(server.get("latency", 0) / 1000000, 1),
+                    "download_mbps": round(server.get("dl_speed", 0) / 125000, 1),
+                    "upload_mbps": round(server.get("ul_speed", 0) / 125000, 1)
+                })
+            except Exception as e:
+                frappe.log_error(title="Speedtest Parse Error", message=f"{str(e)}\nOutput: {output}")
+                frappe.throw(f"Failed to parse speedtest output. Error: {str(e)}")
+        else:
+            # Smart MWAN Multi-ISP Mode
+            lines = mwan_out.splitlines()
+            for line in lines:
+                match = re.search(r'interface (\S+) is (online|offline)', line)
+                if match:
+                    iface = match.group(1)
+                    status = match.group(2)
+                    
+                    if iface.endswith('6'):
+                        continue # Skip IPv6 duplicate interfaces
+                        
+                    if status == 'offline':
+                        results.append({
+                            "interface": iface,
+                            "status": "Offline",
+                            "isp": "Disconnected / Down",
+                            "ping": 0,
+                            "download_mbps": 0,
+                            "upload_mbps": 0
+                        })
+                    elif status == 'online':
+                        # Phase 2: IP Resolution
+                        stdin, stdout, stderr = ssh.exec_command(f"ifstatus {iface}")
+                        ifstatus_out = stdout.read().decode('utf-8')
+                        try:
+                            ifstatus_json = json.loads(ifstatus_out)
+                            ip = ifstatus_json.get("ipv4-address", [{}])[0].get("address")
+                            if ip:
+                                # Phase 3: Targeted Speedtest Execution
+                                stdin, stdout, stderr = ssh.exec_command(f"/usr/bin/speedtest-go --json --source={ip}")
+                                st_output = stdout.read().decode('utf-8')
+                                try:
+                                    st_data = json.loads(st_output)
+                                    server = st_data.get("servers", [{}])[0]
+                                    user_info = st_data.get("user_info", {})
+                                    results.append({
+                                        "interface": iface,
+                                        "status": "Online",
+                                        "isp": user_info.get("Isp", "Unknown ISP"),
+                                        "ping": round(server.get("latency", 0) / 1000000, 1),
+                                        "download_mbps": round(server.get("dl_speed", 0) / 125000, 1),
+                                        "upload_mbps": round(server.get("ul_speed", 0) / 125000, 1)
+                                    })
+                                except Exception:
+                                    results.append({
+                                        "interface": iface,
+                                        "status": "Error",
+                                        "isp": "Speedtest Failed",
+                                        "ping": 0,
+                                        "download_mbps": 0,
+                                        "upload_mbps": 0
+                                    })
+                        except Exception:
+                            pass
+                            
+        ssh.close()
+        return {"status": "success", "results": results}
+        
     except Exception as e:
         frappe.log_error(title="Failed to run speedtest", message=str(e))
         frappe.throw(f"Speedtest failed: {str(e)}")
