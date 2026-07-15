@@ -272,9 +272,14 @@ frappe.pages['network-dashboard'].on_page_load = function (wrapper) {
                         args: {
                             nas_device_name: router.name
                         },
+                        timeout: 300000,
                         callback: (r) => {
                             if (r.message && r.message.status === 'success') {
-                                this.$set(router, 'latest_speed_results', r.message.results);
+                                // Find the active router object from the array because setInterval might have replaced it while we were waiting!
+                                const currentRouter = this.routers.find(rt => rt.name === router.name);
+                                if (currentRouter) {
+                                    this.$set(currentRouter, 'latest_speed_results', r.message.results);
+                                }
                             } else {
                                 frappe.show_alert({
                                     message: `Speed test failed to complete`,
@@ -284,6 +289,7 @@ frappe.pages['network-dashboard'].on_page_load = function (wrapper) {
                             this.testingSpeedRouter = null;
                         },
                         error: () => {
+                            frappe.show_alert({ message: 'Speed test timed out. Please try again.', indicator: 'red' });
                             this.testingSpeedRouter = null;
                         }
                     });
