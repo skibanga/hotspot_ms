@@ -128,8 +128,9 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
     `);
 
     // Initialize Vue App
-    new Vue({
-        el: '#noc-dashboard-app',
+    frappe.require('https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js', () => {
+        new Vue({
+            el: '#noc-dashboard-app',
         data: {
             loading: true,
             routers: [],
@@ -187,5 +188,6 @@ frappe.pages['network-dashboard'].on_page_load = function(wrapper) {
                 });
             }
         }
+    });
     });
 }
