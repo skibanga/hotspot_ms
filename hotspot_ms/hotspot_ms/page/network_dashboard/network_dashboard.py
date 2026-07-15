@@ -122,6 +122,7 @@ def run_speedtest(nas_device_name):
             mwan_clean = ansi_escape.sub('', mwan_out)
             
             lines = mwan_clean.splitlines()
+            ips_to_test = []
             for line in lines:
                 match = re.search(r"interface (\S+) is (online|offline)", line)
                 if match:
@@ -131,90 +132,87 @@ def run_speedtest(nas_device_name):
                     if iface.endswith("6"):
                         continue  # Skip IPv6 duplicate interfaces
 
-                    if status == "offline":
-                        results.append(
-                            {
-                                "interface": iface,
-                                "status": "Offline",
-                                "isp": "Disconnected / Down",
-                                "ping": 0,
-                                "download_mbps": 0,
-                                "upload_mbps": 0,
-                            }
-                        )
-                    elif status == "online":
+                    if status == 'offline':
+                        results.append({
+                            "interface": iface,
+                            "status": "Offline",
+                            "isp": "Disconnected / Down",
+                            "ping": 0,
+                            "download_mbps": 0,
+                            "upload_mbps": 0
+                        })
+                    elif status == 'online':
                         # Phase 2: IP Resolution
                         stdin, stdout, stderr = ssh.exec_command(f"ifstatus {iface}")
-                        ifstatus_out = stdout.read().decode("utf-8")
+                        ifstatus_out = stdout.read().decode('utf-8')
                         try:
                             ifstatus_json = json.loads(ifstatus_out)
                             ip = None
-                            if (
-                                "ipv4-address" in ifstatus_json
-                                and len(ifstatus_json["ipv4-address"]) > 0
-                            ):
+                            if "ipv4-address" in ifstatus_json and len(ifstatus_json["ipv4-address"]) > 0:
                                 ip = ifstatus_json["ipv4-address"][0].get("address")
-
+                                
                             if ip:
-                                # Phase 3: Targeted Speedtest Execution
-                                stdin, stdout, stderr = ssh.exec_command(
-                                    f"/usr/bin/speedtest-go --json --source={ip}"
-                                )
-                                st_output = stdout.read().decode("utf-8")
-                                try:
-                                    st_data = json.loads(st_output)
-                                    server = st_data.get("servers", [{}])[0]
-                                    user_info = st_data.get("user_info", {})
-                                    results.append(
-                                        {
-                                            "interface": iface,
-                                            "status": "Online",
-                                            "isp": user_info.get("Isp", "Unknown ISP"),
-                                            "ping": round(
-                                                server.get("latency", 0) / 1000000, 1
-                                            ),
-                                            "download_mbps": round(
-                                                server.get("dl_speed", 0) / 125000, 1
-                                            ),
-                                            "upload_mbps": round(
-                                                server.get("ul_speed", 0) / 125000, 1
-                                            ),
-                                        }
-                                    )
-                                except Exception as st_err:
-                                    results.append(
-                                        {
-                                            "interface": iface,
-                                            "status": "Error",
-                                            "isp": f"Speedtest Failed: {str(st_err)}",
-                                            "ping": 0,
-                                            "download_mbps": 0,
-                                            "upload_mbps": 0,
-                                        }
-                                    )
+                                ips_to_test.append({"interface": iface, "ip": ip})
                             else:
-                                results.append(
-                                    {
-                                        "interface": iface,
-                                        "status": "Error",
-                                        "isp": f"No IPv4 Address Found",
-                                        "ping": 0,
-                                        "download_mbps": 0,
-                                        "upload_mbps": 0,
-                                    }
-                                )
-                        except Exception as e:
-                            results.append(
-                                {
+                                results.append({
                                     "interface": iface,
                                     "status": "Error",
-                                    "isp": f"ifstatus Parse Error: {str(e)}",
-                                    "ping": 0,
-                                    "download_mbps": 0,
-                                    "upload_mbps": 0,
-                                }
-                            )
-
+                                    "isp": "No IPv4 Address Found",
+                                    "ping": 0, "download_mbps": 0, "upload_mbps": 0
+                                })
+                        except Exception as e:
+                            results.append({
+                                "interface": iface,
+                                "status": "Error",
+                                "isp": f"ifstatus Parse Error: {str(e)}",
+                                "ping": 0, "download_mbps": 0, "upload_mbps": 0
+                            })
+                            
+            # Phase 3: Parallel Speedtest Execution (Prevents Timeout!)
+            executions = []
+            for item in ips_to_test:
+                ip = item["ip"]
+                iface = item["interface"]
+                # paramiko exec_command is non-blocking until .read() is called
+                stdin, stdout, stderr = ssh.exec_command(f"/usr/bin/speedtest-go --json --source={ip}")
+                executions.append({
+                    "interface": iface,
+                    "stdout": stdout,
+                    "stderr": stderr
+                })
+                
+            # Phase 4: Wait and Collect Results
+            for exec_data in executions:
+                iface = exec_data["interface"]
+                try:
+                    # This will block only until this specific test finishes
+                    st_output = exec_data["stdout"].read().decode('utf-8')
+                    if not st_output.strip():
+                        err_out = exec_data["stderr"].read().decode('utf-8')
+                        raise Exception(f"Empty output. Stderr: {err_out}")
+                        
+                    st_data = json.loads(st_output)
+                    server = st_data.get("servers", [{}])[0]
+                    user_info = st_data.get("user_info", {})
+                    
+                    results.append({
+                        "interface": iface,
+                        "status": "Online",
+                        "isp": user_info.get("Isp", "Unknown ISP"),
+                        "ping": round(server.get("latency", 0) / 1000000, 1),
+                        "download_mbps": round(server.get("dl_speed", 0) / 125000, 1),
+                        "upload_mbps": round(server.get("ul_speed", 0) / 125000, 1)
+                    })
+                except Exception as st_err:
+                    results.append({
+                        "interface": iface,
+                        "status": "Error",
+                        "isp": f"Speedtest Failed: {str(st_err)}",
+                        "ping": 0,
+                        "download_mbps": 0,
+                        "upload_mbps": 0
+                    })
+                    
         ssh.close()
         return {"status": "success", "results": results}
 
