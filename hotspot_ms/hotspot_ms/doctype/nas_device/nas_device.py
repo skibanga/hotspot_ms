@@ -4,6 +4,7 @@
 from textwrap import dedent
 import secrets
 import string
+import socket
 from urllib.parse import quote
 
 import frappe
@@ -103,6 +104,17 @@ def generate_openwrt_provisioning_script(name: str) -> dict:
 	if ":" in domain_name:
 		domain_name = domain_name.split(":")[0]
 
+	site_ip = ""
+	try:
+		resolved_ip = socket.gethostbyname(domain_name)
+		if resolved_ip and not resolved_ip.startswith("127."):
+			site_ip = resolved_ip
+	except Exception:
+		pass
+
+	fas_ip_setting = f"\toption fasremoteip '{site_ip}'\n" if site_ip else ""
+	preauth_ip_settings = f"\tlist preauthenticated_users 'allow tcp port 443 to {site_ip}'\n\tlist preauthenticated_users 'allow tcp port 80 to {site_ip}'\n" if site_ip else ""
+
 	nas_id = doc.short_name or doc.device_name
 
 	script = f"""#!/bin/sh
@@ -196,9 +208,7 @@ config opennds
 	option gatewayinterface '$GW_IFACE'
 	option gatewayname '{nas_id}'
 	option gatewayport '{doc.opennds_gateway_port}'
-
-	option fasremoteip '157.173.109.148'
-	option fasremotefqdn '{domain_name}'
+{fas_ip_setting}	option fasremotefqdn '{domain_name}'
 	option fasport '80'
 	option faspath '/hotspot/login'
 	option fassecureenabled '1'
@@ -206,9 +216,7 @@ config opennds
 
 	list preauthenticated_users 'allow udp port 53'
 	list preauthenticated_users 'allow tcp port 53'
-	list preauthenticated_users 'allow tcp port 443 to 157.173.109.148'
-	list preauthenticated_users 'allow tcp port 80 to 157.173.109.148'
-EOF
+{preauth_ip_settings}EOF
 
 echo "3b. Applying Hardening and Anti-Tethering Rules..."
 mkdir -p /usr/share/nftables.d/table-pre/
