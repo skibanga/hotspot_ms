@@ -126,7 +126,26 @@ else
 fi
 
 echo "3. Configuring OpenNDS..."
-GW_IFACE="$(uci -q get network.lan.device || uci -q get network.lan.ifname || echo "br-lan")"
+detect_lan_iface() {
+	if ip link show dev br-lan >/dev/null 2>&1; then
+		echo "br-lan"
+		return
+	fi
+	if uci -q get network.lan.device >/dev/null 2>&1; then
+		uci -q get network.lan.device
+		return
+	fi
+	if uci -q get network.lan.ifname >/dev/null 2>&1; then
+		uci -q get network.lan.ifname
+		return
+	fi
+	local iface
+	iface="$(ip -o link show 2>/dev/null | awk -F': ' '$2 !~ /^(lo|docker|veth|wg)/ {print $2; exit}')"
+	echo "${iface:-eth0}"
+}
+
+GW_IFACE="$(detect_lan_iface)"
+echo " OpenNDS Gateway Interface: $GW_IFACE"
 
 cat << EOF > /etc/config/opennds
 config opennds
