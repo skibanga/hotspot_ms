@@ -126,7 +126,7 @@ else
 fi
 
 echo "3. Configuring OpenNDS..."
-detect_lan_iface() {
+detect_lan_iface() {{
 	if ip link show dev br-lan >/dev/null 2>&1; then
 		echo "br-lan"
 		return
@@ -140,9 +140,9 @@ detect_lan_iface() {
 		return
 	fi
 	local iface
-	iface="$(ip -o link show 2>/dev/null | awk -F': ' '$2 !~ /^(lo|docker|veth|wg)/ {print $2; exit}')"
-	echo "${iface:-eth0}"
-}
+	iface="$(ip -o link show 2>/dev/null | awk -F': ' '$2 !~ /^(lo|docker|veth|wg)/ {{print $2; exit}}')"
+	echo "${{iface:-eth0}}"
+}}
 
 GW_IFACE="$(detect_lan_iface)"
 echo " OpenNDS Gateway Interface: $GW_IFACE"
