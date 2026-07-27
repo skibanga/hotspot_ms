@@ -108,28 +108,42 @@ echo " Device: {doc.device_name} ({doc.ip_address})"
 echo "=========================================="
 
 echo "1. Installing required packages..."
-apk update || true
-apk add kmod-usb-net-rtl8152 kmod-usb-net-asix ca-certificates ca-bundle || true
+if command -v apk >/dev/null 2>&1; then
+	apk update || true
+	apk add opennds kmod-usb-net-rtl8152 kmod-usb-net-asix ca-certificates ca-bundle curl wget || true
+elif command -v opkg >/dev/null 2>&1; then
+	opkg update || true
+	opkg install opennds kmod-usb-net-rtl8152 kmod-usb-net-asix ca-certificates ca-bundle curl wget || true
+fi
 
 echo "2. Configuring Network..."
-uci set network.lan.ipaddr='{doc.ip_address}'
-uci commit network
+if uci -q get network.lan >/dev/null 2>&1; then
+	uci set network.lan.ipaddr='{doc.ip_address}' || true
+	uci commit network || true
+else
+	echo " Notice: network.lan section not found in UCI, skipping static IP assignment."
+fi
 
 echo "3. Configuring OpenNDS..."
-uci set opennds.@opennds[0].gatewayport='{doc.opennds_gateway_port}'
-uci set opennds.@opennds[0].faskey='{doc.opennds_fas_key}'
-uci set opennds.@opennds[0].max_clients_per_token='1'
-uci set opennds.@opennds[0].login_option_enabled='3'
-uci set opennds.@opennds[0].theme_spec_path='/usr/lib/opennds/theme_click-to-continue.sh'
+if ! uci -q get opennds.@opennds[0] >/dev/null 2>&1; then
+	touch /etc/config/opennds 2>/dev/null || true
+	uci set opennds.main=opennds 2>/dev/null || true
+fi
+
+uci -q set opennds.@opennds[0].gatewayport='{doc.opennds_gateway_port}' || true
+uci -q set opennds.@opennds[0].faskey='{doc.opennds_fas_key or ""}' || true
+uci -q set opennds.@opennds[0].max_clients_per_token='1' || true
+uci -q set opennds.@opennds[0].login_option_enabled='3' || true
+uci -q set opennds.@opennds[0].theme_spec_path='/usr/lib/opennds/theme_click-to-continue.sh' || true
 
 # Clear and rebuild preauthenticated_users
-uci delete opennds.@opennds[0].preauthenticated_users || true
-uci add_list opennds.@opennds[0].preauthenticated_users='allow udp port 53'
-uci add_list opennds.@opennds[0].preauthenticated_users='allow tcp port 53'
-uci add_list opennds.@opennds[0].preauthenticated_users='allow tcp port 443 to 157.173.109.148'
-uci add_list opennds.@opennds[0].preauthenticated_users='allow tcp port 80 to 157.173.109.148'
+uci -q delete opennds.@opennds[0].preauthenticated_users 2>/dev/null || true
+uci -q add_list opennds.@opennds[0].preauthenticated_users='allow udp port 53' || true
+uci -q add_list opennds.@opennds[0].preauthenticated_users='allow tcp port 53' || true
+uci -q add_list opennds.@opennds[0].preauthenticated_users='allow tcp port 443 to 157.173.109.148' || true
+uci -q add_list opennds.@opennds[0].preauthenticated_users='allow tcp port 80 to 157.173.109.148' || true
 
-uci commit opennds
+uci commit opennds 2>/dev/null || true
 
 echo "3b. Applying Hardening and Anti-Tethering Rules..."
 mkdir -p /usr/share/nftables.d/table-pre/
