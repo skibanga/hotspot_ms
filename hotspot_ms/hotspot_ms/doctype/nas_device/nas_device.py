@@ -117,26 +117,60 @@ elif command -v opkg >/dev/null 2>&1; then
 	opkg install opennds kmod-usb-net-rtl8152 kmod-usb-net-asix ca-certificates ca-bundle curl wget || true
 fi
 
-echo "2. Configuring Network..."
-if uci -q get network.lan >/dev/null 2>&1; then
-	uci set network.lan.ipaddr='{doc.ip_address}' || true
-	uci commit network || true
-else
-	echo " Notice: network.lan section not found in UCI, skipping static IP assignment."
+echo "2. Configuring Network & LAN Interface..."
+if ! uci -q get network.lan >/dev/null 2>&1; then
+	uci set network.lan=interface
+	uci set network.lan.proto='static'
 fi
+
+if ip link show dev eth1 >/dev/null 2>&1; then
+	uci set network.lan.device='br-lan'
+	if ! uci -q get network.@device[0] >/dev/null 2>&1; then
+		uci add network device >/dev/null 2>&1 || true
+	fi
+	uci set network.@device[0].name='br-lan'
+	uci set network.@device[0].type='bridge'
+	uci delete network.@device[0].ports 2>/dev/null || true
+	uci add_list network.@device[0].ports='eth1'
+	if ip link show dev eth2 >/dev/null 2>&1; then
+		uci add_list network.@device[0].ports='eth2'
+	fi
+	ip link set eth1 up 2>/dev/null || true
+	if ip link show dev eth2 >/dev/null 2>&1; then
+		ip link set eth2 up 2>/dev/null || true
+	fi
+elif [ -z "$(uci -q get network.lan.device)" ]; then
+	uci set network.lan.device='eth0'
+fi
+
+uci set network.lan.ipaddr='{doc.ip_address}'
+uci set network.lan.netmask='255.255.255.0'
+uci commit network || true
+
+echo "2b. Configuring DHCP Server for LAN..."
+if ! uci -q get dhcp.lan >/dev/null 2>&1; then
+	uci set dhcp.lan=dhcp
+fi
+uci set dhcp.lan.interface='lan'
+uci set dhcp.lan.start='100'
+uci set dhcp.lan.limit='150'
+uci set dhcp.lan.leasetime='12h'
+uci set dhcp.lan.dhcpv4='server'
+uci commit dhcp || true
+/etc/init.d/dnsmasq restart || true
 
 echo "3. Configuring OpenNDS..."
 detect_lan_iface() {{
-	if ip link show dev br-lan >/dev/null 2>&1; then
-		echo "br-lan"
-		return
-	fi
 	if uci -q get network.lan.device >/dev/null 2>&1; then
 		uci -q get network.lan.device
 		return
 	fi
-	if uci -q get network.lan.ifname >/dev/null 2>&1; then
-		uci -q get network.lan.ifname
+	if ip link show dev br-lan >/dev/null 2>&1; then
+		echo "br-lan"
+		return
+	fi
+	if ip link show dev eth1 >/dev/null 2>&1; then
+		echo "eth1"
 		return
 	fi
 	local iface
