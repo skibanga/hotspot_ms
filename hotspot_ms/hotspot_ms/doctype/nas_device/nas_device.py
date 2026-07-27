@@ -191,7 +191,6 @@ config opennds
 	option gatewayinterface '$GW_IFACE'
 	option gatewayname '{nas_id}'
 	option gatewayport '{doc.opennds_gateway_port}'
-	option faskey '{doc.opennds_fas_key or ""}'
 	option max_clients_per_token '1'
 	option login_option_enabled '3'
 	option theme_spec_path '/usr/lib/opennds/theme_click-to-continue.sh'
@@ -258,6 +257,7 @@ generate_splash_sequence() {{
 }}
 EOF
 chmod +x /usr/lib/opennds/theme_click-to-continue.sh
+sed -i 's/themespecpath="$4"/themespecpath="\/usr\/lib\/opennds\/theme_click-to-continue.sh"/g' /usr/lib/opennds/libopennds.sh 2>/dev/null || true
 
 # Script 1: Restore Active Clients
 cat << 'EOF' > /usr/bin/hotspot_restore_active_clients.sh
