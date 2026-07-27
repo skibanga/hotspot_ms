@@ -80,11 +80,16 @@ frappe.ui.form.on("Nas Device", {
 				return;
 			}
 
-			const siteUrl = frappe.urllib.get_base_url();
-			const encName = encodeURIComponent(frm.doc.name);
-			const encSecret = encodeURIComponent(frm.doc.shared_secret || "");
-			
-			const cmd = `wget --no-check-certificate -qO- "${siteUrl}/api/method/hotspot_ms.hotspot_ms.doctype.nas_device.nas_device.download_provisioning_script?name=${encName}&secret=${encSecret}" | sh`;
+			const res = await frappe.call({
+				method: "hotspot_ms.hotspot_ms.doctype.nas_device.nas_device.get_provisioning_command",
+				args: { name: frm.doc.name },
+			});
+
+			const cmd = res.message && res.message.command;
+			if (!cmd) {
+				frappe.msgprint(__("Could not generate provisioning command."));
+				return;
+			}
 
 			const dialog = new frappe.ui.Dialog({
 				title: __("OpenWrt Provisioning Script"),

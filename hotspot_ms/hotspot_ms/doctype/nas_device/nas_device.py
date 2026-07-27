@@ -4,6 +4,7 @@
 from textwrap import dedent
 import secrets
 import string
+from urllib.parse import quote
 
 import frappe
 from frappe.model.document import Document
@@ -732,9 +733,9 @@ echo "7. Restarting services..."
 [ -x /etc/init.d/opennds ] && /etc/init.d/opennds start 2>/dev/null || /etc/init.d/opennds restart || true
 
 echo "8. Launching hotspot background agents..."
-pkill -f hotspot_restore_active_clients || true
-pkill -f hotspot_deauth_worker || true
-pkill -f hotspot_sync_session_usage || true
+killall hotspot_restore_active_clients.sh 2>/dev/null || pkill -f hotspot_restore_active_clients 2>/dev/null || true
+killall hotspot_deauth_worker.sh 2>/dev/null || pkill -f hotspot_deauth_worker 2>/dev/null || true
+killall hotspot_sync_session_usage.sh 2>/dev/null || pkill -f hotspot_sync_session_usage 2>/dev/null || true
 
 sh /usr/bin/hotspot_restore_active_clients.sh >/dev/null 2>&1 &
 sh /usr/bin/hotspot_deauth_worker.sh >/dev/null 2>&1 &
@@ -747,10 +748,22 @@ echo "=========================================="
 	return {"ok": True, "script": script}
 
 
+@frappe.whitelist()
+def get_provisioning_command(name: str) -> dict:
+	doc = frappe.get_doc("Nas Device", name)
+	secret = doc.get_password("shared_secret")
+	site_url = frappe.utils.get_url()
+	enc_name = quote(doc.name)
+	enc_secret = quote(secret or "")
+	cmd = f'wget --no-check-certificate -qO- "{site_url}/api/method/hotspot_ms.hotspot_ms.doctype.nas_device.nas_device.download_provisioning_script?name={enc_name}&secret={enc_secret}" | sh'
+	return {"ok": True, "command": cmd}
+
+
 @frappe.whitelist(allow_guest=True)
 def download_provisioning_script(name: str, secret: str):
 	doc = frappe.get_doc("Nas Device", name)
-	if doc.shared_secret != secret:
+	real_secret = doc.get_password("shared_secret")
+	if real_secret != secret and doc.shared_secret != secret:
 		frappe.local.response["http_status_code"] = 403
 		return "Unauthorized"
 
