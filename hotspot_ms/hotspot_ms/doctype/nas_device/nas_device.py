@@ -125,28 +125,23 @@ else
 fi
 
 echo "3. Configuring OpenNDS..."
-if [ ! -f /etc/config/opennds ] || ! uci -q get opennds.@opennds[0] >/dev/null 2>&1; then
-	touch /etc/config/opennds 2>/dev/null || true
-	uci set opennds.main=opennds 2>/dev/null || true
-fi
+GW_IFACE="$(uci -q get network.lan.device || uci -q get network.lan.ifname || echo "br-lan")"
 
-uci -q set opennds.@opennds[0].enabled='1' || true
-uci -q set opennds.@opennds[0].gatewayinterface='br-lan' || true
-uci -q set opennds.@opennds[0].gatewayname='{nas_id}' || true
-uci -q set opennds.@opennds[0].gatewayport='{doc.opennds_gateway_port}' || true
-uci -q set opennds.@opennds[0].faskey='{doc.opennds_fas_key or ""}' || true
-uci -q set opennds.@opennds[0].max_clients_per_token='1' || true
-uci -q set opennds.@opennds[0].login_option_enabled='3' || true
-uci -q set opennds.@opennds[0].theme_spec_path='/usr/lib/opennds/theme_click-to-continue.sh' || true
-
-# Clear and rebuild preauthenticated_users
-uci -q delete opennds.@opennds[0].preauthenticated_users 2>/dev/null || true
-uci -q add_list opennds.@opennds[0].preauthenticated_users='allow udp port 53' || true
-uci -q add_list opennds.@opennds[0].preauthenticated_users='allow tcp port 53' || true
-uci -q add_list opennds.@opennds[0].preauthenticated_users='allow tcp port 443 to 157.173.109.148' || true
-uci -q add_list opennds.@opennds[0].preauthenticated_users='allow tcp port 80 to 157.173.109.148' || true
-
-uci commit opennds 2>/dev/null || true
+cat << EOF > /etc/config/opennds
+config opennds
+	option enabled '1'
+	option gatewayinterface '$GW_IFACE'
+	option gatewayname '{nas_id}'
+	option gatewayport '{doc.opennds_gateway_port}'
+	option faskey '{doc.opennds_fas_key or ""}'
+	option max_clients_per_token '1'
+	option login_option_enabled '3'
+	option theme_spec_path '/usr/lib/opennds/theme_click-to-continue.sh'
+	list preauthenticated_users 'allow udp port 53'
+	list preauthenticated_users 'allow tcp port 53'
+	list preauthenticated_users 'allow tcp port 443 to 157.173.109.148'
+	list preauthenticated_users 'allow tcp port 80 to 157.173.109.148'
+EOF
 
 echo "3b. Applying Hardening and Anti-Tethering Rules..."
 mkdir -p /usr/share/nftables.d/table-pre/
@@ -734,7 +729,16 @@ echo "7. Restarting services..."
 [ -x /etc/init.d/mwan3 ] && /etc/init.d/mwan3 restart || true
 [ -x /etc/init.d/firewall ] && /etc/init.d/firewall restart || true
 [ -x /etc/init.d/opennds ] && /etc/init.d/opennds enable 2>/dev/null || true
-[ -x /etc/init.d/opennds ] && /etc/init.d/opennds restart || true
+[ -x /etc/init.d/opennds ] && /etc/init.d/opennds start 2>/dev/null || /etc/init.d/opennds restart || true
+
+echo "8. Launching hotspot background agents..."
+pkill -f hotspot_restore_active_clients || true
+pkill -f hotspot_deauth_worker || true
+pkill -f hotspot_sync_session_usage || true
+
+sh /usr/bin/hotspot_restore_active_clients.sh >/dev/null 2>&1 &
+sh /usr/bin/hotspot_deauth_worker.sh >/dev/null 2>&1 &
+sh /usr/bin/hotspot_sync_session_usage.sh >/dev/null 2>&1 &
 
 echo "=========================================="
 echo " Provisioning Complete! "
