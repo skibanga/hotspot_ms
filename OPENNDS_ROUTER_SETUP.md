@@ -1,92 +1,54 @@
-# OpenNDS Android Captive Portal HSTS Workaround
+# OpenNDS Direct Remote FAS Integration Guide
 
-## The Problem
-When deploying a Captive Portal with a securely encrypted (HTTPS) backend server (like Frappe with Let's Encrypt), mobile devices running Android frequently fail to authenticate users due to missing `clientmac` and `clientip` parameters. 
+## Direct Remote FAS Architecture
 
-This occurs because of a built-in privacy protection mechanism in modern Android's Captive Portal Login browser (WebView).
+OpenNDS (Forwarding Authentication Service) allows OpenWrt routers to redirect unauthenticated Wi-Fi / LAN clients directly to your secure cloud-hosted Frappe portal (`https://your-domain.com/hotspot/login`).
 
-### The "HTTPS Redirect Stripping" Bug
-1. Standard OpenNDS Forwarding Authentication Service (FAS) generates an unencrypted `http://` link containing the user's MAC address (e.g., `http://hotspot.domain.com/login?fas=...`).
-2. When the Android device connects, the OpenNDS router redirects it to this `http://` URL.
-3. The backend server's Nginx configuration (which is enforcing HTTPS) instantly intercepts the request and responds with an HTTP `301/307 Redirect` to upgrade the connection to `https://`.
-4. **The Bug:** When the Android Captive Portal browser follows this HTTP-to-HTTPS redirect, it intentionally deletes all URL query strings as a privacy measure to prevent tracking. 
-5. The Frappe backend receives the HTTPS request, but the MAC address and IP are gone, causing authentication to fail.
-
-*Note: OpenNDS itself cannot natively generate an `https://` link without crashing due to a bug in version 10 where it attempts to send unencrypted HTTP traffic to port 443, resulting in a `400 Bad Request` from Nginx.*
-
-## The Solution (OpenNDS Mode 3 ThemeSpec)
-To bypass both the Android privacy bug and the OpenNDS HTTPS bug, we utilize a custom "local theme" script on the OpenWrt router.
-
-Instead of instructing OpenNDS to use FAS to redirect the user to the server directly, we configure OpenNDS to load a local script (`theme_click-to-continue.sh`). This script generates a tiny HTML page directly on the router.
-
-### How it works:
-1. OpenNDS redirects the unauthenticated user to the router's local web server (`http://status.client:2050`).
-2. The router executes the custom `/usr/lib/opennds/theme_click-to-continue.sh` script.
-3. The script injects the user's `$clientmac` and `$clientip` into a snippet of Javascript inside an HTML page.
-4. The HTML page is sent to the Android phone.
-5. The Android phone executes the Javascript: `window.location.replace("https://your-domain.com/hotspot/login?clientmac=...&clientip=...");`.
-6. Because the redirection is performed by **Javascript** (client-side) rather than an HTTP 301 Header (server-side), Android treats it as standard web navigation and preserves the MAC address query strings perfectly.
-
-## Configuration Details for OpenWrt Router
-
-### 1. Create the Theme Script
-SSH into your OpenWrt router and create/edit the following file:
-**File:** `/usr/lib/opennds/theme_click-to-continue.sh`
-
-**Script Contents:**
-```bash
-#!/bin/sh
-title="theme_click-to-continue"
-generate_splash_sequence() {
-	echo "<!DOCTYPE html>
-		<html>
-		<head>
-		<meta charset=\"utf-8\">
-		<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
-		<title>Redirecting...</title>
-		<script>
-			// Replace 'hotspot.uniquemindpro.xyz' with your actual Frappe domain!
-			var redirUrl = \"https://hotspot.uniquemindpro.xyz/hotspot/login?fas=${fas}\";
-			window.location.replace(redirUrl);
-		</script>
-		</head>
-		<body style=\"background-color:#101622; color:white; font-family:sans-serif; text-align:center; padding-top:50px;\">
-		<p>Redirecting to secure login portal...</p>
-		</body>
-		</html>
-	"
-}
+```text
+Clients (Wi-Fi / LAN)
+   ├──> OpenWrt (openNDS listening on LAN port)
+   └──> Direct FAS HTTP Redirect (fasport 80) ──> Nginx SSL (443) ──> Frappe Hotspot Portal
 ```
 
-Make it executable:
-```bash
-chmod +x /usr/lib/opennds/theme_click-to-continue.sh
+---
+
+## 1. How Direct FAS Port 80 Works
+
+1. OpenNDS redirects unauthenticated users to `http://your-domain.com:80/hotspot/login?fas=...`.
+2. Server-side Nginx listening on port 80 accepts the request and returns an HTTP `301/307 Redirect` upgrading it to `https://your-domain.com/hotspot/login?fas=...`.
+3. The client's browser follows the redirect to `https://` and loads the Frappe portal seamlessly without needing local theme scripts on the router.
+
+> [!NOTE]
+> Setting `fasport '80'` avoids Nginx's `400 Bad Request: Plain HTTP request sent to HTTPS port` error that occurs when openNDS attempts to send unencrypted HTTP payloads directly to port 443.
+
+---
+
+## 2. OpenWrt UCI Configuration (`/etc/config/opennds`)
+
+```uci
+config opennds
+	option enabled '1'
+	option gatewayinterface 'br-lan'
+	option gatewayname 'OpenWrt-Branch-1'
+	option gatewayport '2050'
+
+	# Direct Remote FAS Settings
+	option fasremoteip '157.173.109.148'
+	option fasremotefqdn 'your-domain.com'
+	option fasport '80'
+	option faspath '/hotspot/login'
+	option fassecureenabled '1'
+	option faskey 'YOUR_GENERATED_FAS_KEY'
+
+	# Whitelist DNS and Cloud Portal IP
+	list preauthenticated_users 'allow udp port 53'
+	list preauthenticated_users 'allow tcp port 53'
+	list preauthenticated_users 'allow tcp port 443 to 157.173.109.148'
+	list preauthenticated_users 'allow tcp port 80 to 157.173.109.148'
 ```
 
-### 2. Patch OpenNDS Engine (if using OpenNDS 10.3)
-Due to a configuration bug in some OpenNDS builds, you must hardcode the script path into the engine to ensure it runs properly.
+---
 
-Run this command on the router to patch `libopennds.sh`:
-```bash
-sed -i 's/themespecpath="$4"/themespecpath="\/usr\/lib\/opennds\/theme_click-to-continue.sh"/g' /usr/lib/opennds/libopennds.sh
-```
+## 3. Automated Provisioning
 
-### 3. Update UCI Configuration
-Run these commands to remove standard FAS configurations and enable Mode 3:
-```bash
-# Delete standard FAS configuration
-uci delete opennds.@opennds[0].faskey
-uci delete opennds.@opennds[0].fasremotefqdn
-uci delete opennds.@opennds[0].fasport
-uci delete opennds.@opennds[0].faspath
-uci delete opennds.@opennds[0].fassecureenabled
-uci delete opennds.@opennds[0].fasremoteip
-
-# Set Mode 3 (ThemeSpec) and theme path
-uci set opennds.@opennds[0].login_option_enabled='3'
-uci set opennds.@opennds[0].theme_spec_path='/usr/lib/opennds/theme_click-to-continue.sh'
-uci commit opennds
-
-# Restart OpenNDS to apply
-/etc/init.d/opennds restart
-```
+You can automatically generate and deploy this configuration to any OpenWrt router by clicking **Generate Provisioning Script** on the **Nas Device** record in Frappe Desk!

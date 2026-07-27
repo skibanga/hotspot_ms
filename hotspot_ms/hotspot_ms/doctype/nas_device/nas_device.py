@@ -98,6 +98,11 @@ def generate_openwrt_hardening_bundle(name: str | None = None, hotspot_iface: st
 def generate_openwrt_provisioning_script(name: str) -> dict:
 	doc = frappe.get_doc("Nas Device", name)
 	site_url = frappe.utils.get_url()
+	parsed_url = frappe.urllib.parse.urlparse(site_url)
+	domain_name = parsed_url.netloc or parsed_url.path
+	if ":" in domain_name:
+		domain_name = domain_name.split(":")[0]
+
 	nas_id = doc.short_name or doc.device_name
 
 	script = f"""#!/bin/sh
@@ -163,7 +168,7 @@ uci set dhcp.lan.dhcpv4='server'
 uci commit dhcp || true
 /etc/init.d/dnsmasq restart || true
 
-echo "3. Configuring OpenNDS..."
+echo "3. Configuring OpenNDS (Direct Remote FAS)..."
 detect_lan_iface() {{
 	if uci -q get network.lan.device >/dev/null 2>&1; then
 		uci -q get network.lan.device
@@ -191,9 +196,14 @@ config opennds
 	option gatewayinterface '$GW_IFACE'
 	option gatewayname '{nas_id}'
 	option gatewayport '{doc.opennds_gateway_port}'
-	option max_clients_per_token '1'
-	option login_option_enabled '3'
-	option theme_spec_path '/usr/lib/opennds/theme_click-to-continue.sh'
+
+	option fasremoteip '157.173.109.148'
+	option fasremotefqdn '{domain_name}'
+	option fasport '80'
+	option faspath '/hotspot/login'
+	option fassecureenabled '1'
+	option faskey '{doc.opennds_fas_key or ""}'
+
 	list preauthenticated_users 'allow udp port 53'
 	list preauthenticated_users 'allow tcp port 53'
 	list preauthenticated_users 'allow tcp port 443 to 157.173.109.148'
@@ -231,33 +241,8 @@ NAS_IDENTIFIER="{nas_id}"
 NAS_SECRET="{doc.shared_secret}"
 EOF
 
-echo "5. Installing Custom Theme and Worker Scripts..."
-
+echo "5. Installing Hotspot Worker Scripts..."
 mkdir -p /usr/lib/opennds
-cat << 'EOF' > /usr/lib/opennds/theme_click-to-continue.sh
-#!/bin/sh
-title="theme_click-to-continue"
-generate_splash_sequence() {{
-	echo "<!DOCTYPE html>
-		<html>
-		<head>
-		<meta charset=\"utf-8\">
-		<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
-		<title>Redirecting...</title>
-		<script>
-			var redirUrl = \"{site_url}/hotspot/login?fas=\$fas\";
-			window.location.replace(redirUrl);
-		</script>
-		</head>
-		<body style=\"background-color:#101622; color:white; font-family:sans-serif; text-align:center; padding-top:50px;\">
-		<p>Redirecting to secure login portal...</p>
-		</body>
-		</html>
-	"
-}}
-EOF
-chmod +x /usr/lib/opennds/theme_click-to-continue.sh
-sed -i 's/themespecpath="$4"/themespecpath="\/usr\/lib\/opennds\/theme_click-to-continue.sh"/g' /usr/lib/opennds/libopennds.sh 2>/dev/null || true
 
 # Script 1: Restore Active Clients
 cat << 'EOF' > /usr/bin/hotspot_restore_active_clients.sh
