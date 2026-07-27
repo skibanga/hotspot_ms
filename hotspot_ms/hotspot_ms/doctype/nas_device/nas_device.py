@@ -125,11 +125,13 @@ else
 fi
 
 echo "3. Configuring OpenNDS..."
-if ! uci -q get opennds.@opennds[0] >/dev/null 2>&1; then
+if [ ! -f /etc/config/opennds ] || ! uci -q get opennds.@opennds[0] >/dev/null 2>&1; then
 	touch /etc/config/opennds 2>/dev/null || true
 	uci set opennds.main=opennds 2>/dev/null || true
 fi
 
+uci -q set opennds.@opennds[0].enabled='1' || true
+uci -q set opennds.@opennds[0].gatewayinterface='br-lan' || true
 uci -q set opennds.@opennds[0].gatewayport='{doc.opennds_gateway_port}' || true
 uci -q set opennds.@opennds[0].faskey='{doc.opennds_fas_key or ""}' || true
 uci -q set opennds.@opennds[0].max_clients_per_token='1' || true
@@ -161,11 +163,13 @@ chain hotspot_hardening {{
 }}
 EOF
 
-# Ensure wireless client isolation is enabled
-for section in $(uci show wireless 2>/dev/null | sed -n 's/^wireless\.\([^=]*\)=wifi-iface$/\1/p'); do
-	uci -q set "wireless.$section.isolate='1'" || true
-done
-uci commit wireless || true
+# Ensure wireless client isolation is enabled if wireless config exists
+if [ -f /etc/config/wireless ]; then
+	for section in $(uci show wireless 2>/dev/null | sed -n 's/^wireless\.\([^=]*\)=wifi-iface$/\1/p'); do
+		uci -q set "wireless.$section.isolate='1'" || true
+	done
+	uci commit wireless 2>/dev/null || true
+fi
 
 echo "4. Creating Agent Configuration..."
 cat << 'EOF' > /etc/hotspot_restore.conf
@@ -725,10 +729,11 @@ EOF
 chmod +x /etc/rc.local
 
 echo "7. Restarting services..."
-/etc/init.d/network restart || true
-/etc/init.d/mwan3 restart || true
-/etc/init.d/firewall restart || true
-/etc/init.d/opennds restart || true
+[ -x /etc/init.d/network ] && /etc/init.d/network restart || true
+[ -x /etc/init.d/mwan3 ] && /etc/init.d/mwan3 restart || true
+[ -x /etc/init.d/firewall ] && /etc/init.d/firewall restart || true
+[ -x /etc/init.d/opennds ] && /etc/init.d/opennds enable 2>/dev/null || true
+[ -x /etc/init.d/opennds ] && /etc/init.d/opennds restart || true
 
 echo "=========================================="
 echo " Provisioning Complete! "
