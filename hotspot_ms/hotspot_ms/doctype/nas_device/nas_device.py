@@ -132,6 +132,7 @@ fi
 
 uci -q set opennds.@opennds[0].enabled='1' || true
 uci -q set opennds.@opennds[0].gatewayinterface='br-lan' || true
+uci -q set opennds.@opennds[0].gatewayname='{nas_id}' || true
 uci -q set opennds.@opennds[0].gatewayport='{doc.opennds_gateway_port}' || true
 uci -q set opennds.@opennds[0].faskey='{doc.opennds_fas_key or ""}' || true
 uci -q set opennds.@opennds[0].max_clients_per_token='1' || true
