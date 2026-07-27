@@ -123,7 +123,15 @@ if ! uci -q get network.lan >/dev/null 2>&1; then
 	uci set network.lan.proto='static'
 fi
 
-if ip link show dev eth1 >/dev/null 2>&1; then
+WAN_DEV="$(uci -q get network.wan.device || uci -q get network.wan.ifname || echo "eth0")"
+LAN_PORTS=""
+for dev in $(ip -o link show 2>/dev/null | awk -F': ' '$2 ~ /^(eth|en|lan|wlan)[0-9]+/ {{print $2}}'); do
+	if [ "$dev" != "$WAN_DEV" ]; then
+		LAN_PORTS="$LAN_PORTS $dev"
+	fi
+done
+
+if [ -n "$LAN_PORTS" ]; then
 	uci set network.lan.device='br-lan'
 	if ! uci -q get network.@device[0] >/dev/null 2>&1; then
 		uci add network device >/dev/null 2>&1 || true
@@ -131,14 +139,10 @@ if ip link show dev eth1 >/dev/null 2>&1; then
 	uci set network.@device[0].name='br-lan'
 	uci set network.@device[0].type='bridge'
 	uci delete network.@device[0].ports 2>/dev/null || true
-	uci add_list network.@device[0].ports='eth1'
-	if ip link show dev eth2 >/dev/null 2>&1; then
-		uci add_list network.@device[0].ports='eth2'
-	fi
-	ip link set eth1 up 2>/dev/null || true
-	if ip link show dev eth2 >/dev/null 2>&1; then
-		ip link set eth2 up 2>/dev/null || true
-	fi
+	for port in $LAN_PORTS; do
+		uci add_list network.@device[0].ports="$port"
+		ip link set "$port" up 2>/dev/null || true
+	done
 elif [ -z "$(uci -q get network.lan.device)" ]; then
 	uci set network.lan.device='eth0'
 fi
