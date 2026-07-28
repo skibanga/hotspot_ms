@@ -572,6 +572,7 @@ def get_packages() -> dict[str, Any]:
             "upload_kbps",
             "description",
             "is_free",
+            "requires_ad_view",
         ],
         order_by="price asc",
     )
@@ -610,10 +611,18 @@ def claim_free_voucher(
     mac_address: str | None = None,
     ip_address: str | None = None,
     nas_device: str | None = None,
+    tok: str | None = None,
+    redir: str | None = None,
+    authaction: str | None = None,
+    fas: str | None = None,
+    gatewayaddress: str | None = None,
+    gatewayport: str | None = None,
+    authdir: str | None = None,
+    hid: str | None = None,
 ) -> dict[str, Any]:
     """
-    Claim a free 1-hour voucher. One claim per MAC address per calendar day.
-    Issues a new voucher from the free plan, activates it, and returns the session.
+    Claim a free voucher. One claim per MAC address per calendar day.
+    Issues a new complimentary voucher from the free plan, activates it, and returns the session.
     """
     mac_address = _normalize_mac(mac_address)
     ip_address = _normalize_ip(ip_address)
@@ -625,7 +634,7 @@ def claim_free_voucher(
     free_plans = frappe.get_all(
         "Hotspot Plan",
         filters={"enabled": 1, "is_free": 1},
-        fields=["name", "plan_name"],
+        fields=["name", "plan_name", "requires_ad_view"],
         ignore_permissions=True,
         limit=1,
     )
@@ -633,6 +642,7 @@ def claim_free_voucher(
         return _error("No free plan is currently available", "NO_FREE_PLAN")
 
     plan_name = free_plans[0]["name"]
+    requires_ad_view = cint(free_plans[0].get("requires_ad_view"))
 
     # Check once-per-day limit
     if _has_claimed_free_today(mac_address, plan_name):
@@ -641,11 +651,12 @@ def claim_free_voucher(
             "FREE_ALREADY_CLAIMED",
         )
 
-    # Issue a free voucher
+    # Issue a complimentary free voucher
     plan_doc = frappe.get_doc("Hotspot Plan", plan_name)
     voucher = frappe.new_doc("Hotspot Voucher")
     voucher.voucher_code = f"FREE-{secrets.token_hex(5).upper()}"
     voucher.status = "New"
+    voucher.is_complimentary = 1
     voucher.plan = plan_doc.name
     voucher.device_mac = mac_address
     if ip_address:
@@ -666,7 +677,27 @@ def claim_free_voucher(
         return result
 
     result["voucher_code"] = voucher.voucher_code
-    result["message"] = frappe._("Free access granted! Enjoy your 1 hour of internet.")
+    result["requires_ad_view"] = requires_ad_view
+
+    # Build openNDS redirect URL directly if provided
+    redirect_result = build_opennds_redirect(
+        session_id=result.get("session_id"),
+        voucher_code=voucher.voucher_code,
+        tok=tok,
+        redir=redir,
+        authaction=authaction,
+        fas=fas,
+        gatewayaddress=gatewayaddress,
+        gatewayport=gatewayport,
+        authdir=authdir,
+        hid=hid,
+        nas_device=nas_device,
+    )
+    if redirect_result.get("ok"):
+        result["redirect_url"] = redirect_result.get("redirect_url")
+
+    validity_str = f"{plan_doc.validity_value} {plan_doc.validity_unit or 'Minutes'}"
+    result["message"] = frappe._(f"Free access granted! Enjoy your {validity_str} speed test trial.")
     return result
 
 
@@ -1882,6 +1913,7 @@ def log_ad_view_and_claim_slice(
         voucher_doc = frappe.new_doc("Hotspot Voucher")
         voucher_doc.voucher_code = f"FREE-{secrets.token_hex(5).upper()}"
         voucher_doc.status = "Active"
+        voucher_doc.is_complimentary = 1
         voucher_doc.plan = plan_name
         voucher_doc.device_mac = mac_address
         if ip_address:

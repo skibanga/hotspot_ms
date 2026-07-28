@@ -861,166 +861,185 @@
       if (btnClaimFree) {
         btnClaimFree.addEventListener("click", function () {
           if (!captive.clientmac) {
-            showFreeFeedback("err", "Cannot detect your device. Please connect via the hotspot WiFi.");
+            showFreeFeedback("err", __("Cannot detect your device. Please connect via the hotspot WiFi."));
             return;
           }
 
           btnClaimFree.disabled = true;
-          btnClaimFree.textContent = __("Checking Status...");
-          showFreeFeedback("info", __("Checking your daily free status..."));
+          btnClaimFree.textContent = __("Connecting...");
+          showFreeFeedback("info", __("Activating your daily free speed test trial..."));
 
-          callApi("hotspot_ms.api.portal.check_free_slice_status", {
-            mac_address: captive.clientmac
-          }).then(function(status) {
-            if (!status.ok || !status.allowed) {
-              showFreeFeedback("err", status.message || __("You have reached your daily limit of free access today. Please buy a package to continue!"));
-              btnClaimFree.disabled = false;
-              btnClaimFree.textContent = "🚀 " + __("Get Free Access");
-              return Promise.reject("handled");
-            }
-            return callApi("hotspot_ms.api.portal.get_random_active_ad", {
-              mac_address: captive.clientmac
-            });
-          }).then(function(adRes) {
-            if (!adRes.ok) {
-              showFreeFeedback("err", adRes.message || __("Failed to load ad. Please try again."));
+          callApi("hotspot_ms.api.portal.claim_free_voucher", {
+            mac_address: captive.clientmac,
+            ip_address: captive.clientip,
+            nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid,
+            tok: captive.tok,
+            redir: captive.redir,
+            authaction: captive.authaction,
+            fas: captive.fas,
+            gatewayaddress: captive.gatewayaddress,
+            gatewayport: captive.gatewayport,
+            authdir: captive.authdir,
+            hid: captive.hid
+          }).then(function(claimRes) {
+            if (!claimRes.ok) {
+              showFreeFeedback("err", __(claimRes.message) || __("You have reached your daily limit of free access today. Please buy a package to continue!"));
               btnClaimFree.disabled = false;
               btnClaimFree.textContent = "🚀 " + __("Get Free Access");
               return;
             }
 
-            var ad = adRes.ad;
-            var adModal = document.getElementById("ad-modal");
-            var adTitle = document.getElementById("ad-title");
-            var adTimer = document.getElementById("ad-timer");
-            var adVideo = document.getElementById("ad-video");
-            var adCarousel = document.getElementById("ad-carousel");
-            var adImage = document.getElementById("ad-image");
-            var adText = document.getElementById("ad-text");
-            var adTextTitle = document.getElementById("ad-text-title");
-            var adCta = document.getElementById("ad-cta");
-            var adConnect = document.getElementById("ad-connect");
-
-            adTitle.textContent = ad.title || __("Sponsor Ad");
-            
-            if (ad.cta_url) {
-              adCta.href = ad.cta_url;
-              adCta.className = adCta.className.replace("hidden", "flex");
-            } else {
-              adCta.className = adCta.className.replace("flex", "hidden");
-            }
-
-            adVideo.className = adVideo.className.replace("flex", "hidden");
-            adCarousel.className = adCarousel.className.replace("flex", "hidden");
-            adText.className = adText.className.replace("flex", "hidden");
-            
-            adConnect.disabled = true;
-            adConnect.className = "w-full h-14 bg-primary text-white font-black rounded-xl text-lg shadow-lg shadow-primary/25 opacity-50 cursor-not-allowed transition-all flex items-center justify-center space-x-2";
-            adConnect.innerHTML = '<span>' + __("Please watch full ad") + '</span>';
-
-            var duration = 15;
-            var activeTimer = null;
-
-            if (ad.ad_type === "Video" && ad.video_file) {
-              adVideo.src = ad.video_file;
-              adVideo.className = adVideo.className.replace("hidden", "flex");
-              adVideo.muted = false;
-              var playPromise = adVideo.play();
-              if (playPromise !== undefined) {
-                playPromise.catch(function() {
-                  adVideo.muted = true;
-                  adVideo.play();
-                });
-              }
-              adVideo.onloadedmetadata = function() {
-                if (adVideo.duration && adVideo.duration > 0) {
-                  duration = Math.min(Math.round(adVideo.duration), 120);
-                }
-              };
-            } else if (ad.ad_type === "Image Carousel" && ad.video_file) {
-              adImage.src = ad.video_file;
-              adCarousel.className = adCarousel.className.replace("hidden", "flex");
-              duration = 10;
-            } else {
-              adTextTitle.textContent = ad.title || __("Tanzania Hotspot");
-              adText.className = adText.className.replace("hidden", "flex");
-              duration = 8;
-            }
-
-            adModal.style.display = "flex";
-
-            var updateTimer = function() {
-              if (duration > 0) {
-                adTimer.textContent = __("Unlock in") + " " + duration + "s";
-                duration--;
-                activeTimer = setTimeout(updateTimer, 1000);
-              } else {
-                adTimer.textContent = __("Completed! ✓");
-                adTimer.className = "px-3 py-1 bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-black rounded-full transition-all animate-bounce";
-                
-                adConnect.disabled = false;
-                adConnect.className = "w-full h-14 bg-primary hover:bg-primary/90 text-white font-black rounded-xl text-lg shadow-lg shadow-primary/25 transition-all flex items-center justify-center space-x-2 cursor-pointer";
-                adConnect.innerHTML = '<span>' + __("Unlock Internet Now") + ' 🚀</span>';
-              }
-            };
-
-            updateTimer();
-
-            adConnect.onclick = function() {
-              if (activeTimer) clearTimeout(activeTimer);
-              adConnect.disabled = true;
-              adConnect.innerHTML = '<span>' + __("Connecting...") + '</span> <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
-
-              callApi("hotspot_ms.api.portal.log_ad_view_and_claim_slice", {
-                mac_address: captive.clientmac,
-                ad_id: ad.name,
-                ip_address: captive.clientip,
-                nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid
-              }).then(function(claimed) {
-                if (!claimed.ok) {
-                  showFreeFeedback("err", __(claimed.message) || __("Could not claim free access."));
-                  adModal.style.display = "none";
+            if (Number(claimRes.requires_ad_view) === 1) {
+              return callApi("hotspot_ms.api.portal.get_random_active_ad", {
+                mac_address: captive.clientmac
+              }).then(function(adRes) {
+                if (!adRes.ok) {
+                  showFreeFeedback("err", adRes.message || __("Failed to load ad. Please try again."));
                   btnClaimFree.disabled = false;
                   btnClaimFree.textContent = "🚀 " + __("Get Free Access");
                   return;
                 }
 
-                showFreeFeedback("ok", __(claimed.message) || __("Free access granted!"));
+                var ad = adRes.ad;
+                var adModal = document.getElementById("ad-modal");
+                var adTitle = document.getElementById("ad-title");
+                var adTimer = document.getElementById("ad-timer");
+                var adVideo = document.getElementById("ad-video");
+                var adCarousel = document.getElementById("ad-carousel");
+                var adImage = document.getElementById("ad-image");
+                var adText = document.getElementById("ad-text");
+                var adTextTitle = document.getElementById("ad-text-title");
+                var adCta = document.getElementById("ad-cta");
+                var adConnect = document.getElementById("ad-connect");
 
-                return callApi("hotspot_ms.api.portal.build_opennds_redirect", {
-                  session_id: claimed.session_id,
-                  voucher_code: claimed.voucher_code,
-                  tok: captive.tok,
-                  redir: captive.redir,
-                  authaction: captive.authaction,
-                  fas: captive.fas,
-                  gatewayaddress: captive.gatewayaddress,
-                  gatewayport: captive.gatewayport,
-                  authdir: captive.authdir,
-                  hid: captive.hid,
-                  nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid
-                }).then(function(redirectResult) {
-                  adModal.style.display = "none";
-                  if (redirectResult.ok && redirectResult.redirect_url) {
-                    window.location.href = redirectResult.redirect_url;
-                  } else {
-                    showFreeFeedback("ok", __("Free access active! You can now browse the internet."));
-                    btnClaimFree.textContent = "✓ " + __("Access Granted");
+                adTitle.textContent = ad.title || __("Sponsor Ad");
+                
+                if (ad.cta_url) {
+                  adCta.href = ad.cta_url;
+                  adCta.className = adCta.className.replace("hidden", "flex");
+                } else {
+                  adCta.className = adCta.className.replace("flex", "hidden");
+                }
+
+                adVideo.className = adVideo.className.replace("flex", "hidden");
+                adCarousel.className = adCarousel.className.replace("flex", "hidden");
+                adText.className = adText.className.replace("flex", "hidden");
+                
+                adConnect.disabled = true;
+                adConnect.className = "w-full h-14 bg-primary text-white font-black rounded-xl text-lg shadow-lg shadow-primary/25 opacity-50 cursor-not-allowed transition-all flex items-center justify-center space-x-2";
+                adConnect.innerHTML = '<span>' + __("Please watch full ad") + '</span>';
+
+                var duration = 15;
+                var activeTimer = null;
+
+                if (ad.ad_type === "Video" && ad.video_file) {
+                  adVideo.src = ad.video_file;
+                  adVideo.className = adVideo.className.replace("hidden", "flex");
+                  adVideo.muted = false;
+                  var playPromise = adVideo.play();
+                  if (playPromise !== undefined) {
+                    playPromise.catch(function() {
+                      adVideo.muted = true;
+                      adVideo.play();
+                    });
                   }
-                });
-              }).catch(function(err) {
-                showFreeFeedback("err", __("Something went wrong. Please try again."));
-                adModal.style.display = "none";
-                btnClaimFree.disabled = false;
-                btnClaimFree.textContent = "🚀 " + __("Get Free Access");
+                  adVideo.onloadedmetadata = function() {
+                    if (adVideo.duration && adVideo.duration > 0) {
+                      duration = Math.min(Math.round(adVideo.duration), 120);
+                    }
+                  };
+                } else if (ad.ad_type === "Image Carousel" && ad.video_file) {
+                  adImage.src = ad.video_file;
+                  adCarousel.className = adCarousel.className.replace("hidden", "flex");
+                  duration = 10;
+                } else {
+                  adTextTitle.textContent = ad.title || __("Tanzania Hotspot");
+                  adText.className = adText.className.replace("hidden", "flex");
+                  duration = 8;
+                }
+
+                adModal.style.display = "flex";
+
+                var updateTimer = function() {
+                  if (duration > 0) {
+                    adTimer.textContent = __("Unlock in") + " " + duration + "s";
+                    duration--;
+                    activeTimer = setTimeout(updateTimer, 1000);
+                  } else {
+                    adTimer.textContent = __("Completed! ✓");
+                    adTimer.className = "px-3 py-1 bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-black rounded-full transition-all animate-bounce";
+                    
+                    adConnect.disabled = false;
+                    adConnect.className = "w-full h-14 bg-primary hover:bg-primary/90 text-white font-black rounded-xl text-lg shadow-lg shadow-primary/25 transition-all flex items-center justify-center space-x-2 cursor-pointer";
+                    adConnect.innerHTML = '<span>' + __("Unlock Internet Now") + ' 🚀</span>';
+                  }
+                };
+
+                updateTimer();
+
+                adConnect.onclick = function() {
+                  if (activeTimer) clearTimeout(activeTimer);
+                  adConnect.disabled = true;
+                  adConnect.innerHTML = '<span>' + __("Connecting...") + '</span> <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+
+                  callApi("hotspot_ms.api.portal.log_ad_view_and_claim_slice", {
+                    mac_address: captive.clientmac,
+                    ad_id: ad.name,
+                    ip_address: captive.clientip,
+                    nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid
+                  }).then(function(claimed) {
+                    if (!claimed.ok) {
+                      showFreeFeedback("err", __(claimed.message) || __("Could not claim free access."));
+                      adModal.style.display = "none";
+                      btnClaimFree.disabled = false;
+                      btnClaimFree.textContent = "🚀 " + __("Get Free Access");
+                      return;
+                    }
+
+                    showFreeFeedback("ok", __(claimed.message) || __("Free access granted!"));
+
+                    return callApi("hotspot_ms.api.portal.build_opennds_redirect", {
+                      session_id: claimed.session_id,
+                      voucher_code: claimed.voucher_code,
+                      tok: captive.tok,
+                      redir: captive.redir,
+                      authaction: captive.authaction,
+                      fas: captive.fas,
+                      gatewayaddress: captive.gatewayaddress,
+                      gatewayport: captive.gatewayport,
+                      authdir: captive.authdir,
+                      hid: captive.hid,
+                      nas_device: captive.gatewayname || captive.gatewayaddress || captive.hid
+                    }).then(function(redirectResult) {
+                      adModal.style.display = "none";
+                      if (redirectResult.ok && redirectResult.redirect_url) {
+                        window.location.href = redirectResult.redirect_url;
+                      } else {
+                        showFreeFeedback("ok", __("Free access active! You can now browse the internet."));
+                        btnClaimFree.textContent = "✓ " + __("Access Granted");
+                      }
+                    });
+                  }).catch(function(err) {
+                    showFreeFeedback("err", __("Something went wrong. Please try again."));
+                    adModal.style.display = "none";
+                    btnClaimFree.disabled = false;
+                    btnClaimFree.textContent = "🚀 " + __("Get Free Access");
+                  });
+                };
               });
-            };
-          }).catch(function(error) {
-            if (error !== "handled") {
-              showFreeFeedback("err", __("Something went wrong. Please try again."));
-              btnClaimFree.disabled = false;
-              btnClaimFree.textContent = "🚀 " + __("Get Free Access");
             }
+
+            // Direct Speed Test Trial Mode (no ad required)
+            showFreeFeedback("ok", claimRes.message || __("Free access granted!"));
+            if (claimRes.redirect_url) {
+              window.location.href = claimRes.redirect_url;
+            } else {
+              btnClaimFree.textContent = "✓ " + __("Access Granted");
+            }
+          }).catch(function(error) {
+            showFreeFeedback("err", __("Something went wrong. Please try again."));
+            btnClaimFree.disabled = false;
+            btnClaimFree.textContent = "🚀 " + __("Get Free Access");
           });
         });
       }

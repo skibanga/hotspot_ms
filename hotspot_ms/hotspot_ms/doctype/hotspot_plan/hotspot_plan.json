@@ -8,6 +8,7 @@
   "plan_name",
   "enabled",
   "is_free",
+  "requires_ad_view",
   "column_break_1",
   "price",
   "currency",
@@ -47,6 +48,13 @@
    "fieldtype": "Check",
    "in_list_view": 1,
    "label": "Is Free"
+  },
+  {
+   "default": "0",
+   "description": "When checked, users must watch a sponsor ad before claiming free access.",
+   "fieldname": "requires_ad_view",
+   "fieldtype": "Check",
+   "label": "Requires Ad View"
   },
   {
    "fieldname": "column_break_1",
