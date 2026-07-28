@@ -17,6 +17,16 @@ DEFAULT_HOTSPOT_PLANS: tuple[dict[str, Any], ...] = (
 		"description": "Free 10-minute speed test trial — one claim per device per day.",
 	},
 	{
+		"plan_name": "Free - 1 Hour",
+		"price": 0,
+		"currency": "TZS",
+		"validity_value": 1,
+		"validity_unit": "Hours",
+		"is_free": 1,
+		"requires_ad_view": 1,
+		"description": "Free 1-hour access — one claim per device per day.",
+	},
+	{
 		"plan_name": "TSh 500 - 6 Hours",
 		"price": 500,
 		"currency": "TZS",
