@@ -823,6 +823,6 @@ def download_provisioning_script(name: str, secret: str):
 		return "Unauthorized"
 
 	res = generate_openwrt_provisioning_script(name)
-	frappe.response["type"] = "download"
-	frappe.response["filename"] = "provision.sh"
-	frappe.response["filecontent"] = res.get("script", "").encode("utf-8")
+	frappe.response["type"] = "text"
+	frappe.response["content_type"] = "text/plain"
+	return res.get("script", "")
