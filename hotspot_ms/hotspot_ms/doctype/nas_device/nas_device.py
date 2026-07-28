@@ -625,6 +625,8 @@ urlencode() {{
     ch="$(printf '%s' "$s" | cut -c "$i")"
     case "$ch" in
       [a-zA-Z0-9.~_-]) out="${{out}}${{ch}}" ;;
+      "#") out="${{out}}%23" ;;
+      "%") out="${{out}}%25" ;;
       :) out="${{out}}%3A" ;;
       /) out="${{out}}%2F" ;;
       \?) out="${{out}}%3F" ;;
@@ -641,23 +643,47 @@ urlencode() {{
 }}
 
 scan_active_clients_usage() {{
-  ndsctl json 2>/dev/null | awk -F'"' '
-    BEGIN {{ printf "["; first = 1; mac = ""; state = ""; datain = 0; dataout = 0 }}
-    /^[ \t]*"mac":/ {{ mac = $4 }}
-    /^[ \t]*"state":/ {{ state = $4 }}
-    /^[ \t]*"download_this_session":/ {{ dataout = $4 }}
-    /^[ \t]*"upload_this_session":/ {{ datain = $4 }}
-    /^[ \t]*}},/ || /^[ \t]*}}$/ {{
-      if (mac != "" && state != "") {{
-        if (state == "Authenticated") {{
-          if (first == 0) printf ","
-          printf "{{\"mac_address\":\"%s\",\"input_octets\":%s,\"output_octets\":%s}}", mac, datain, dataout
-          first = 0
-        }}
-        mac = ""; state = ""; datain = 0; dataout = 0
+  ndsctl status 2>/dev/null | awk '
+    BEGIN {{ printf "["; first = 1; mac = ""; state = ""; down_bytes = 0; up_bytes = 0 }}
+    /Client/ {{
+      if (mac != "" && state == "Authenticated") {{
+        if (first == 0) printf ","
+        printf "{{\"mac_address\":\"%s\",\"input_octets\":%.0f,\"output_octets\":%.0f}}", mac, up_bytes, down_bytes
+        first = 0
+      }}
+      mac = ""; state = ""; down_bytes = 0; up_bytes = 0
+    }}
+    /IP:/ {{
+      for (i = 1; i <= NF; i++) {{
+        if ($i == "MAC:") mac = $(i + 1)
       }}
     }}
-    END {{ printf "]" }}
+    /State:/ {{ state = $2 }}
+    /Download this session:/ {{
+      val = $4; unit = $5
+      gsub(/;/, "", unit)
+      if (unit == "kB" || unit == "KB" || unit == "kb") mult = 1024
+      else if (unit == "MB" || unit == "mb") mult = 1048576
+      else if (unit == "GB" || unit == "gb") mult = 1073741824
+      else mult = 1
+      down_bytes = val * mult
+    }}
+    /Upload this session:/ {{
+      val = $4; unit = $5
+      gsub(/;/, "", unit)
+      if (unit == "kB" || unit == "KB" || unit == "kb") mult = 1024
+      else if (unit == "MB" || unit == "mb") mult = 1048576
+      else if (unit == "GB" || unit == "gb") mult = 1073741824
+      else mult = 1
+      up_bytes = val * mult
+    }}
+    END {{
+      if (mac != "" && state == "Authenticated") {{
+        if (first == 0) printf ","
+        printf "{{\"mac_address\":\"%s\",\"input_octets\":%.0f,\"output_octets\":%.0f}}", mac, up_bytes, down_bytes
+      }}
+      printf "]"
+    }}
   '
 }}
 
