@@ -13,7 +13,7 @@ from frappe.model.document import Document
 
 class NasDevice(Document):
 	def validate(self):
-		if not self.get_password("shared_secret") and not self.shared_secret:
+		if not self.shared_secret:
 			alphabet = string.ascii_letters + string.digits
 			self.shared_secret = "".join(secrets.choice(alphabet) for _ in range(8))
 
