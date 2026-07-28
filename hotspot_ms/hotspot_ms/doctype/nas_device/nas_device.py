@@ -5,7 +5,7 @@ from textwrap import dedent
 import secrets
 import string
 import socket
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 import frappe
 from frappe.model.document import Document
@@ -102,7 +102,7 @@ def generate_openwrt_hardening_bundle(name: str | None = None, hotspot_iface: st
 def generate_openwrt_provisioning_script(name: str) -> dict:
 	doc = frappe.get_doc("Nas Device", name)
 	site_url = frappe.utils.get_url()
-	parsed_url = frappe.urllib.parse.urlparse(site_url)
+	parsed_url = urlparse(site_url)
 	domain_name = parsed_url.netloc or parsed_url.path
 	if ":" in domain_name:
 		domain_name = domain_name.split(":")[0]
