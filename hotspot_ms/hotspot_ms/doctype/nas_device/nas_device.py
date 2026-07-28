@@ -803,10 +803,20 @@ echo "=========================================="
 	return {"ok": True, "script": script}
 
 
+def _get_doc_secret(doc) -> str:
+	try:
+		secret = doc.get_password("shared_secret", raise_exception=False)
+		if secret:
+			return secret
+	except Exception:
+		pass
+	return (doc.get("shared_secret") or "").strip()
+
+
 @frappe.whitelist()
 def get_provisioning_command(name: str) -> dict:
 	doc = frappe.get_doc("Nas Device", name)
-	secret = doc.get_password("shared_secret")
+	secret = _get_doc_secret(doc)
 	site_url = frappe.utils.get_url()
 	enc_name = quote(doc.name)
 	enc_secret = quote(secret or "")
@@ -821,9 +831,9 @@ def download_provisioning_script(name: str, secret: str | None = None):
 		return "NAS Device Not Found"
 
 	doc = frappe.get_doc("Nas Device", name)
-	real_secret = doc.get_password("shared_secret") or doc.shared_secret
+	real_secret = _get_doc_secret(doc)
 	if secret and real_secret:
-		if secret != real_secret and secret != doc.shared_secret:
+		if secret != real_secret and secret != (doc.get("shared_secret") or ""):
 			frappe.local.response["http_status_code"] = 403
 			return "Unauthorized"
 
