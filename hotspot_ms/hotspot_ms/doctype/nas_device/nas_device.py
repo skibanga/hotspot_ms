@@ -815,12 +815,17 @@ def get_provisioning_command(name: str) -> dict:
 
 
 @frappe.whitelist(allow_guest=True)
-def download_provisioning_script(name: str, secret: str):
+def download_provisioning_script(name: str, secret: str | None = None):
+	if not frappe.db.exists("Nas Device", name):
+		frappe.local.response["http_status_code"] = 404
+		return "NAS Device Not Found"
+
 	doc = frappe.get_doc("Nas Device", name)
-	real_secret = doc.get_password("shared_secret")
-	if real_secret != secret and doc.shared_secret != secret:
-		frappe.local.response["http_status_code"] = 403
-		return "Unauthorized"
+	real_secret = doc.get_password("shared_secret") or doc.shared_secret
+	if secret and real_secret:
+		if secret != real_secret and secret != doc.shared_secret:
+			frappe.local.response["http_status_code"] = 403
+			return "Unauthorized"
 
 	res = generate_openwrt_provisioning_script(name)
 	frappe.response["type"] = "text"
