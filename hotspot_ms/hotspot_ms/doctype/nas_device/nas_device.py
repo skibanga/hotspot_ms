@@ -12,7 +12,10 @@ from frappe.model.document import Document
 
 
 class NasDevice(Document):
-	pass
+	def validate(self):
+		if not self.get_password("shared_secret") and not self.shared_secret:
+			alphabet = string.ascii_letters + string.digits
+			self.shared_secret = "".join(secrets.choice(alphabet) for _ in range(8))
 
 
 @frappe.whitelist()
@@ -290,6 +293,8 @@ urlencode() {{
     ch="$(printf '%s' "$s" | cut -c "$i")"
     case "$ch" in
       [a-zA-Z0-9.~_-]) out="${{out}}${{ch}}" ;;
+      "#") out="${{out}}%23" ;;
+      "%") out="${{out}}%25" ;;
       :) out="${{out}}%3A" ;;
       /) out="${{out}}%2F" ;;
       \?) out="${{out}}%3F" ;;

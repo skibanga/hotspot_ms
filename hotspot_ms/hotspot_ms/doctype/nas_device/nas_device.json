@@ -93,8 +93,7 @@
   {
    "fieldname": "shared_secret",
    "fieldtype": "Password",
-   "label": "Shared Secret",
-   "reqd": 1
+   "label": "Shared Secret"
   },
   {
    "fieldname": "short_name",
