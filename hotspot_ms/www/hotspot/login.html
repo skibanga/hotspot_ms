@@ -175,7 +175,7 @@
               <span class="text-3xl">🎁</span>
               <h3 class="text-green-900 text-xl font-black">{{ _("Free Internet Access") }}</h3>
             </div>
-            <p class="text-green-800 text-sm leading-relaxed">{{ _("Get 1 hour of free high-speed internet — no payment needed. One free session per device per day.") }}</p>
+            <p id="free-plan-desc" class="text-green-800 text-sm leading-relaxed"></p>
             <button id="btn-claim-free" type="button" class="w-full h-12 bg-green-500 hover:bg-green-600 text-white font-black text-base rounded-xl shadow-lg shadow-green-500/25 transition-all flex items-center justify-center space-x-2">
               🚀 {{ _("Get Free Access") }}
             </button>
@@ -573,18 +573,22 @@
               return;
             }
 
-            var hasFree = false;
+            var freeItem = null;
             var paidItems = [];
             for (var i = 0; i < items.length; i++) {
               if (Number(items[i].is_free) === 1) {
-                hasFree = true;
+                if (!freeItem) freeItem = items[i];
               } else {
                 paidItems.push(items[i]);
               }
             }
 
-            if (hasFree && captive.clientmac) {
+            if (freeItem && captive.clientmac) {
               var freeBanner = document.getElementById("free-banner");
+              var freeDesc = document.getElementById("free-plan-desc");
+              if (freeDesc && freeItem.description) {
+                freeDesc.textContent = freeItem.description;
+              }
               if (freeBanner) {
                 freeBanner.className = freeBanner.className.replace("hidden", "flex");
               }
