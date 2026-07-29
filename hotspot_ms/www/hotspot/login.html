@@ -168,9 +168,9 @@
       <div class="flex flex-col lg:flex-row space-y-8 lg:space-y-0 lg:space-x-16">
         <div class="w-full lg:w-5/12 flex flex-col space-y-6">
 
-          <div id="free-banner" class="hidden rounded-2xl border-2 border-green-400 bg-gradient-to-br from-green-50 to-emerald-50 p-6 shadow-lg relative overflow-hidden">
+          <div id="free-banner" class="hidden w-full rounded-2xl border-2 border-green-400 bg-gradient-to-br from-green-50 to-emerald-50 p-6 shadow-lg relative overflow-hidden">
           <div class="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-black px-8 py-1 rotate-45 translate-x-6 translate-y-2">{{ _("FREE") }}</div>
-          <div class="flex flex-col space-y-3">
+          <div class="flex flex-col space-y-3 w-full">
             <div class="flex items-center space-x-2">
               <span class="text-3xl">🎁</span>
               <h3 class="text-green-900 text-xl font-black">{{ _("Free Internet Access") }}</h3>
@@ -577,7 +577,9 @@
             var paidItems = [];
             for (var i = 0; i < items.length; i++) {
               if (Number(items[i].is_free) === 1) {
-                if (!freeItem) freeItem = items[i];
+                if (!freeItem || Number(items[i].requires_ad_view) === 0) {
+                  freeItem = items[i];
+                }
               } else {
                 paidItems.push(items[i]);
               }
@@ -590,7 +592,7 @@
                 freeDesc.textContent = freeItem.description;
               }
               if (freeBanner) {
-                freeBanner.className = freeBanner.className.replace("hidden", "flex");
+                freeBanner.style.display = "block";
               }
             }
 
