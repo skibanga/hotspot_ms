@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import frappe
 import json
+import subprocess
 from frappe.utils import cint, flt, get_datetime, now_datetime
 
 DEAUTH_PENDING_PREFIX = "DEAUTH_PENDING|"
@@ -125,8 +126,6 @@ def auto_activate_stuck_vouchers() -> dict[str, int]:
 	return {"auto_activated_vouchers": activated}
 
 
-import paramiko
-
 def sync_all_routers_data():
 	"""
 	Scheduled task that connects to each enabled OpenWrt NAS Device
@@ -139,18 +138,22 @@ def sync_all_routers_data():
 			continue
 			
 		try:
-			# 1. SSH into the router
-			ssh = paramiko.SSHClient()
-			ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-			# Note: We rely on passwordless SSH keys
-			ssh.connect(hostname=router.vpn_ip_address, username='root', timeout=5)
+			# 1. Run system SSH directly (100% reliable with system SSH keys)
+			cmd = [
+				"ssh",
+				"-o", "StrictHostKeyChecking=no",
+				"-o", "UserKnownHostsFile=/dev/null",
+				"-o", "ConnectTimeout=5",
+				f"root@{router.vpn_ip_address}",
+				"ndsctl json"
+			]
+			res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=6)
+			if res.returncode != 0:
+				raise Exception(res.stderr.decode("utf-8") or "SSH execution failed")
+
+			output = res.stdout.decode("utf-8")
 			
-			# 2. Run ndsctl json
-			stdin, stdout, stderr = ssh.exec_command('ndsctl json')
-			output = stdout.read().decode('utf-8')
-			ssh.close()
-			
-			# 3. Parse JSON
+			# 2. Parse JSON
 			nds_data = json.loads(output)
 			clients = nds_data.get('clients', {})
 			
