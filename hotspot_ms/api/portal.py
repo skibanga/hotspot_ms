@@ -281,6 +281,8 @@ def _push_wireguard_authentication(
             "-o",
             "StrictHostKeyChecking=no",
             "-o",
+            "UserKnownHostsFile=/dev/null",
+            "-o",
             "ConnectTimeout=3",
             f"root@{vpn_ip}",
             f"ndsctl auth {mac} {minutes}",
