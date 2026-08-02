@@ -1077,11 +1077,11 @@ def build_opennds_redirect(
 
         return_token = _compute_opennds_return_token(hid, faskey)
         host_port = _normalize_host_port(gatewayaddress)
-        if not host_port:
-            host_port = gatewayaddress
-        if ":" not in host_port:
-            port = gatewayport or _get_opennds_gateway_port(nas_device)
-            host_port = f"{host_port}:{port}" if port else host_port
+        port = gatewayport or _get_opennds_gateway_port(nas_device) or "2050"
+        if not host_port or host_port.split(":")[0].replace(".", "").isdigit():
+            host_port = f"status.client:{port}"
+        elif ":" not in host_port:
+            host_port = f"{host_port}:{port}"
 
         auth_path = (authdir or _default_opennds_authdir()).lstrip("/")
         auth_base = f"http://{host_port}/{auth_path}/"
@@ -1097,11 +1097,11 @@ def build_opennds_redirect(
 
     if not authaction and gatewayaddress:
         host_port = _normalize_host_port(gatewayaddress)
-        if not host_port:
-            host_port = gatewayaddress
-        if ":" not in host_port:
-            port = gatewayport or _get_opennds_gateway_port(nas_device)
-            host_port = f"{host_port}:{port}" if port else host_port
+        port = gatewayport or _get_opennds_gateway_port(nas_device) or "2050"
+        if not host_port or host_port.split(":")[0].replace(".", "").isdigit():
+            host_port = f"status.client:{port}"
+        elif ":" not in host_port:
+            host_port = f"{host_port}:{port}"
         auth_path = (authdir or _default_opennds_authdir()).lstrip("/")
         authaction = f"http://{host_port}/{auth_path}/"
 
