@@ -262,7 +262,7 @@ def _push_wireguard_authentication(
     voucher_code: str = "",
 ) -> bool:
     """
-    Directly push instant authentication command to the target router over WireGuard VPN (0.01 seconds).
+    Directly push instant SSH ndsctl auth command to the target router over WireGuard VPN (0.01 seconds).
     """
     nas_name = _resolve_nas_device(nas_device)
     mac = _normalize_mac(mac_address)
@@ -275,13 +275,20 @@ def _push_wireguard_authentication(
         if not vpn_ip:
             return False
 
-        port = _get_opennds_gateway_port(nas_name)
         minutes = max(1, int(session_minutes or 10))
-        url = f"http://{vpn_ip}:{port}/opennds_auth/?mac={mac}&minutes={minutes}&voucher={voucher_code}"
-
-        req = urllib.request.Request(url, headers={"User-Agent": "Frappe-Hotspot/1.0"})
-        with urllib.request.urlopen(req, timeout=3) as resp:
-            return resp.status in (200, 302)
+        cmd = [
+            "ssh",
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "ConnectTimeout=3",
+            f"root@{vpn_ip}",
+            f"ndsctl auth {mac} {minutes}",
+        ]
+        res = subprocess.run(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=4
+        )
+        return res.returncode == 0
     except Exception:
         pass
 
