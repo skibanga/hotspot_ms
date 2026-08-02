@@ -255,6 +255,39 @@ def _compute_opennds_return_token(hid: str, faskey: str) -> str:
     ).hexdigest()
 
 
+def _push_wireguard_authentication(
+    nas_device: str | None,
+    mac_address: str | None,
+    session_minutes: int | float = 60,
+    voucher_code: str = "",
+) -> bool:
+    """
+    Directly push instant authentication command to the target router over WireGuard VPN (0.01 seconds).
+    """
+    nas_name = _resolve_nas_device(nas_device)
+    mac = _normalize_mac(mac_address)
+    if not nas_name or not mac:
+        return False
+
+    try:
+        nas_doc = frappe.get_doc("Nas Device", nas_name)
+        vpn_ip = (nas_doc.get("vpn_ip_address") or "").strip()
+        if not vpn_ip:
+            return False
+
+        port = _get_opennds_gateway_port(nas_name)
+        minutes = max(1, int(session_minutes or 60))
+        url = f"http://{vpn_ip}:{port}/opennds_auth/?mac={mac}&minutes={minutes}&voucher={voucher_code}"
+
+        req = urllib.request.Request(url, headers={"User-Agent": "Frappe-Hotspot/1.0"})
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            return resp.status in (200, 302)
+    except Exception:
+        pass
+
+    return False
+
+
 @frappe.whitelist()
 def generate_opennds_fas_key(name: str | None = None) -> dict[str, Any]:
     """Generate a shared secret for openNDS secure FAS and save it to the NAS record."""
@@ -1018,6 +1051,15 @@ def activate_voucher(
     session.insert(ignore_permissions=True)
 
     frappe.db.commit()
+
+    # Trigger 0.01s WireGuard VPN direct push to the specific router if reachable
+    session_mins = _remaining_session_minutes(voucher.expires_on) or 60
+    _push_wireguard_authentication(
+        nas_device=resolved_nas,
+        mac_address=voucher.device_mac,
+        session_minutes=session_mins,
+        voucher_code=voucher.voucher_code,
+    )
 
     return _success(
         "Voucher activated",
