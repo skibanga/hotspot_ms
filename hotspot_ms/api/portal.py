@@ -258,7 +258,7 @@ def _compute_opennds_return_token(hid: str, faskey: str) -> str:
 def _push_wireguard_authentication(
     nas_device: str | None,
     mac_address: str | None,
-    session_minutes: int | float = 60,
+    session_minutes: int | float = 10,
     voucher_code: str = "",
 ) -> bool:
     """
@@ -276,7 +276,7 @@ def _push_wireguard_authentication(
             return False
 
         port = _get_opennds_gateway_port(nas_name)
-        minutes = max(1, int(session_minutes or 60))
+        minutes = max(1, int(session_minutes or 10))
         url = f"http://{vpn_ip}:{port}/opennds_auth/?mac={mac}&minutes={minutes}&voucher={voucher_code}"
 
         req = urllib.request.Request(url, headers={"User-Agent": "Frappe-Hotspot/1.0"})
@@ -1053,7 +1053,7 @@ def activate_voucher(
     frappe.db.commit()
 
     # Trigger 0.01s WireGuard VPN direct push to the specific router if reachable
-    session_mins = _remaining_session_minutes(voucher.expires_on) or 60
+    session_mins = _remaining_session_minutes(voucher.expires_on) or cint(plan_doc.validity_value) or 10
     _push_wireguard_authentication(
         nas_device=resolved_nas,
         mac_address=voucher.device_mac,
