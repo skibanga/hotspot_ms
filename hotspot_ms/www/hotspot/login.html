@@ -390,21 +390,47 @@
         return "";
       }
 
+      // Safe Session Persistence for Vanilla ES5 (compatible with Android 4.2+ / old webviews)
+      function safeStorageGet(key) {
+        try {
+          if (window.sessionStorage) return window.sessionStorage.getItem(key) || "";
+        } catch (e) {}
+        return "";
+      }
+
+      function safeStorageSet(key, val) {
+        try {
+          if (window.sessionStorage && val) window.sessionStorage.setItem(key, val);
+        } catch (e) {}
+      }
+
       var authactionRaw = (getQueryParam("authaction") || "").trim();
       var captive = {
-        tok: (serverCaptive.tok || getQueryParam("tok") || "").trim(),
-        redir: (serverCaptive.redir || getQueryParam("redir") || "").trim(),
-        clientip: (serverCaptive.clientip || getQueryParam("clientip") || parseEmbeddedParam(authactionRaw, "clientip") || "").trim(),
-        clientmac: (serverCaptive.clientmac || getQueryParam("clientmac") || parseEmbeddedParam(authactionRaw, "clientmac") || "").trim(),
-        authaction: (serverCaptive.authaction || authactionRaw || "").trim(),
-        fas: (serverCaptive.fas || getQueryParam("fas") || "").trim(),
-        gatewayname: (serverCaptive.gatewayname || getQueryParam("gatewayname") || "").trim(),
-        gatewayaddress: (serverCaptive.gatewayaddress || getQueryParam("gatewayaddress") || "").trim(),
-        gatewayport: (serverCaptive.gatewayport || getQueryParam("gatewayport") || "").trim(),
-        authdir: (serverCaptive.authdir || getQueryParam("authdir") || "").trim(),
-        hid: (serverCaptive.hid || getQueryParam("hid") || "").trim(),
+        tok: (serverCaptive.tok || getQueryParam("tok") || safeStorageGet("hs_tok") || "").trim(),
+        redir: (serverCaptive.redir || getQueryParam("redir") || safeStorageGet("hs_redir") || "").trim(),
+        clientip: (serverCaptive.clientip || getQueryParam("clientip") || parseEmbeddedParam(authactionRaw, "clientip") || safeStorageGet("hs_clientip") || "").trim(),
+        clientmac: (serverCaptive.clientmac || getQueryParam("clientmac") || parseEmbeddedParam(authactionRaw, "clientmac") || safeStorageGet("hs_clientmac") || "").trim(),
+        authaction: (serverCaptive.authaction || authactionRaw || safeStorageGet("hs_authaction") || "").trim(),
+        fas: (serverCaptive.fas || getQueryParam("fas") || safeStorageGet("hs_fas") || "").trim(),
+        gatewayname: (serverCaptive.gatewayname || getQueryParam("gatewayname") || safeStorageGet("hs_gatewayname") || "").trim(),
+        gatewayaddress: (serverCaptive.gatewayaddress || getQueryParam("gatewayaddress") || safeStorageGet("hs_gatewayaddress") || "").trim(),
+        gatewayport: (serverCaptive.gatewayport || getQueryParam("gatewayport") || safeStorageGet("hs_gatewayport") || "").trim(),
+        authdir: (serverCaptive.authdir || getQueryParam("authdir") || safeStorageGet("hs_authdir") || "").trim(),
+        hid: (serverCaptive.hid || getQueryParam("hid") || safeStorageGet("hs_hid") || "").trim(),
         secure_fas: Boolean(serverCaptive.secure_fas)
       };
+
+      if (captive.tok) safeStorageSet("hs_tok", captive.tok);
+      if (captive.redir) safeStorageSet("hs_redir", captive.redir);
+      if (captive.clientip) safeStorageSet("hs_clientip", captive.clientip);
+      if (captive.clientmac) safeStorageSet("hs_clientmac", captive.clientmac);
+      if (captive.authaction) safeStorageSet("hs_authaction", captive.authaction);
+      if (captive.fas) safeStorageSet("hs_fas", captive.fas);
+      if (captive.gatewayname) safeStorageSet("hs_gatewayname", captive.gatewayname);
+      if (captive.gatewayaddress) safeStorageSet("hs_gatewayaddress", captive.gatewayaddress);
+      if (captive.gatewayport) safeStorageSet("hs_gatewayport", captive.gatewayport);
+      if (captive.authdir) safeStorageSet("hs_authdir", captive.authdir);
+      if (captive.hid) safeStorageSet("hs_hid", captive.hid);
 
       if (captive.tok || captive.authaction) {
         captiveInfo.style.display = "block";
