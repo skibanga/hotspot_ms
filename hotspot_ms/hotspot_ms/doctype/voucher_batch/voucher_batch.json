@@ -26,9 +26,8 @@
   {
    "fieldname": "batch_code",
    "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Batch Code",
-   "read_only": 1
+   "in_list_view": 1,
+   "label": "Batch Code"
   },
   {
    "default": "Draft",
