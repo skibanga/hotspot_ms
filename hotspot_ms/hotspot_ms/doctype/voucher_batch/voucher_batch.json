@@ -100,6 +100,6 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "title_field": "batch_code",
+ "title_field": "name",
  "track_changes": 1
 }
