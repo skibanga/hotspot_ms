@@ -23,7 +23,7 @@ class VoucherBatch(Document):
 
 		plan = frappe.get_doc("Hotspot Plan", self.plan)
 		expires_on = self.expires_on
-		prefix = (self.batch_code or "").replace(" ", "").upper()
+		prefix = (getattr(self, "voucher_prefix", "") or "").replace(" ", "").upper()
 		created = 0
 
 		for _ in range(remaining):

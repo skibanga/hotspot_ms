@@ -6,6 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "batch_code",
+  "voucher_prefix",
   "status",
   "column_break_1",
   "plan",
@@ -24,6 +25,11 @@
    "label": "Batch Code",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "fieldname": "voucher_prefix",
+   "fieldtype": "Data",
+   "label": "Voucher Prefix (Optional)"
   },
   {
    "default": "Draft",
