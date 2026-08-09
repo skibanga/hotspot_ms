@@ -1,10 +1,11 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format:VB-.YY.MM.-.#####.",
+ "autoname": "naming_series:",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "naming_series",
   "voucher_prefix",
   "status",
   "column_break_1",
@@ -16,6 +17,14 @@
   "notes"
  ],
  "fields": [
+  {
+   "default": "VB-.YY.MM.-.#####",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Naming Series",
+   "options": "VB-.YY.MM.-.#####",
+   "reqd": 1
+  },
   {
    "fieldname": "voucher_prefix",
    "fieldtype": "Data",
@@ -100,6 +109,5 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "title_field": "voucher_prefix",
  "track_changes": 1
 }
