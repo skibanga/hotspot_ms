@@ -23,7 +23,7 @@ class VoucherBatch(Document):
 
 		plan = frappe.get_doc("Hotspot Plan", self.plan)
 		expires_on = self.expires_on
-		prefix = (self.batch_code or "HS").replace(" ", "").upper()
+		prefix = (self.batch_code or "").replace(" ", "").upper()
 		created = 0
 
 		for _ in range(remaining):
@@ -46,11 +46,12 @@ class VoucherBatch(Document):
 		return created
 
 
-def _build_unique_voucher_code(prefix: str) -> str:
+def _build_unique_voucher_code(prefix: str = "") -> str:
 	alphabet = string.ascii_uppercase + string.digits
+	prefix = (prefix or "").strip().upper()
 	for _ in range(20):
 		suffix = "".join(secrets.choice(alphabet) for _ in range(8))
-		code = f"{prefix}-{suffix}"
+		code = f"{prefix}-{suffix}" if prefix else suffix
 		if not frappe.db.exists("Hotspot Voucher", {"voucher_code": code}):
 			return code
 
