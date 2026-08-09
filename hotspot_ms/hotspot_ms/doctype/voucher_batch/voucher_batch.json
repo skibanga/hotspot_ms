@@ -6,7 +6,6 @@
  "engine": "InnoDB",
  "field_order": [
   "voucher_prefix",
-  "batch_code",
   "status",
   "column_break_1",
   "plan",
@@ -22,12 +21,6 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Voucher Prefix (Optional)"
-  },
-  {
-   "fieldname": "batch_code",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Batch Code"
   },
   {
    "default": "Draft",
@@ -107,6 +100,6 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "title_field": "name",
+ "title_field": "voucher_prefix",
  "track_changes": 1
 }
