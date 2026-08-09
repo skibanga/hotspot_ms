@@ -1,11 +1,10 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:batch_code",
+ "autoname": "format:VB-.YY.MM.-.#####.",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "batch_code",
   "voucher_prefix",
   "status",
   "column_break_1",
@@ -18,17 +17,9 @@
  ],
  "fields": [
   {
-   "fieldname": "batch_code",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Batch Code",
-   "reqd": 1,
-   "unique": 1
-  },
-  {
    "fieldname": "voucher_prefix",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Voucher Prefix (Optional)"
   },
   {
