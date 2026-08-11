@@ -278,10 +278,13 @@ def _push_wireguard_authentication(
         minutes = max(1, int(session_minutes))
         cmd = [
             "ssh",
+            "-q",
             "-o",
             "StrictHostKeyChecking=no",
             "-o",
             "UserKnownHostsFile=/dev/null",
+            "-o",
+            "LogLevel=ERROR",
             "-o",
             "ConnectTimeout=3",
             f"root@{vpn_ip}",

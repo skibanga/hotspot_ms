@@ -141,15 +141,18 @@ def sync_all_routers_data():
 			# 1. Run system SSH directly (100% reliable with system SSH keys)
 			cmd = [
 				"ssh",
+				"-q",
 				"-o", "StrictHostKeyChecking=no",
 				"-o", "UserKnownHostsFile=/dev/null",
+				"-o", "LogLevel=ERROR",
 				"-o", "ConnectTimeout=10",
 				f"root@{router.vpn_ip_address}",
 				"ndsctl json"
 			]
 			res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=15)
 			if res.returncode != 0:
-				raise Exception(res.stderr.decode("utf-8") or "SSH execution failed")
+				err_msg = res.stderr.decode("utf-8").strip() or "SSH execution failed"
+				raise Exception(err_msg)
 
 			output = res.stdout.decode("utf-8")
 			
