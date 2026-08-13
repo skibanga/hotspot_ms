@@ -8,6 +8,7 @@ def execute(filters=None):
     from_date = getdate(filters.get("from_date"))
     to_date = getdate(filters.get("to_date"))
     plan_filter = filters.get("plan")
+    nas_device_filter = filters.get("nas_device")
     include_complimentary = filters.get("include_complimentary")
 
     # ── Build WHERE clause ──────────────────────────────────────────────────────
@@ -24,6 +25,10 @@ def execute(filters=None):
         conditions.append("v.plan = %(plan)s")
         query_params["plan"] = plan_filter
 
+    if nas_device_filter:
+        conditions.append("v.last_nas = %(nas_device)s")
+        query_params["nas_device"] = nas_device_filter
+
     if not include_complimentary:
         conditions.append("IFNULL(v.is_complimentary, 0) = 0")
 
@@ -38,13 +43,14 @@ def execute(filters=None):
         SELECT
             DATE(v.generated_on)    AS date,
             v.plan,
+            v.last_nas              AS nas_device,
             COUNT(v.name)           AS total_vouchers,
             SUM(IFNULL(p.price, 0)) AS total_revenue
         FROM `tabHotspot Voucher` v
         LEFT JOIN `tabHotspot Plan` p ON p.name = v.plan
         WHERE {where}
-        GROUP BY DATE(v.generated_on), v.plan
-        ORDER BY date DESC, v.plan ASC
+        GROUP BY DATE(v.generated_on), v.plan, v.last_nas
+        ORDER BY date DESC, v.plan ASC, v.last_nas ASC
         """,
         query_params,
         as_dict=True,
@@ -125,6 +131,13 @@ def execute(filters=None):
             "width": 180,
         },
         {
+            "fieldname": "nas_device",
+            "label": _("NAS Device"),
+            "fieldtype": "Link",
+            "options": "Nas Device",
+            "width": 160,
+        },
+        {
             "fieldname": "total_vouchers",
             "label": _("Total Vouchers"),
             "fieldtype": "Int",
@@ -143,6 +156,7 @@ def execute(filters=None):
         {
             "date": r.date,
             "plan": r.plan,
+            "nas_device": r.nas_device,
             "total_vouchers": r.total_vouchers,
             "total_revenue": r.total_revenue,
         }
@@ -154,6 +168,7 @@ def execute(filters=None):
         data.append({
             "date": _("TOTAL"),
             "plan": "",
+            "nas_device": "",
             "total_vouchers": total_vouchers,
             "total_revenue": total_revenue,
             "bold": 1,

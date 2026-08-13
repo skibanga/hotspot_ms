@@ -71,6 +71,12 @@ frappe.query_reports["Voucher Sales Report"] = {
 			options: "Hotspot Plan",
 		},
 		{
+			fieldname: "nas_device",
+			label: __("NAS Device"),
+			fieldtype: "Link",
+			options: "Nas Device",
+		},
+		{
 			fieldname: "include_complimentary",
 			label: __("Include Complimentary"),
 			fieldtype: "Check",
