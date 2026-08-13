@@ -19,14 +19,40 @@ frappe.pages['network-dashboard'].on_page_load = function (wrapper) {
             </div>
             
             <div v-else>
+                <!-- Top Filter & Action Bar -->
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex items-center space-x-3">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Router Filter:</label>
+                        <select v-model="selectedRouter" class="bg-slate-50 border border-slate-300 text-slate-800 text-xs font-semibold rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5 min-w-[200px]">
+                            <option value="">🌐 All Routers ({{ routers.length }})</option>
+                            <option v-for="r in routers" :key="r.name" :value="r.name">
+                                {{ r.status === 'Online' ? '🟢' : '🔴' }} {{ r.device_name || r.name }} ({{ r.vpn_ip_address || 'No IP' }})
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex items-center space-x-3">
+                        <button @click="testAllRouters" :disabled="testingAll || loading" class="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 px-4 py-2.5 rounded-lg shadow-sm transition-all flex items-center">
+                            <svg v-if="testingAll" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            <svg v-else class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            {{ testingAll ? `Testing (${testedCount}/${routers.filter(r=>r.status==='Online').length})...` : '⚡ Run Test for All Routers' }}
+                        </button>
+                        
+                        <button @click="fetchData" :disabled="loading" class="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 px-4 py-2.5 rounded-lg transition-all flex items-center border border-slate-200">
+                            <svg :class="{'animate-spin': loading}" class="w-4 h-4 mr-1.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            {{ loading ? 'Refreshing...' : '🔄 Fetch All' }}
+                        </button>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200 transition-all hover:shadow-md">
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-medium text-slate-500 mb-1">Routers Online</p>
                                 <div class="flex items-baseline">
-                                    <h3 class="text-3xl font-bold text-slate-800">{{ routers.filter(r => r.status === 'Online').length }}</h3>
-                                    <span class="ml-2 text-sm font-medium text-slate-500">/ {{ routers.length }} Total</span>
+                                    <h3 class="text-3xl font-bold text-slate-800">{{ displayRouters.filter(r => r.status === 'Online').length }}</h3>
+                                    <span class="ml-2 text-sm font-medium text-slate-500">/ {{ displayRouters.length }} Filtered</span>
                                 </div>
                             </div>
                             <div class="p-3 bg-indigo-50 rounded-lg">
@@ -40,8 +66,8 @@ frappe.pages['network-dashboard'].on_page_load = function (wrapper) {
                             <div>
                                 <p class="text-sm font-medium text-slate-500 mb-1">Access Points Online</p>
                                 <div class="flex items-baseline">
-                                    <h3 class="text-3xl font-bold text-slate-800">{{ aps.filter(a => a.status === 'Online').length }}</h3>
-                                    <span class="ml-2 text-sm font-medium text-slate-500">/ {{ aps.length }} Total</span>
+                                    <h3 class="text-3xl font-bold text-slate-800">{{ displayAps.filter(a => a.status === 'Online').length }}</h3>
+                                    <span class="ml-2 text-sm font-medium text-slate-500">/ {{ displayAps.length }} Filtered</span>
                                 </div>
                             </div>
                             <div class="p-3 bg-emerald-50 rounded-lg">
@@ -54,7 +80,7 @@ frappe.pages['network-dashboard'].on_page_load = function (wrapper) {
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-indigo-100 text-sm font-medium mb-1">Active Users Right Now</p>
-                                <h3 class="text-4xl font-bold">{{ active_clients.length }}</h3>
+                                <h3 class="text-4xl font-bold">{{ displayClients.length }}</h3>
                             </div>
                             <div class="p-3 bg-white/20 rounded-lg backdrop-blur-sm">
                                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
@@ -66,11 +92,14 @@ frappe.pages['network-dashboard'].on_page_load = function (wrapper) {
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-1 space-y-6">
                         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                                 <h2 class="text-base font-semibold text-slate-800">Hardware Health</h2>
+                                <button @click="testAllRouters" :disabled="testingAll || loading" class="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded transition-colors uppercase tracking-wide disabled:opacity-50">
+                                    {{ testingAll ? 'Testing All...' : 'Run All Tests' }}
+                                </button>
                             </div>
                             <ul class="divide-y divide-slate-100">
-                                <li v-for="router in routers" :key="router.name" class="px-6 py-4 hover:bg-slate-50 transition-colors">
+                                <li v-for="router in displayRouters" :key="router.name" class="px-6 py-4 hover:bg-slate-50 transition-colors">
                                     <div class="flex items-center justify-between mb-2">
                                         <div class="flex items-center">
                                             <span class="relative flex h-3 w-3 mr-3">
@@ -139,14 +168,15 @@ frappe.pages['network-dashboard'].on_page_load = function (wrapper) {
                                         <tr class="bg-white text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
                                             <th class="px-6 py-4 font-semibold">Device MAC</th>
                                             <th class="px-6 py-4 font-semibold">IP Address</th>
+                                            <th class="px-6 py-4 font-semibold">Router</th>
                                             <th class="px-6 py-4 font-semibold">Voucher</th>
                                             <th class="px-6 py-4 font-semibold">Data (D/U)</th>
                                             <th class="px-6 py-4 font-semibold text-right">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-100">
-                                        <tr v-if="active_clients.length === 0">
-                                            <td colspan="5" class="px-6 py-12 text-center text-slate-500">
+                                        <tr v-if="displayClients.length === 0">
+                                            <td colspan="6" class="px-6 py-12 text-center text-slate-500">
                                                 <div class="flex flex-col items-center">
                                                     <svg class="w-12 h-12 text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                                                     <p class="font-medium">No active users currently online.</p>
@@ -154,9 +184,12 @@ frappe.pages['network-dashboard'].on_page_load = function (wrapper) {
                                                 </div>
                                             </td>
                                         </tr>
-                                        <tr v-for="client in active_clients" :key="client.name" class="hover:bg-slate-50 transition-colors group">
+                                        <tr v-for="client in displayClients" :key="client.name" class="hover:bg-slate-50 transition-colors group">
                                             <td class="px-6 py-4 text-slate-700 font-mono text-sm">{{ client.mac_address }}</td>
                                             <td class="px-6 py-4 text-slate-600 text-sm font-medium">{{ client.ip_address }}</td>
+                                            <td class="px-6 py-4 text-slate-600 text-xs font-semibold">
+                                                <span class="bg-slate-100 text-slate-700 px-2 py-1 rounded">{{ client.nas_device || 'Unknown' }}</span>
+                                            </td>
                                             <td class="px-6 py-4">
                                                 <div class="flex flex-col">
                                                     <span class="text-sm font-semibold text-slate-700">{{ client.voucher_code }}</span>
@@ -203,11 +236,28 @@ frappe.pages['network-dashboard'].on_page_load = function (wrapper) {
             data: {
                 loading: true,
                 firstLoad: true,
+                selectedRouter: '',
                 routers: [],
                 aps: [],
                 active_clients: [],
                 kicking: null,
-                testingSpeedRouter: null
+                testingSpeedRouter: null,
+                testingAll: false,
+                testedCount: 0
+            },
+            computed: {
+                displayRouters() {
+                    if (!this.selectedRouter) return this.routers;
+                    return this.routers.filter(r => r.name === this.selectedRouter);
+                },
+                displayAps() {
+                    if (!this.selectedRouter) return this.aps;
+                    return this.aps.filter(a => a.nas_device === this.selectedRouter);
+                },
+                displayClients() {
+                    if (!this.selectedRouter) return this.active_clients;
+                    return this.active_clients.filter(c => c.nas_device === this.selectedRouter);
+                }
             },
             mounted() {
                 this.fetchData();
@@ -265,7 +315,7 @@ frappe.pages['network-dashboard'].on_page_load = function (wrapper) {
                         });
                     });
                 },
-                runSpeedTest(router) {
+                runSpeedTest(router, onComplete) {
                     this.testingSpeedRouter = router.name;
                     frappe.call({
                         method: 'hotspot_ms.hotspot_ms.page.network_dashboard.network_dashboard.run_speedtest',
@@ -275,10 +325,8 @@ frappe.pages['network-dashboard'].on_page_load = function (wrapper) {
                         timeout: 300000,
                         callback: (r) => {
                             if (r.message && r.message.status === 'success') {
-                                // Find the active router object from the array because setInterval might have replaced it while we were waiting!
                                 const currentRouter = this.routers.find(rt => rt.name === router.name);
                                 if (currentRouter) {
-                                    // Sort results so Online interfaces are always at the top
                                     const sortedResults = r.message.results.sort((a, b) => {
                                         if (a.status === 'Online' && b.status !== 'Online') return -1;
                                         if (a.status !== 'Online' && b.status === 'Online') return 1;
@@ -288,17 +336,37 @@ frappe.pages['network-dashboard'].on_page_load = function (wrapper) {
                                 }
                             } else {
                                 frappe.show_alert({
-                                    message: `Speed test failed to complete`,
+                                    message: `Speed test failed for ${router.device_name || router.name}`,
                                     indicator: 'red'
                                 });
                             }
                             this.testingSpeedRouter = null;
+                            if (typeof onComplete === 'function') onComplete();
                         },
                         error: () => {
-                            frappe.show_alert({ message: 'Speed test timed out. Please try again.', indicator: 'red' });
+                            frappe.show_alert({ message: `Speed test timed out for ${router.device_name || router.name}`, indicator: 'red' });
                             this.testingSpeedRouter = null;
+                            if (typeof onComplete === 'function') onComplete();
                         }
                     });
+                },
+                async testAllRouters() {
+                    const onlineList = this.routers.filter(r => r.status === 'Online');
+                    if (!onlineList.length) {
+                        frappe.show_alert({ message: 'No online routers found to test', indicator: 'orange' });
+                        return;
+                    }
+                    this.testingAll = true;
+                    this.testedCount = 0;
+                    
+                    for (const r of onlineList) {
+                        await new Promise((resolve) => {
+                            this.runSpeedTest(r, resolve);
+                        });
+                        this.testedCount++;
+                    }
+                    this.testingAll = false;
+                    frappe.show_alert({ message: 'Speed tests completed for all online routers!', indicator: 'green' });
                 }
             }
         });
