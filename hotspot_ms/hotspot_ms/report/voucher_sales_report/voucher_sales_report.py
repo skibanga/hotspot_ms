@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import getdate, date_diff, add_days, flt
+from frappe.utils import getdate, date_diff, add_days, add_months, flt
 
 
 def execute(filters=None):
@@ -10,6 +10,7 @@ def execute(filters=None):
     plan_filter = filters.get("plan")
     nas_device_filter = filters.get("nas_device")
     include_complimentary = filters.get("include_complimentary")
+    group_by = filters.get("group_by") or "Day"
 
     # ── Build WHERE clause ──────────────────────────────────────────────────────
     conditions = [
@@ -37,11 +38,17 @@ def execute(filters=None):
 
     where = " AND ".join(conditions)
 
+    period_expr = (
+        "DATE_FORMAT(v.generated_on, '%%Y-%%m-01')"
+        if group_by == "Month"
+        else "DATE(v.generated_on)"
+    )
+
     # ── Fetch voucher rows with plan price ──────────────────────────────────────
     rows = frappe.db.sql(
         f"""
         SELECT
-            DATE(v.generated_on)    AS date,
+            {period_expr}            AS period,
             v.plan,
             v.last_nas              AS nas_device,
             COUNT(v.name)           AS total_vouchers,
@@ -49,8 +56,8 @@ def execute(filters=None):
         FROM `tabHotspot Voucher` v
         LEFT JOIN `tabHotspot Plan` p ON p.name = v.plan
         WHERE {where}
-        GROUP BY DATE(v.generated_on), v.plan, v.last_nas
-        ORDER BY date DESC, v.plan ASC, v.last_nas ASC
+        GROUP BY {period_expr}, v.plan, v.last_nas
+        ORDER BY period DESC, v.plan ASC, v.last_nas ASC
         """,
         query_params,
         as_dict=True,
@@ -84,45 +91,76 @@ def execute(filters=None):
         },
     ]
 
-    # ── Build line chart (vouchers generated per day) ───────────────────────────
-    date_counts = {}
-    date_revenue = {}
-    current = from_date
-    while current <= to_date:
-        date_counts[str(current)] = 0
-        date_revenue[str(current)] = 0
-        current = add_days(current, 1)
+    # ── Build period buckets (Day or Month) for the table & chart ───────────────
+    is_monthly = group_by == "Month"
+
+    def month_start(d):
+        return d.replace(day=1)
+
+    periods = []
+    if is_monthly:
+        current = month_start(from_date)
+        end = month_start(to_date)
+        while current <= end:
+            periods.append(current)
+            current = add_months(current, 1)
+    else:
+        current = from_date
+        while current <= to_date:
+            periods.append(current)
+            current = add_days(current, 1)
+
+    period_counts = {p: 0 for p in periods}
+    period_revenue = {p: 0 for p in periods}
 
     for r in rows:
-        key = str(r.date)
-        if key in date_counts:
-            date_counts[key] += r.total_vouchers
-            date_revenue[key] += flt(r.total_revenue)
+        key = getdate(r.period)
+        if is_monthly:
+            key = month_start(key)
+        if key in period_counts:
+            period_counts[key] += r.total_vouchers
+            period_revenue[key] += flt(r.total_revenue)
+
+    chart_labels = [
+        p.strftime("%b %Y") if is_monthly else str(p) for p in periods
+    ]
+    chart_values = [period_revenue[p] for p in periods]
 
     chart = {
         "data": {
-            "labels": list(date_counts.keys()),
+            "labels": chart_labels,
             "datasets": [
                 {
                     "name": _("Revenue (TSh)"),
-                    "values": list(date_revenue.values()),
+                    "values": chart_values,
                 }
             ],
         },
-        "type": "line",
+        "type": "line" if is_monthly else "line",
         "lineOptions": {"regionFill": 1},
-        "axisOptions": {"xIsSeries": True},
-        "title": _("Daily Revenue Trend"),
+        "axisOptions": {"xIsSeries": not is_monthly},
+        "title": _("Monthly Revenue Trend") if is_monthly else _("Daily Revenue Trend"),
     }
 
     # ── Columns ──────────────────────────────────────────────────────────────────
-    columns = [
+    period_column = (
         {
-            "fieldname": "date",
+            "fieldname": "period",
+            "label": _("Month"),
+            "fieldtype": "Data",
+            "width": 130,
+        }
+        if is_monthly
+        else {
+            "fieldname": "period",
             "label": _("Date"),
             "fieldtype": "Date",
             "width": 130,
-        },
+        }
+    )
+
+    columns = [
+        period_column,
         {
             "fieldname": "plan",
             "label": _("Plan"),
@@ -152,21 +190,24 @@ def execute(filters=None):
     ]
 
     # ── Format rows for display ──────────────────────────────────────────────────
-    data = [
-        {
-            "date": r.date,
-            "plan": r.plan,
-            "nas_device": r.nas_device,
-            "total_vouchers": r.total_vouchers,
-            "total_revenue": r.total_revenue,
-        }
-        for r in rows
-    ]
+    data = []
+    for r in rows:
+        key = getdate(r.period)
+        period_value = key.strftime("%b %Y") if is_monthly else key
+        data.append(
+            {
+                "period": period_value,
+                "plan": r.plan,
+                "nas_device": r.nas_device,
+                "total_vouchers": r.total_vouchers,
+                "total_revenue": r.total_revenue,
+            }
+        )
 
     # ── Totals row at the bottom ─────────────────────────────────────────────────
     if data:
         data.append({
-            "date": _("TOTAL"),
+            "period": _("TOTAL"),
             "plan": "",
             "nas_device": "",
             "total_vouchers": total_vouchers,

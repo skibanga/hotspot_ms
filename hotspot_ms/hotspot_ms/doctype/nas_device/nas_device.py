@@ -393,7 +393,7 @@ scan_preauth_clients() {{
 run_once() {{
   scan_preauth_clients | while IFS="$(printf '\\t')" read -r ip mac token; do
     [ -n "$mac" ] || continue
-    restore_one_client "$ip" "$mac" "$token"
+    restore_one_client "$ip" "$mac" "$token" || true
   done
 }}
 
@@ -412,7 +412,7 @@ main() {{
   fi
 
   while true; do
-    run_once
+    run_once || true
     sleep "$POLL_INTERVAL"
   done
 }}
@@ -525,7 +525,7 @@ sync_usage() {{
   response="$(wget -qO- --post-data="nas_identifier=$(urlencode "$NAS_IDENTIFIER")&secret=$(urlencode "$NAS_SECRET")&usage_data=$(urlencode "$payload")" --timeout=10 "$url" 2>/dev/null || true)"
   
   if [ -n "$response" ]; then
-    ok="$(printf '%s' "$response" | jsonfilter -e '@.ok' 2>/dev/null || true)"
+    ok="$(printf '%s' "$response" | jsonfilter -e '@.message.ok' 2>/dev/null || true)"
     if [ "$ok" = "true" ]; then
       log "synchronized usage data successfully"
       return 0
@@ -785,8 +785,8 @@ main() {{
   fi
 
   while true; do
-    poll_deauth
-    sync_usage
+    poll_deauth || true
+    sync_usage || true
     sleep "$POLL_INTERVAL"
   done
 }}
@@ -799,17 +799,49 @@ chmod +x /usr/bin/hotspot_restore_active_clients.sh
 chmod +x /usr/bin/hotspot_deauth_worker.sh
 chmod +x /usr/bin/hotspot_sync_session_usage.sh
 
+echo "6b. Installing procd services (auto-restart on crash)..."
+# Stop and disable the old rc.local-launched copies before switching to procd.
+killall hotspot_restore_active_clients.sh 2>/dev/null || pkill -f hotspot_restore_active_clients 2>/dev/null || true
+killall hotspot_deauth_worker.sh 2>/dev/null || pkill -f hotspot_deauth_worker 2>/dev/null || true
+killall hotspot_sync_session_usage.sh 2>/dev/null || pkill -f hotspot_sync_session_usage 2>/dev/null || true
+
 cat << 'EOF' > /etc/rc.local
 #!/bin/sh
 sleep 15
 /etc/init.d/opennds restart
-sleep 5
-sh /usr/bin/hotspot_restore_active_clients.sh &
-sh /usr/bin/hotspot_deauth_worker.sh &
-sh /usr/bin/hotspot_sync_session_usage.sh &
 exit 0
 EOF
 chmod +x /etc/rc.local
+
+install_hotspot_service() {{
+  local svc_name="$1"
+  local prog_path="$2"
+  cat << EOF > "/etc/init.d/$svc_name"
+#!/bin/sh /etc/rc.common
+
+USE_PROCD=1
+START=96
+STOP=10
+
+PROG=$prog_path
+
+start_service() {{
+  procd_open_instance
+  procd_set_param command "\\$PROG"
+  procd_set_param respawn 3600 5 0
+  procd_set_param stdout 1
+  procd_set_param stderr 1
+  procd_close_instance
+}}
+EOF
+  chmod +x "/etc/init.d/$svc_name"
+  "/etc/init.d/$svc_name" enable
+  "/etc/init.d/$svc_name" restart
+}}
+
+install_hotspot_service hotspot-restore /usr/bin/hotspot_restore_active_clients.sh
+install_hotspot_service hotspot-deauth /usr/bin/hotspot_deauth_worker.sh
+install_hotspot_service hotspot-sync /usr/bin/hotspot_sync_session_usage.sh
 
 echo "7. Restarting services..."
 [ -x /etc/init.d/network ] && /etc/init.d/network restart || true
@@ -818,17 +850,13 @@ echo "7. Restarting services..."
 [ -x /etc/init.d/opennds ] && /etc/init.d/opennds enable 2>/dev/null || true
 [ -x /etc/init.d/opennds ] && /etc/init.d/opennds start 2>/dev/null || /etc/init.d/opennds restart || true
 
-echo "8. Launching hotspot background agents..."
-killall hotspot_restore_active_clients.sh 2>/dev/null || pkill -f hotspot_restore_active_clients 2>/dev/null || true
-killall hotspot_deauth_worker.sh 2>/dev/null || pkill -f hotspot_deauth_worker 2>/dev/null || true
-killall hotspot_sync_session_usage.sh 2>/dev/null || pkill -f hotspot_sync_session_usage 2>/dev/null || true
-
-sh /usr/bin/hotspot_restore_active_clients.sh >/dev/null 2>&1 &
-sh /usr/bin/hotspot_deauth_worker.sh >/dev/null 2>&1 &
-sh /usr/bin/hotspot_sync_session_usage.sh >/dev/null 2>&1 &
-
 echo "=========================================="
 echo " Provisioning Complete! "
+echo " Hotspot agents are now procd services:"
+echo "   /etc/init.d/hotspot-restore {{start|stop|restart}}"
+echo "   /etc/init.d/hotspot-deauth  {{start|stop|restart}}"
+echo "   /etc/init.d/hotspot-sync    {{start|stop|restart}}"
+echo " They auto-restart on crash and on reboot."
 echo "=========================================="
 """
 	return {"ok": True, "script": script}

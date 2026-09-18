@@ -65,6 +65,13 @@ frappe.query_reports["Voucher Sales Report"] = {
 			reqd: 1,
 		},
 		{
+			fieldname: "group_by",
+			label: __("Group By"),
+			fieldtype: "Select",
+			options: ["Day", "Month"].join("\n"),
+			default: "Day",
+		},
+		{
 			fieldname: "plan",
 			label: __("Plan"),
 			fieldtype: "Link",
