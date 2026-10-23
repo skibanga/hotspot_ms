@@ -1453,22 +1453,19 @@ def pull_disconnect_actions(
         return error
 
     limit = max(1, min(cint(limit) or 20, 100))
-    rows = frappe.get_all(
-        "Hotspot Session",
-        filters={"terminate_cause": ("like", f"{DEAUTH_PENDING_PREFIX}%")},
-        fields=[
-            "name",
-            "session_id",
-            "session_status",
-            "terminate_cause",
-            "ip_address",
-            "mac_address",
-            "nas_device",
-            "stop_time",
-        ],
-        order_by="modified asc",
-        limit=limit,
-        ignore_permissions=True,
+    # IGNORE INDEX (modified): with ORDER BY modified + LIMIT, MariaDB walks
+    # the whole table in date order looking for the few pending rows (seconds
+    # per call on a large table, every 15 s per router). Without that index it
+    # finds them through terminate_cause and sorts only those.
+    rows = frappe.db.sql(
+        """select name, session_id, session_status, terminate_cause, ip_address,
+            mac_address, nas_device, stop_time
+        from `tabHotspot Session` ignore index (modified)
+        where terminate_cause like %s
+        order by modified asc
+        limit %s""",
+        (f"{DEAUTH_PENDING_PREFIX}%", limit),
+        as_dict=True,
     )
 
     actions = []
