@@ -1673,21 +1673,19 @@ def sync_session_usage(
             target_session_name = session_name
             target_total_mb = total_mb
 
-        # Also update the parent Hotspot Voucher immediately in real-time
+        # Also update the parent Hotspot Voucher immediately in real-time.
+        # A voucher's true usage is the SUM of every session it has ever had
+        # (a device reconnecting mid-voucher starts a new session each time),
+        # not just the largest single session - so this must sum, not max.
         voucher_name = session_doc.get("voucher")
         if voucher_name:
             voucher_sessions = frappe.get_all(
                 "Hotspot Session",
                 filters={"voucher": voucher_name},
-                fields=["name", "total_mb"],
+                fields=["total_mb"],
                 ignore_permissions=True,
             )
-            max_session_mb = max(
-                [flt(target_total_mb)] + [flt(vs.get("total_mb") or 0) for vs in voucher_sessions]
-            )
-
-            current_voucher_used = flt(frappe.db.get_value("Hotspot Voucher", voucher_name, "data_used_mb") or 0)
-            total_voucher_mb = max(current_voucher_used, max_session_mb)
+            total_voucher_mb = sum(flt(vs.get("total_mb") or 0) for vs in voucher_sessions)
 
             frappe.db.set_value(
                 "Hotspot Voucher",
